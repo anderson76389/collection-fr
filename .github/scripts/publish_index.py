@@ -17,6 +17,7 @@ RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
     "animesama",
+    "bananascan",
     "astralmanga",
     "dassouscan",
     "japscan",

@@ -55,7 +55,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
 
-      - name: Build the twelve French extensions
+      - name: Build the thirteen French extensions
         if: ${{ steps.gate.outputs.enabled == 'true' }}
         working-directory: source
         env:
@@ -65,6 +65,7 @@ jobs:
         run: |
           modules=(
             :src:fr:animesama
+            :src:fr:bananascan
             :src:fr:astralmanga
             :src:fr:dassouscan
             :src:fr:japscan
