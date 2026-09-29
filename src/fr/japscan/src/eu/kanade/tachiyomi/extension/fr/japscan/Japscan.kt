@@ -518,8 +518,11 @@ abstract class Japscan :
 
         // The probe body is never reused — the WebView re-fetches the chapter itself — so
         // this only answers "is the captcha in the way right now?".
-        fun captchaPresent(): Boolean = client.newCall(GET(chapterUrl, headers)).execute().use {
-            captchaRegex.containsMatchIn(it.body.string())
+        fun captchaPresent(): Boolean = client.newCall(GET(chapterUrl, headers)).execute().use { response ->
+            if (response.code == 404) {
+                throw Exception("Japscan : HTTP 404 pour le chapitre (URL : ${response.request.url})")
+            }
+            captchaRegex.containsMatchIn(response.body.string())
         }
 
         var blocked = captchaPresent()
