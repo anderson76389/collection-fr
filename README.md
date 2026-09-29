@@ -1,20 +1,51 @@
-# Collection FR — sources Mihon
+# Collection FR — sources indépendantes pour Mihon
 
-Ce dépôt est maintenant destiné à contenir une copie indépendante du code source des extensions, et non un catalogue qui renvoie vers les APK signés par Keiyoushi.
+Ce dépôt contient une copie indépendante du code source des extensions françaises. Il ne réutilise plus les APK signés par Keiyoushi.
 
-## Copie locale du projet source
+## Copie du code source
 
-Le workflow `.github/workflows/bootstrap-upstream.yml` copie le dépôt source public de Keiyoushi dans ce dépôt une seule fois. Une fois copié, le code reste ici même si une source est retirée en amont. Les sources françaises incluses couvrent les modules présents dans le dépôt amont, dont Scan-Manga et Japscan.
+Le workflow `.github/workflows/bootstrap-upstream.yml` a copié le dépôt `keiyoushi/extensions-source` une seule fois. Cette copie reste dans `main` même si une source disparaît de l’amont. Les changements personnels sont conservés dans ce dépôt.
 
-Le dépôt amont est sous licence GPL-3.0 ; ses avis de licence sont conservés dans la copie.
+Le code amont est sous licence GPL-3.0 ; ses fichiers de licence et mentions sont conservés.
 
-## État Mihon
+## Correctifs en cours
 
-Une copie du code ne suffit pas pour publier des extensions installables. Il faut compiler les APK, les signer avec une clé qui appartient à ce dépôt, puis générer et héberger l'index Mihon correspondant. Les APK Keiyoushi ne sont donc pas présentées comme tes propres builds. La clé de signature n'est pas stockée dans le dépôt public.
+- **Scan-Manga** : l’extension utilisait `m.scan-manga.com` et construisait sa recherche sur `bqj.m.scan-manga.com`, un hôte qui ne résout pas. Le code utilise maintenant `www.scan-manga.com` et `/search/quick.json` sans le sous-domaine `bqj.`.
+- **Japscan** : l’extension utilise le domaine demandé `japscan.lol`. Le lecteur a été adapté avec le correctif de rendu par WebView/canvas proposé dans [le PR amont #18111](https://github.com/keiyoushi/extensions-source/pull/18111), qui traite l’échec de lecture après vérification humaine. Le filtre de chapitres plus récent du dépôt a été gardé.
 
-## Sources à corriger
+La compilation et le lint Release de Scan-Manga et Japscan passent dans GitHub Actions. Les requêtes HTTP lancées depuis les runners GitHub reçoivent une réponse 403 des protections anti-bot des sites ; elles ne reproduisent pas une lecture depuis ton téléphone. Le correctif doit donc encore être essayé dans Mihon sur ton réseau. Pour Japscan, le lecteur peut afficher le CAPTCHA du site.
 
-- **Scan-Manga** : l'extension actuelle construit l'URL de recherche avec un sous-domaine `bqj.` invalide et utilise l'ancien hôte mobile. Le correctif doit aussi vérifier les URL et sélecteurs du site en ligne.
-- **Japscan** : le code actuel est attaché à `japscan.foo`. Il faut confronter l'hôte exact et les URL des chapitres à ceux que Mihon reçoit, car une 404 peut venir d'une URL/site déplacé ou d'une route obsolète.
+## Créer le dépôt Mihon
 
-Les APK ne seront marquées comme fonctionnelles qu'après compilation et vérification de leurs requêtes réelles.
+Le workflow `.github/workflows/build-and-publish.yml` compile les onze sources françaises, les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
+
+Avant son premier lancement, crée une clé Android locale et ajoute ces secrets dans **Settings → Secrets and variables → Actions** du dépôt :
+
+- `SIGNING_KEY` : contenu de `collection-fr.jks` encodé en Base64
+- `ALIAS` : alias donné à la clé
+- `KEY_STORE_PASSWORD` : mot de passe du keystore
+- `KEY_PASSWORD` : mot de passe de la clé
+
+Exemple pour créer la clé :
+
+```sh
+keytool -genkeypair -v -keystore collection-fr.jks -alias collection-fr -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 collection-fr.jks
+```
+
+Sur PowerShell, encode le keystore avec :
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("collection-fr.jks"))
+```
+
+Garde le fichier `.jks` hors de GitHub et ne partage pas ces valeurs dans une conversation. Après avoir enregistré les secrets, lance **Actions → Build and publish personal extensions → Run workflow**.
+
+Une fois la première publication terminée, ajoute cette adresse comme dépôt dans Mihon :
+
+```
+https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json
+```
+
+La clé de signature est propre à ce dépôt. Si des extensions signées par Keiyoushi sont déjà installées, Android ne les mettra pas à jour par-dessus celles-ci ; il faudra les remplacer par les versions de Collection FR.
+
