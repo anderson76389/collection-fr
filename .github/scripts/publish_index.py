@@ -94,7 +94,12 @@ def main() -> None:
                 "extensionLib": str(info["extensionLib"]),
                 "versionCode": str(info["versionCode"]),
                 "versionName": str(info["versionName"]),
-                "contentWarning": info["contentWarning"],
+                "contentWarning": {
+                    0: "CONTENT_WARNING_UNSPECIFIED",
+                    1: "CONTENT_WARNING_SAFE",
+                    2: "CONTENT_WARNING_MIXED",
+                    3: "CONTENT_WARNING_NSFW",
+                }.get(int(info["contentWarning"]), "CONTENT_WARNING_UNSPECIFIED"),
                 "sources": source_entries,
             }
         )
