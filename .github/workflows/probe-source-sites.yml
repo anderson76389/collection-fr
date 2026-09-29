@@ -1,0 +1,34 @@
+name: Probe source site endpoints
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/probe-source-sites.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare currently configured and requested domains
+        shell: bash
+        run: |
+          set +e
+          urls=(
+            "https://www.scan-manga.com/?po"
+            "https://m.scan-manga.com/"
+            "https://bqj.m.scan-manga.com/search/quick.json?term=onepiece"
+            "https://www.scan-manga.com/search/quick.json?term=onepiece"
+            "https://www.japscan.foo/mangas/?sort=popular&p=1"
+            "https://japscan.lol/mangas/?sort=popular&p=1"
+          )
+          for url in "${urls[@]}"; do
+            printf '%s -> ' "$url"
+            curl --location --max-time 25 --silent --show-error \
+              --user-agent "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124.0 Mobile Safari/537.36" \
+              --output /dev/null --write-out 'HTTP %{http_code} final=%{url_effective}\n' "$url"
+          done
