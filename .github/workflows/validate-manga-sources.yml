@@ -7,6 +7,7 @@ on:
       - "src/fr/scanmanga/**"
       - "src/fr/japscan/**"
       - ".github/workflows/validate-manga-sources.yml"
+      - ".github/scripts/publish_index.py"
   pull_request:
     paths:
       - "src/fr/scanmanga/**"
@@ -31,6 +32,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Check publisher syntax
+        run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
         run: ./gradlew --no-daemon :src:fr:scanmanga:lintRelease :src:fr:japscan:lintRelease
