@@ -11,6 +11,8 @@ REPO_DIR = Path(os.environ["REPO_DIR"])
 REPOSITORY = os.environ["GITHUB_REPOSITORY"]
 COMMIT_SHA = os.environ["GITHUB_SHA"]
 FINGERPRINT = os.environ["SIGNING_FINGERPRINT"].replace(":", "").lower()
+if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FINGERPRINT):
+    raise ValueError("SIGNING_FINGERPRINT must be a SHA-256 certificate fingerprint")
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
