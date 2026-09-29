@@ -6,13 +6,13 @@ plugins {
 
 keiyoushi {
     name = "Japscan"
-    versionCode = 71
+    versionCode = 72
     contentWarning = ContentWarning.SAFE
     libVersion = "1.4"
 
     source {
         lang = "fr"
-        baseUrl = "https://japscan.lol"
+        baseUrl = "https://www.japscan.foo"
         id = 11L
     }
 }
