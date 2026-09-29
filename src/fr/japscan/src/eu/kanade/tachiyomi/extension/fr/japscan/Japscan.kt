@@ -56,7 +56,14 @@ abstract class Japscan :
 
     // Sometimes an adblock blocker will pop up, preventing the user from opening
     // a cloudflare protected page
-    private val internalBaseUrl = "https://www.japscan.foo"
+    private val internalBaseUrl = baseUrl.toHttpUrl()
+        .newBuilder()
+        .encodedPath("/")
+        .query(null)
+        .build()
+        .toString()
+        .trimEnd('/')
+    private val imageCdnHost = "c4.${internalBaseUrl.toHttpUrl().host.substringAfter("www.")}"
 
     override val supportsLatest = true
 
@@ -387,8 +394,16 @@ abstract class Japscan :
         val latch = CountDownLatch(1)
         val jsInterface = JsInterface(latch)
         var webView: WebView? = null
-        var request: Response = client.newCall(GET("$internalBaseUrl${chapter.url}", headers)).execute()
-        var pageContent = request.body.string()
+        fun fetchChapterHtml(): String {
+            client.newCall(GET("$internalBaseUrl${chapter.url}", headers)).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw Exception("Japscan : HTTP ${response.code} pour le chapitre ${chapter.url} (URL : ${response.request.url})")
+                }
+                return response.body.string()
+            }
+        }
+
+        var pageContent = fetchChapterHtml()
         val matchResult = captchaRegex.find(pageContent)
 
         if (matchResult != null) {
@@ -409,8 +424,7 @@ abstract class Japscan :
             var captchaWait = 0
             while (captchaWait < 15) {
                 Thread.sleep(5000)
-                request = client.newCall(GET("$internalBaseUrl${chapter.url}", headers)).execute()
-                pageContent = request.body.string()
+                pageContent = fetchChapterHtml()
                 val isGood = captchaRegex.find(pageContent)
                 if (isGood == null) {
                     val closeIntent = Intent().apply {
@@ -458,9 +472,10 @@ abstract class Japscan :
                             }
 
                             // Hook atob — Japscan delivers the chapter payload as a base64-encoded
-                            // JSON whose `cc` array contains the c4.japscan.foo image URLs. The
+                            // JSON whose `cc` array contains the image CDN URLs. The
                             // payload no longer goes through String.replace, so atob is the only
                             // reliable interception point.
+                            const imageCdnHost = '$imageCdnHost';
                             const originalAtob = window.atob;
                             window.atob = function(str) {
                                 const result = originalAtob.call(this, str);
@@ -471,7 +486,7 @@ abstract class Japscan :
                                             Array.from(result, c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
                                         );
                                     } catch (e) { return result; }
-                                    if (utf8.indexOf('c4.japscan.foo') !== -1 && !window.__createCalled) {
+                                    if (utf8.indexOf(imageCdnHost) !== -1 && !window.__createCalled) {
                                         try {
                                             const parsed = JSON.parse(utf8);
                                             waitForRC(() => create(parsed));
@@ -547,7 +562,7 @@ abstract class Japscan :
                               (function visit(value) {
                                 if (found) return;
                                 if (Array.isArray(value) && value.length > 0 &&
-                                    value.every(v => typeof v === 'string' && v.indexOf('c4.japscan.foo') !== -1)) {
+                                    value.every(v => typeof v === 'string' && v.indexOf(imageCdnHost) !== -1)) {
                                   found = value;
                                   return;
                                 }
