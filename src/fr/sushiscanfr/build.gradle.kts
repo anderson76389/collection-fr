@@ -5,14 +5,20 @@ plugins {
 }
 
 keiyoushi {
-    name = "Sushiscan.fr"
-    versionCode = 3
+    name = "Sushiscan.net"
+    versionCode = 4
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
     theme = "mangathemesia"
 
     source {
+        name = "Sushiscan.net"
         lang = "fr"
-        baseUrl = "https://sushiscan.fr"
+        baseUrl = "https://sushiscan.net"
+        id = 3196884165456788667L
     }
+}
+
+dependencies {
+    implementation(project(":lib:randomua"))
 }

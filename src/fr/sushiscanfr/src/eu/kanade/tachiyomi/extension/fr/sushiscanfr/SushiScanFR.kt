@@ -1,24 +1,31 @@
 package eu.kanade.tachiyomi.extension.fr.sushiscanfr
 
 import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
-import eu.kanade.tachiyomi.source.model.SManga
 import keiyoushi.annotation.Source
-import org.jsoup.nodes.Document
+import keiyoushi.network.get
+import keiyoushi.network.rateLimit
+import keiyoushi.utils.asJsoup
+import keiyoushi.utils.getPreferences
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import kotlin.time.Duration.Companion.seconds
 
 @Source
 abstract class SushiScanFR : MangaThemesia() {
     override val mangaUrlDirectory = "/catalogue"
-    override val altNamePrefix = "Nom alternatif : "
-    override val seriesAuthorSelector = ".imptdt:contains(Auteur) i, .fmed b:contains(Auteur)+span"
-    override val seriesStatusSelector = ".imptdt:contains(Statut) i"
-    override fun String?.parseStatus(): Int = when {
-        this == null -> SManga.UNKNOWN
-        this.contains("En Cours", ignoreCase = true) -> SManga.ONGOING
-        this.contains("Terminé", ignoreCase = true) -> SManga.COMPLETED
-        else -> SManga.UNKNOWN
-    }
+    override val datePattern = "dd MMMM yyyy"
 
-    override fun mangaDetailsParse(document: Document): SManga = super.mangaDetailsParse(document).apply {
-        status = document.select(seriesStatusSelector).text().parseStatus()
-    }
+    private val preferences = getPreferences()
+
+    override fun OkHttpClient.Builder.configureClient() = rateLimit(2, 1.seconds)
+
+    override val altNamePrefix = "Nom alternatif : "
+    override val seriesAuthorSelector = ".infotable tr:contains(Auteur) td:last-child"
+    override val seriesStatusSelector = ".infotable tr:contains(Statut) td:last-child"
+
+    override suspend fun getPopularManga(page: Int) = searchMangaParse(client.get("$baseUrl/catalogue/?page=$page&order=popular").asJsoup())
+    override suspend fun getLatestUpdates(page: Int) = searchMangaParse(client.get("$baseUrl/catalogue/?page=$page&order=update").asJsoup())
+
+    override fun searchMangaUrl(page: Int, query: String) = "$baseUrl/page/$page".toHttpUrl().newBuilder()
+        .addQueryParameter("s", query)
 }
