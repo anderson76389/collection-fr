@@ -155,7 +155,7 @@ def main() -> None:
         encoding="utf-8",
     )
     repo_config = {
-        "index_v2": f"https://raw.githubusercontent.com/{REPOSITORY}/repo/index.json",
+        "index_v2": f"https://raw.githubusercontent.com/{REPOSITORY}/repo/index.json?build={COMMIT_SHA[:7]}",
         "meta": {
             "name": "Collection FR",
             "shortName": "CFR",
