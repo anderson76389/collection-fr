@@ -23,7 +23,6 @@ EXPECTED_MODULES = {
     "src/fr/japscan",
     "src/fr/mangascantrad",
     "src/fr/mangasoriginesfr",
-    "src/fr/phenixscans",
     "src/fr/rimuscans",
     "src/fr/scanreader",
     "src/fr/scanvf",

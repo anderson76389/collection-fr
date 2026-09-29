@@ -4,7 +4,7 @@ Ce dépôt contient une copie indépendante du code source des extensions franç
 
 ## Copie du code source
 
-Le workflow `.github/workflows/bootstrap-upstream.yml` a copié le dépôt `keiyoushi/extensions-source` une seule fois. Cette copie reste dans `main` même si une source disparaît de l’amont. Les changements personnels sont conservés dans ce dépôt.
+Le dépôt `keiyoushi/extensions-source` a été copié une seule fois. Le workflow d’import initial, désormais inutile, a été retiré. Cette copie reste dans `main` même si une source disparaît de l’amont. Les changements personnels sont conservés dans ce dépôt.
 
 Le code amont est sous licence GPL-3.0 ; ses fichiers de licence et mentions sont conservés.
 
@@ -24,7 +24,7 @@ La compilation et le lint ne constituent pas un test de lecture dans Mihon. Manh
 
 ## Créer le dépôt Mihon
 
-Le workflow `.github/workflows/build-and-publish.yml` compile seize extensions françaises et Manhuarm (multilingue), les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
+Le workflow `.github/workflows/build-and-publish.yml` compile quinze extensions françaises et Manhuarm (multilingue), les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
 
 Avant son premier lancement, crée une clé Android locale et ajoute ces secrets dans **Settings → Secrets and variables → Actions** du dépôt :
 
@@ -60,3 +60,7 @@ La clé de signature est propre à ce dépôt. Si des extensions signées par Ke
 ## Vérification des lecteurs
 
 Voir le [rapport du 29 septembre 2026](docs/source-audit-2026-09-29.md) pour les tests HTTP, les corrections ciblées et les limites de validation Android. Scan-Manga et Japscan ne sont pas annoncés comme réparés.
+
+## Sources retirées à la demande de l’utilisateur
+
+Twatt, les deux variantes Phenix Scans, Ono, Lelmanga, Lelscan, Lelscan-VF, Kiwiya Scans, AralosBD, Blue Solo et FMTEAM ont été retirées de `src/fr`. L’index publié contient désormais 16 extensions (15 françaises et Manhuarm). Le rapport de vérification conserve les résultats historiques antérieurs à ces suppressions.

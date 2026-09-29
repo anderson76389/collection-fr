@@ -2,7 +2,7 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main, fix/source-audit-20260929]
+    branches: [main]
     paths:
       - "src/fr/animesama/**"
       - "src/fr/scanvf/**"
