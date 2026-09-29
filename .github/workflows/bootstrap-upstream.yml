@@ -1,3 +1,4 @@
+# This workflow makes the initial source snapshot durable in this repository.
 name: Bootstrap independent source copy
 
 on:
