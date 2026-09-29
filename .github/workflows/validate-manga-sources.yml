@@ -1,16 +1,14 @@
-name: Validate Scan-Manga and Japscan
+name: Validate Japscan
 
 on:
   push:
     branches: [main]
     paths:
-      - "src/fr/scanmanga/**"
       - "src/fr/japscan/**"
       - ".github/workflows/validate-manga-sources.yml"
       - ".github/scripts/publish_index.py"
   pull_request:
     paths:
-      - "src/fr/scanmanga/**"
       - "src/fr/japscan/**"
       - ".github/workflows/validate-manga-sources.yml"
 
@@ -37,4 +35,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:scanmanga:lintRelease :src:fr:japscan:lintRelease
+        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease

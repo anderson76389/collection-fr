@@ -8,16 +8,17 @@ Le workflow `.github/workflows/bootstrap-upstream.yml` a copié le dépôt `keiy
 
 Le code amont est sous licence GPL-3.0 ; ses fichiers de licence et mentions sont conservés.
 
-## Correctifs en cours
+## État des sources
 
-- **Scan-Manga** : l’extension utilisait `m.scan-manga.com` et construisait sa recherche sur `bqj.m.scan-manga.com`, un hôte qui ne résout pas. Le code utilise maintenant `www.scan-manga.com` et `/search/quick.json` sans le sous-domaine `bqj.`.
-- **Japscan** : l’extension utilise le domaine demandé `japscan.lol`. Le lecteur a été adapté avec le correctif de rendu par WebView/canvas proposé dans [le PR amont #18111](https://github.com/keiyoushi/extensions-source/pull/18111), qui traite l’échec de lecture après vérification humaine. Le filtre de chapitres plus récent du dépôt a été gardé.
+Les extensions explicitement marquées adultes (`NSFW`) ont été retirées de `src/fr`. Les sources `Mixed` restent disponibles, conformément au choix de garder les sources pouvant contenir du contenu adulte non exclusif.
 
-La compilation et le lint Release de Scan-Manga et Japscan passent dans GitHub Actions. Les requêtes HTTP lancées depuis les runners GitHub reçoivent une réponse 403 des protections anti-bot des sites ; elles ne reproduisent pas une lecture depuis ton téléphone. Le correctif doit donc encore être essayé dans Mihon sur ton réseau. Pour Japscan, le lecteur peut afficher le CAPTCHA du site.
+- **Astral-Manga** est incluse dans la publication en version 1.4.48 et son site répond avec des chapitres récents.
+- **Japscan** reste incluse (https://www.japscan.foo). Les retours indiquent que la lecture des chapitres peut encore échouer après le CAPTCHA ; le site n’est donc pas classé comme fermé.
+- Les erreurs 403 reçues par les runners GitHub ne suffisent pas à conclure qu’un site est hors service : elles peuvent venir de la protection anti-robot.
 
 ## Créer le dépôt Mihon
 
-Le workflow `.github/workflows/build-and-publish.yml` compile les onze sources françaises, les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
+Le workflow `.github/workflows/build-and-publish.yml` compile les douze sources françaises, les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
 
 Avant son premier lancement, crée une clé Android locale et ajoute ces secrets dans **Settings → Secrets and variables → Actions** du dépôt :
 
