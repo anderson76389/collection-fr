@@ -12,7 +12,7 @@ keiyoushi {
 
     source {
         lang = "fr"
-        baseUrl = "https://www.japscan.foo"
+        baseUrl = "https://japscan.lol"
         id = 11L
     }
 }
