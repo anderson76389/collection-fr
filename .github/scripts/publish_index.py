@@ -25,7 +25,6 @@ EXPECTED_MODULES = {
     "mangasoriginesfr",
     "phenixscans",
     "rimuscans",
-    "scanmanga",
     "scanreader",
     "scanvf",
     "sushiscanfr",
