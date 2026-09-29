@@ -2,8 +2,10 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/source-audit-20260929]
     paths:
+      - "src/fr/animesama/**"
+      - "src/fr/scanvf/**"
       - "src/fr/japscan/**"
       - "src/fr/blossomscans/**"
       - "src/fr/pantheonscan/**"
@@ -14,6 +16,8 @@ on:
       - ".github/scripts/publish_index.py"
   pull_request:
     paths:
+      - "src/fr/animesama/**"
+      - "src/fr/scanvf/**"
       - "src/fr/japscan/**"
       - "src/fr/blossomscans/**"
       - "src/fr/pantheonscan/**"
@@ -45,4 +49,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:softepsilonscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:scanmanga:lintRelease
+        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:softepsilonscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:scanmanga:lintRelease :src:fr:animesama:lintRelease :src:fr:scanvf:lintRelease

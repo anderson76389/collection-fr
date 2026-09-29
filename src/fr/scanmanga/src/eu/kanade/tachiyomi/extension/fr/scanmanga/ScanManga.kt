@@ -364,7 +364,10 @@ abstract class ScanManga :
     override fun pageListParse(response: Response): List<Page> = parsePageList(response.asJsoup())
 
     private fun parsePageList(document: org.jsoup.nodes.Document): List<Page> {
-        val packedScript = document.selectFirst(PACKED_SCRIPT_SELECTOR)!!.data()
+        val packedScript = document.select("script")
+            .map { it.data() }
+            .firstOrNull { HUNTER_OBFUSCATION_REGEX.containsMatchIn(it) }
+            ?: error("Failed to find packed reader script.")
         val unpackedScript = decodeHunter(packedScript)
 
         val (sml) = SML_PARAM_REGEX.find(unpackedScript)?.destructured
@@ -373,7 +376,7 @@ abstract class ScanManga :
         val (sme) = SME_PARAM_REGEX.find(unpackedScript)?.destructured
             ?: error("Failed to extract sme parameter.")
 
-        val (chapterId) = CHAPTER_INFO_REGEX.find(packedScript)?.destructured
+        val (chapterId) = CHAPTER_INFO_REGEX.find(document.html())?.destructured
             ?: error("Failed to extract chapter ID.")
 
         val availableVariables = mapOf(
@@ -391,8 +394,9 @@ abstract class ScanManga :
         val pageListUrl = injectVariables(PAGE_LIST_URL, availableVariables)
         val requestHeaders = headers.newBuilder()
             .add("Origin", "${documentUrl.scheme}://${documentUrl.host}")
-            .add("Referer", documentUrl.toString())
-            .add("Token", LEL_TOKEN)
+            .set("Referer", "${documentUrl.scheme}://${documentUrl.host}/")
+            .set("Source", documentUrl.toString())
+            .set("Token", LEL_TOKEN)
             .build()
 
         val pageListRequest = POST(
@@ -509,11 +513,13 @@ abstract class ScanManga :
     }
 
     companion object {
-        private const val PACKED_SCRIPT_SELECTOR = "script:containsData(eval\\(function \\()"
-        private val HUNTER_OBFUSCATION_REGEX = Regex("""eval\s*\(\s*function\s*\(\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*(?:,\s*[^)]+)?\)\s*\{\s*.*?\s*\}\s*\(\s*"([^"]+)"\s*,\s*\d+\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\d+\s*\)\s*\)""")
+        private val HUNTER_OBFUSCATION_REGEX = Regex(
+            """eval\s*\(\s*(?:/\*.*?\*/\s*)?function\s*\(\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*(?:,\s*[^)]+)?\)\s*\{\s*.*?\s*\}\s*\(\s*"([^"]+)"\s*,\s*\d+\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\d+\s*\)\s*\)""",
+            RegexOption.DOT_MATCHES_ALL,
+        )
         private val SML_PARAM_REGEX = Regex("""sml\s*=\s*'([^']+)'""")
         private val SME_PARAM_REGEX = Regex("""sme\s*=\s*'([^']+)'""")
-        private val CHAPTER_INFO_REGEX = Regex("""const idc = (\d+)""")
+        private val CHAPTER_INFO_REGEX = Regex("""const\s+idc\s*=\s*(\d+)""")
         private const val PAGE_LIST_URL = "https://bqj.{topDomain}/lel/{chapterId}.json"
         private const val REQUEST_BODY = """{"a":"{sme}","b":"{sml}","c":"{fingerprint}"}"""
         private const val LEL_TOKEN = "yf"

@@ -14,7 +14,9 @@ abstract class ScanVF : MMRCMS() {
     override val supportsAdvancedSearch = false
 
     override fun parseSearchDirectory(page: Int): MangasPage {
-        val manga = searchDirectory.subList((page - 1) * 24, min(page * 24, searchDirectory.size))
+        val start = min((page - 1) * 24, searchDirectory.size)
+        val end = min(page * 24, searchDirectory.size)
+        val manga = searchDirectory.subList(start, end)
             .map {
                 SManga.create().apply {
                     url = "/${it.data}"
@@ -22,7 +24,7 @@ abstract class ScanVF : MMRCMS() {
                     thumbnail_url = guessCover(url, null)
                 }
             }
-        val hasNextPage = (page + 1) * 24 <= searchDirectory.size
+        val hasNextPage = end < searchDirectory.size
 
         return MangasPage(manga, hasNextPage)
     }

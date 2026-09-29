@@ -111,7 +111,8 @@ abstract class AnimeSama : HttpSource() {
             ?.joinToString { it.text() }
 
         title = document.selectFirst("div.my-2 h1")!!.text()
-        thumbnail_url = document.selectFirst("img#coverOeuvre")?.absUrl("src")
+        thumbnail_url = document.selectFirst("meta[property=og:image]")?.absUrl("content")
+            ?: document.selectFirst("img#coverOeuvre")?.absUrl("src")
         author = document.selectFirst("span.info-lbl:contains(Créateur) + span.info-val")?.text()
         status = parseStatus(document.selectFirst("span.info-lbl:contains(État) + span.info-val")?.text())
     }

@@ -56,3 +56,7 @@ https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json
 
 La clé de signature est propre à ce dépôt. Si des extensions signées par Keiyoushi sont déjà installées, Android ne les mettra pas à jour par-dessus celles-ci ; il faudra les remplacer par les versions de Collection FR.
 
+
+## Vérification des lecteurs
+
+Voir le [rapport du 29 septembre 2026](docs/source-audit-2026-09-29.md) pour les tests HTTP, les corrections ciblées et les limites de validation Android. Scan-Manga et Japscan ne sont pas annoncés comme réparés.
