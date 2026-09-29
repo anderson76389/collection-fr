@@ -6,13 +6,13 @@ plugins {
 
 keiyoushi {
     name = "Japscan"
-    versionCode = 70
+    versionCode = 71
     contentWarning = ContentWarning.SAFE
     libVersion = "1.4"
 
     source {
         lang = "fr"
-        baseUrl = "https://www.japscan.foo/mangas/?sort=popular&p=1"
+        baseUrl = "https://www.japscan.foo"
         id = 11L
     }
 }
