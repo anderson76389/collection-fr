@@ -12,9 +12,9 @@
         "name": "AnimeSama",
         "packageName": "eu.kanade.tachiyomi.extension.fr.animesama",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.animesama-v1.4.17.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.animesama-v1.4.17.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/animesama/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.animesama-v1.4.17.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.animesama-v1.4.17.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104017",
@@ -33,9 +33,9 @@
         "name": "Astral-Manga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.astralmanga",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.astralmanga-v1.4.48.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.astralmanga-v1.4.48.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/astralmanga/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.astralmanga-v1.4.48.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.astralmanga-v1.4.48.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104048",
@@ -51,12 +51,33 @@
         ]
       },
       {
+        "name": "Harmony-Scan",
+        "packageName": "eu.kanade.tachiyomi.extension.fr.bananascan",
+        "resources": {
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.bananascan-v1.6.56.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/bananascan/res/mipmap-xhdpi/ic_launcher.png",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.bananascan-v1.6.56.jar"
+        },
+        "extensionLib": "1.6",
+        "versionCode": "106056",
+        "versionName": "1.6.56",
+        "contentWarning": "CONTENT_WARNING_MIXED",
+        "sources": [
+          {
+            "id": "3121632933690925888",
+            "name": "Harmony-Scan",
+            "language": "fr",
+            "homeUrl": "https://harmony-scan.fr"
+          }
+        ]
+      },
+      {
         "name": "Dassou Scan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.dassouscan",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.dassouscan-v1.6.1.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.dassouscan-v1.6.1.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/dassouscan/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.dassouscan-v1.6.1.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.dassouscan-v1.6.1.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106001",
@@ -75,9 +96,9 @@
         "name": "Japscan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.japscan",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.japscan-v1.4.72.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.japscan-v1.4.72.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/japscan/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.japscan-v1.4.72.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.japscan-v1.4.72.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104072",
@@ -96,9 +117,9 @@
         "name": "Manga-Scantrad",
         "packageName": "eu.kanade.tachiyomi.extension.fr.mangascantrad",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.mangascantrad-v1.6.59.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.mangascantrad-v1.6.59.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/mangascantrad/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.mangascantrad-v1.6.59.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.mangascantrad-v1.6.59.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106059",
@@ -117,9 +138,9 @@
         "name": "Mangas-Origines.fr",
         "packageName": "eu.kanade.tachiyomi.extension.fr.mangasoriginesfr",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.mangasoriginesfr-v1.6.61.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.mangasoriginesfr-v1.6.61.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/mangasoriginesfr/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.mangasoriginesfr-v1.6.61.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.mangasoriginesfr-v1.6.61.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106061",
@@ -138,9 +159,9 @@
         "name": "Phenix Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.phenixscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.phenixscans-v1.4.1.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.phenixscans-v1.4.1.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/phenixscans/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.phenixscans-v1.4.1.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.phenixscans-v1.4.1.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104001",
@@ -159,9 +180,9 @@
         "name": "Rimu Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.rimuscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.rimuscans-v1.4.35.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.rimuscans-v1.4.35.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/rimuscans/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.rimuscans-v1.4.35.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.rimuscans-v1.4.35.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104035",
@@ -180,9 +201,9 @@
         "name": "Scan-Manga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanmanga",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanmanga-v1.4.25.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanmanga-v1.4.25.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/scanmanga/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanmanga-v1.4.25.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanmanga-v1.4.25.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104025",
@@ -201,9 +222,9 @@
         "name": "Scan Reader",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanreader",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanreader-v1.6.2.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanreader-v1.6.2.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/scanreader/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanreader-v1.6.2.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanreader-v1.6.2.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106002",
@@ -222,9 +243,9 @@
         "name": "Scan VF",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanvf",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanvf-v1.4.16.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanvf-v1.4.16.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/scanvf/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.scanvf-v1.4.16.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.scanvf-v1.4.16.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104016",
@@ -243,9 +264,9 @@
         "name": "Sushiscan.net",
         "packageName": "eu.kanade.tachiyomi.extension.fr.sushiscanfr",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.sushiscanfr-v1.6.4.apk",
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.sushiscanfr-v1.6.4.apk",
           "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/sushiscanfr/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/44c9137/tachiyomi-fr.sushiscanfr-v1.6.4.jar"
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/8cf97af/tachiyomi-fr.sushiscanfr-v1.6.4.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106004",
