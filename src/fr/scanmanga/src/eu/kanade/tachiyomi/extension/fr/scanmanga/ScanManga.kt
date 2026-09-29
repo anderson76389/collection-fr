@@ -46,8 +46,8 @@ abstract class ScanManga :
     ConfigurableSource {
 
     private val domain = baseUrl.toHttpUrl().host
-    private val baseImageUrl = "https://static.$domain/img/manga"
-    private val baseSearchUrl = "https://bqj.$domain/search/quick.json"
+    private val baseImageUrl = "https://static.${domain.removePrefix("www.")}/img/manga"
+    private val baseSearchUrl = "$baseUrl/search/quick.json"
 
     override val supportsLatest = true
 
