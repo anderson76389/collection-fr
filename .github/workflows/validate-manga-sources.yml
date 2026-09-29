@@ -1,0 +1,36 @@
+name: Validate Scan-Manga and Japscan
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/fr/scanmanga/**"
+      - "src/fr/japscan/**"
+      - ".github/workflows/validate-manga-sources.yml"
+  pull_request:
+    paths:
+      - "src/fr/scanmanga/**"
+      - "src/fr/japscan/**"
+      - ".github/workflows/validate-manga-sources.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Lint the release variants
+        run: ./gradlew --no-daemon :src:fr:scanmanga:lintRelease :src:fr:japscan:lintRelease
