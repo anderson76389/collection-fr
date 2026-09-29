@@ -25,27 +25,38 @@ jobs:
           ref: main
           path: source
 
+      - name: Check signing configuration
+        id: gate
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Add the signing secrets described in README.md, then run this workflow again."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up JDK
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         uses: gradle/actions/setup-gradle@v4
 
       - name: Prepare signing key
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         working-directory: source
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-        run: |
-          if [ -z "$SIGNING_KEY" ]; then
-            echo "Configure the repository Actions secrets before publishing." >&2
-            exit 1
-          fi
-          printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
+        run: printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
 
       - name: Build the eleven French extensions
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         working-directory: source
         env:
           ALIAS: ${{ secrets.ALIAS }}
@@ -72,6 +83,7 @@ jobs:
           ./gradlew --no-daemon "${tasks[@]}"
 
       - name: Read signing certificate fingerprint
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         id: signing
         working-directory: source
         env:
@@ -86,12 +98,14 @@ jobs:
           echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
 
       - name: Check out Mihon repository branch
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         uses: actions/checkout@v4
         with:
           ref: repo
           path: repo
 
       - name: Publish APKs and generate Mihon index
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_DIR: ${{ github.workspace }}/source
@@ -100,6 +114,7 @@ jobs:
         run: python source/.github/scripts/publish_index.py
 
       - name: Commit and push the Mihon index
+        if: ${{ steps.gate.outputs.enabled == 'true' }}
         working-directory: repo
         run: |
           git config user.name "github-actions[bot]"
