@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish built French extension APKs and the Mihon v2 index."""
+"""Publish selected French and multilingual extension APKs and the Mihon v2 index."""
 
 import json
 import os
@@ -16,18 +16,23 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
-    "animesama",
-    "bananascan",
-    "astralmanga",
-    "dassouscan",
-    "japscan",
-    "mangascantrad",
-    "mangasoriginesfr",
-    "phenixscans",
-    "rimuscans",
-    "scanreader",
-    "scanvf",
-    "sushiscanfr",
+    "src/fr/animesama",
+    "src/fr/bananascan",
+    "src/fr/astralmanga",
+    "src/fr/dassouscan",
+    "src/fr/japscan",
+    "src/fr/mangascantrad",
+    "src/fr/mangasoriginesfr",
+    "src/fr/phenixscans",
+    "src/fr/rimuscans",
+    "src/fr/scanreader",
+    "src/fr/scanvf",
+    "src/fr/sushiscanfr",
+    "src/fr/blossomscans",
+    "src/fr/pantheonscan",
+    "src/fr/softepsilonscan",
+    "src/all/manhuarm",
+    "src/fr/scanmanga",
 }
 
 
@@ -48,21 +53,22 @@ def find_output(directory: Path, pattern: str, package: str) -> Path:
 
 
 def main() -> None:
-    info_files = sorted(SOURCE_DIR.glob("src/fr/*/build/keiyoushi-source-info.json"))
+    info_files = sorted(SOURCE_DIR.glob("src/*/*/build/keiyoushi-source-info.json"))
     extensions = []
     assets = []
+    outputs_by_package = {}
 
     for info_file in info_files:
         info = json.loads(info_file.read_text(encoding="utf-8"))
-        module = str(info["module"]).split(".")[-1]
+        module = info_file.parent.parent.relative_to(SOURCE_DIR).as_posix()
         if module not in EXPECTED_MODULES:
             continue
 
         package_name = info["packageName"]
-        module_dir = SOURCE_DIR / "src" / "fr" / module
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         assets.extend([apk, jar])
+        outputs_by_package[package_name] = (apk, jar)
 
         source_entries = []
         for source in info["sources"]:
@@ -88,7 +94,7 @@ def main() -> None:
                     "apkUrl": "",
                     "iconUrl": (
                         f"https://raw.githubusercontent.com/{REPOSITORY}/main/"
-                        f"src/fr/{module}/res/mipmap-xhdpi/ic_launcher.png"
+                        f"{module}/res/mipmap-xhdpi/ic_launcher.png"
                     ),
                     "jarUrl": "",
                 },
@@ -105,7 +111,7 @@ def main() -> None:
             }
         )
 
-    found_modules = {str(json.loads(p.read_text(encoding="utf-8"))["module"]).split(".")[-1] for p in info_files}
+    found_modules = {p.parent.parent.relative_to(SOURCE_DIR).as_posix() for p in info_files}
     found_modules &= EXPECTED_MODULES
     missing = EXPECTED_MODULES - found_modules
     if missing:
@@ -135,8 +141,7 @@ def main() -> None:
 
     release_base = f"https://github.com/{REPOSITORY}/releases/download/{RELEASE_TAG}"
     for extension in extensions:
-        apk = next(asset for asset in assets if asset.name.endswith(".apk") and asset.name.startswith("tachiyomi-fr." + extension["packageName"].split(".")[-1] + "-"))
-        jar = next(asset for asset in assets if asset.name.endswith(".jar") and asset.name.startswith("tachiyomi-fr." + extension["packageName"].split(".")[-1] + "-"))
+        apk, jar = outputs_by_package[extension["packageName"]]
         extension["resources"]["apkUrl"] = f"{release_base}/{apk.name}"
         extension["resources"]["jarUrl"] = f"{release_base}/{jar.name}"
 

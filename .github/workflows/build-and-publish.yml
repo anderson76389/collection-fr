@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - "src/fr/**"
+      - "src/all/manhuarm/**"
+      - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
 permissions:
@@ -55,7 +57,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
 
-      - name: Build the twelve French extensions
+      - name: Build the selected extensions
         if: ${{ steps.gate.outputs.enabled == 'true' }}
         working-directory: source
         env:
@@ -76,6 +78,11 @@ jobs:
             :src:fr:scanreader
             :src:fr:scanvf
             :src:fr:sushiscanfr
+            :src:fr:blossomscans
+            :src:fr:pantheonscan
+            :src:fr:softepsilonscan
+            :src:all:manhuarm
+            :src:fr:scanmanga
           )
           tasks=()
           for module in "${modules[@]}"; do

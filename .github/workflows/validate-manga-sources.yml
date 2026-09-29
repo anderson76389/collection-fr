@@ -1,15 +1,25 @@
-name: Validate Japscan
+name: Validate selected sources
 
 on:
   push:
     branches: [main]
     paths:
       - "src/fr/japscan/**"
+      - "src/fr/blossomscans/**"
+      - "src/fr/pantheonscan/**"
+      - "src/fr/softepsilonscan/**"
+      - "src/all/manhuarm/**"
+      - "src/fr/scanmanga/**"
       - ".github/workflows/validate-manga-sources.yml"
       - ".github/scripts/publish_index.py"
   pull_request:
     paths:
       - "src/fr/japscan/**"
+      - "src/fr/blossomscans/**"
+      - "src/fr/pantheonscan/**"
+      - "src/fr/softepsilonscan/**"
+      - "src/all/manhuarm/**"
+      - "src/fr/scanmanga/**"
       - ".github/workflows/validate-manga-sources.yml"
 
 permissions:
@@ -35,4 +45,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease
+        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:softepsilonscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:scanmanga:lintRelease
