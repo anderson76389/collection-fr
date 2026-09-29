@@ -96,8 +96,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_DIR: ${{ github.workspace }}/source
           REPO_DIR: ${{ github.workspace }}/repo
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SHA: ${{ github.sha }}
           SIGNING_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
         run: python source/.github/scripts/publish_index.py
 
