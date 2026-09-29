@@ -1,0 +1,115 @@
+name: Build and publish personal extensions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "src/fr/**"
+      - ".github/scripts/publish_index.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: personal-extension-publish
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        working-directory: source
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "Configure the repository Actions secrets before publishing." >&2
+            exit 1
+          fi
+          printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
+
+      - name: Build the eleven French extensions
+        working-directory: source
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          modules=(
+            :src:fr:animesama
+            :src:fr:astralmanga
+            :src:fr:dassouscan
+            :src:fr:japscan
+            :src:fr:mangascantrad
+            :src:fr:mangasoriginesfr
+            :src:fr:rimuscans
+            :src:fr:scanmanga
+            :src:fr:scanreader
+            :src:fr:scanvf
+            :src:fr:sushiscanfr
+          )
+          tasks=()
+          for module in "${modules[@]}"; do
+            tasks+=("$module:assembleRelease")
+          done
+          ./gradlew --no-daemon "${tasks[@]}"
+
+      - name: Read signing certificate fingerprint
+        id: signing
+        working-directory: source
+        env:
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+        run: |
+          fingerprint="$(keytool -list -v -keystore signingkey.jks -storepass "$KEY_STORE_PASSWORD" -alias "$ALIAS" | sed -nE 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [ -z "$fingerprint" ]; then
+            echo "Could not read the signing certificate fingerprint." >&2
+            exit 1
+          fi
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+
+      - name: Check out Mihon repository branch
+        uses: actions/checkout@v4
+        with:
+          ref: repo
+          path: repo
+
+      - name: Publish APKs and generate Mihon index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_DIR: ${{ github.workspace }}/source
+          REPO_DIR: ${{ github.workspace }}/repo
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+          SIGNING_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
+        run: python source/.github/scripts/publish_index.py
+
+      - name: Commit and push the Mihon index
+        working-directory: repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.json repo.json
+          git commit -m "Publish Collection FR extension index"
+          git push origin repo
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f source/signingkey.jks
