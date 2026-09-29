@@ -404,7 +404,10 @@ abstract class ScanManga :
         val lelResponse = client.newBuilder().cookieJar(CookieJar.NO_COOKIES).build()
             .newCall(pageListRequest).execute().use { response ->
                 if (!response.isSuccessful) {
-                    error("Unexpected error while fetching lel. HTTP ${response.code}")
+                    val errorBody = response.body.string()
+                        .replace(Regex("\\s+"), " ")
+                        .take(240)
+                    error("Unexpected error while fetching lel. HTTP ${response.code} at ${response.request.url}: $errorBody")
                 }
                 dataAPI(response.body.string(), chapterId.toInt())
             }
