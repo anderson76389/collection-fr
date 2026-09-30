@@ -26,7 +26,7 @@ jobs:
         run: python -m pip install Pillow==11.3.0
       - name: Run published APKs in Mihon
         env:
-          SOURCE_AUDIT_LIMIT: "3"
+          SOURCE_AUDIT_LIMIT: "16"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35
@@ -42,5 +42,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mihon-android-source-audit
-          path: android-audit/
+          path: |
+            android-audit/*.xml
+            android-audit/*.png
+            android-audit/*.json
+            android-audit/*.txt
           retention-days: 14

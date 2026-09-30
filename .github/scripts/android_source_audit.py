@@ -51,11 +51,6 @@ def ui(label, screenshot=False):
     if screenshot:
         raw = adb("exec-out", "screencap", "-p", binary=True)
         (OUT / (label + ".png")).write_bytes(raw)
-        image = Image.open(io.BytesIO(raw)).convert("RGB")
-        image.thumbnail((540, 1000))
-        buff = io.BytesIO()
-        image.save(buff, format="JPEG", quality=65)
-        print("AUDIT_SCREENSHOT " + label + " " + base64.b64encode(buff.getvalue()).decode(), flush=True)
     return root
 
 
@@ -153,7 +148,72 @@ def main():
         tap(found)
         time.sleep(12)
         state = ui(slug + "-catalog", screenshot=True)
-        results.append({"source": slug, "status": "catalog_attempted" if state is not None else "ui_unavailable"})
+        result = {"source": slug, "version": ext["versionName"], "stages": {}}
+        results.append(result)
+        def texts(tree):
+            return [n.get("text") for n in tree.iter("node") if n.get("text")] if tree is not None else []
+        def cards(tree):
+            return [n for n in tree.iter("node") if n.get("clickable") == "true"
+                    and n.get("long-clickable") == "true"
+                    and int(re.findall(r"\d+", n.get("bounds"))[1]) > 350
+                    and any(c.get("text") for c in n.iter("node"))] if tree is not None else []
+        def find(tree, text=None, description=None):
+            return next((n for n in tree.iter("node") if
+                        (text is not None and n.get("text") == text) or
+                        (description is not None and n.get("content-desc") == description)), None) if tree is not None else None
+        result["stages"]["popular"] = texts(state)
+        if not cards(state):
+            web = find(state, text="Open in WebView")
+            if web is not None:
+                tap(web)
+                time.sleep(25)
+                ui(slug + "-webview", screenshot=True)
+                adb("shell", "input", "keyevent", "4")
+                time.sleep(2)
+                state = ui(slug + "-returned")
+                retry = find(state, text="Retry")
+                if retry is not None:
+                    tap(retry)
+                    time.sleep(15)
+                    state = ui(slug + "-retried", screenshot=True)
+                    result["stages"]["retry"] = texts(state)
+        latest = find(state, text="Latest")
+        if latest is not None:
+            tap(latest)
+            time.sleep(12)
+            state = ui(slug + "-latest", screenshot=True)
+            result["stages"]["latest"] = texts(state)
+        search = find(state, description="Search")
+        if search is not None:
+            tap(search)
+            adb("shell", "input", "text", "a")
+            adb("shell", "input", "keyevent", "66")
+            time.sleep(12)
+            state = ui(slug + "-search", screenshot=True)
+            result["stages"]["search"] = texts(state)
+        candidates = cards(state)
+        if not candidates:
+            result["status"] = "no_manga_card_after_search"
+            continue
+        result["sample_title"] = texts(candidates[0])
+        tap(candidates[0])
+        time.sleep(18)
+        state = ui(slug + "-details", screenshot=True)
+        result["stages"]["details"] = texts(state)
+        start = find(state, text="Start")
+        if start is None:
+            start = find(state, text="Resume")
+        if start is None:
+            result["status"] = "no_start_button"
+            continue
+        tap(start)
+        time.sleep(40)
+        state = ui(slug + "-reader", screenshot=True)
+        result["stages"]["reader"] = texts(state)
+        result["status"] = "reader_attempted_requires_visual_review"
+        adb("shell", "input", "swipe", "540", "1500", "540", "450", "500")
+        time.sleep(5)
+        ui(slug + "-reader-scrolled", screenshot=True)
     (OUT / "result.json").write_text(json.dumps({"app": "Mihon 0.20.4", "android": 35,
         "chapter_reading_validated": False, "sources": results}, indent=2))
     logs = adb("logcat", "-d", "-v", "threadtime", timeout=30)
