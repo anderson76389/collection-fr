@@ -3,8 +3,6 @@
 Catalog attempts are recorded, never reported as successful chapter reading.
 Only our verified signing certificate is trusted in this fresh test installation.
 """
-import base64
-import io
 import json
 import os
 from pathlib import Path
@@ -14,7 +12,6 @@ import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
-from PIL import Image
 
 OUT = Path("android-audit")
 OUT.mkdir(exist_ok=True)
@@ -128,6 +125,9 @@ def main():
     results = []
     priority = {"scanmanga": 0, "japscan": 1, "dassouscan": 2}
     extensions.sort(key=lambda e: priority.get(e["packageName"].split(".")[-1], 10))
+    selected = os.environ.get("SOURCE_AUDIT_ONLY", "").split(",")
+    if selected != [""]:
+        extensions = [e for e in extensions if e["packageName"].split(".")[-1] in selected]
     for ext in extensions[:int(os.environ.get("SOURCE_AUDIT_LIMIT", "16"))]:
         slug = ext["packageName"].split(".")[-1]
         names = {s["name"] for s in ext["sources"] if s["language"] in ("fr", "all")}
@@ -193,7 +193,18 @@ def main():
             result["stages"]["search"] = texts(state)
         candidates = cards(state)
         if not candidates:
-            result["status"] = "no_manga_card_after_search"
+            # Search failures must not hide a working popular catalogue.
+            adb("shell", "input", "keyevent", "4")
+            time.sleep(1)
+            state = ui(slug + "-search-closed")
+            popular = find(state, text="Popular")
+            if popular is not None:
+                tap(popular)
+                time.sleep(12)
+                state = ui(slug + "-popular-fallback", screenshot=True)
+                candidates = cards(state)
+        if not candidates:
+            result["status"] = "no_manga_card_available"
             continue
         result["sample_title"] = texts(candidates[0])
         tap(candidates[0])
@@ -207,7 +218,7 @@ def main():
             result["status"] = "no_start_button"
             continue
         tap(start)
-        time.sleep(40)
+        time.sleep(45)
         state = ui(slug + "-reader", screenshot=True)
         result["stages"]["reader"] = texts(state)
         result["status"] = "reader_attempted_requires_visual_review"
