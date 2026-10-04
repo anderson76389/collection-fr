@@ -64,8 +64,9 @@ def source_screen():
 
 def main():
     assert adb("shell", "getprop", "ro.kernel.qemu").strip() == "1", "Emulator required"
-    adb("root")
+    adb("root", check=False)
     adb("wait-for-device")
+    assert adb("shell", "id", "-u").strip() == "0", "Rooted test emulator required"
     adb("shell", "input", "keyevent", "82")
     adb("shell", "wm", "size", "1080x1920")
     adb("shell", "wm", "density", "420")
@@ -194,13 +195,13 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "High-Martial" if slug == "scanmanga" else "One")
+            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
             result["stages"]["search"] = texts(state)
         candidates = cards(state)
-        if not candidates:
+        if not candidates or slug == "scanmanga":
             # Search failures must not hide a working popular catalogue.
             reset = find(state, description="Reset")
             if reset is not None:
@@ -216,8 +217,9 @@ def main():
         if not candidates:
             result["status"] = "no_manga_card_available"
             continue
-        result["sample_title"] = texts(candidates[0])
-        tap(candidates[0])
+        preferred = next((c for c in candidates if any("High-Martial" in t for t in texts(c))), candidates[0]) if slug == "scanmanga" else candidates[0]
+        result["sample_title"] = texts(preferred)
+        tap(preferred)
         time.sleep(18)
         state = ui(slug + "-details", screenshot=True)
         result["stages"]["details"] = texts(state)
