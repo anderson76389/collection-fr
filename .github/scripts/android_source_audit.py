@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sqlite3
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -193,7 +194,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
+            adb("shell", "input", "text", "High-Martial" if slug == "scanmanga" else "One")
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -249,6 +250,27 @@ def main():
     for line in logs.splitlines():
         if any(word in line for word in ("Exception", "Error", "HTTP FAILED", "<-- 4", "<-- 5", "Failed to load", "Lib version")):
             print("RUNTIME_LOG", line, flush=True)
+    adb("shell", "am", "force-stop", PACKAGE)
+    adb("pull", "/data/data/" + PACKAGE + "/databases", str(OUT / "databases"), check=False)
+    database_urls = {}
+    for db in (OUT / "databases").glob("*"):
+        if db.name.endswith(("-wal", "-shm", "-journal")):
+            continue
+        try:
+            connection = sqlite3.connect(db)
+            connection.row_factory = sqlite3.Row
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'"):
+                table = row[0]
+                if not re.fullmatch(r"[a-zA-Z_]+", table):
+                    continue
+                columns = [c[1] for c in connection.execute("PRAGMA table_info(" + table + ")")]
+                if "url" in columns:
+                    wanted = [c for c in ("id", "manga_id", "source", "title", "name", "url") if c in columns]
+                    database_urls[db.name + ":" + table] = [dict(r) for r in connection.execute("SELECT " + ",".join(wanted) + " FROM " + table)]
+            connection.close()
+        except Exception as exc:
+            print("DATABASE_AUDIT_ERROR", db.name, str(exc), flush=True)
+    (OUT / "database-urls.json").write_text(json.dumps(database_urls, indent=2))
     print("AUDIT_RESULT", json.dumps(results), flush=True)
 
 
