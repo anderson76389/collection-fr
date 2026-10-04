@@ -1,6 +1,6 @@
 """Exercise published source APKs in a disposable Android emulator, without accounts.
 
-Catalog attempts are recorded, never reported as successful chapter reading.
+Reader screenshots require manual review; workflow success is not source success.
 Only our verified signing certificate is trusted in this fresh test installation.
 """
 import json
@@ -11,7 +11,6 @@ import subprocess
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
-
 
 OUT = Path("android-audit")
 OUT.mkdir(exist_ok=True)
@@ -128,7 +127,15 @@ def main():
     selected = os.environ.get("SOURCE_AUDIT_ONLY", "").split(",")
     if selected != [""]:
         extensions = [e for e in extensions if e["packageName"].split(".")[-1] in selected]
+    def checkpoint():
+        (OUT / "result.json").write_text(json.dumps({
+            "app": "Mihon 0.20.4", "android": 35,
+            "chapter_reading_validated": False, "sources": results,
+            "note": "Reader screenshots require manual review; this is a sampled audit.",
+        }, indent=2))
     for ext in extensions[:int(os.environ.get("SOURCE_AUDIT_LIMIT", "16"))]:
+        checkpoint()
+        (OUT / "logcat.txt").write_text(adb("logcat", "-d", "-v", "threadtime", timeout=30))
         slug = ext["packageName"].split(".")[-1]
         names = {s["name"] for s in ext["sources"] if s["language"] in ("fr", "all")}
         source_screen()
@@ -186,7 +193,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "a")
+            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -194,8 +201,10 @@ def main():
         candidates = cards(state)
         if not candidates:
             # Search failures must not hide a working popular catalogue.
-            adb("shell", "input", "keyevent", "4")
-            time.sleep(1)
+            reset = find(state, description="Reset")
+            if reset is not None:
+                tap(reset)
+                time.sleep(2)
             state = ui(slug + "-search-closed")
             popular = find(state, text="Popular")
             if popular is not None:
@@ -215,18 +224,26 @@ def main():
         if start is None:
             start = find(state, text="Resume")
         if start is None:
-            result["status"] = "no_start_button"
+            for scroll in range(5):
+                start = next((n for n in state.iter("node") if re.match(r"^(?:Chapitre|Ch\.|Chapter)\s*\d", n.get("text", ""))), None) if state is not None else None
+                if start is not None:
+                    break
+                adb("shell", "input", "swipe", "540", "1500", "540", "500", "500")
+                time.sleep(2)
+                state = ui(slug + "-chapters-" + str(scroll), screenshot=True)
+        if start is None:
+            result["status"] = "no_visible_chapter"
             continue
+        result["sample_chapter"] = start.get("text")
         tap(start)
-        time.sleep(45)
+        time.sleep(55)
         state = ui(slug + "-reader", screenshot=True)
         result["stages"]["reader"] = texts(state)
         result["status"] = "reader_attempted_requires_visual_review"
         adb("shell", "input", "swipe", "540", "1500", "540", "450", "500")
         time.sleep(5)
         ui(slug + "-reader-scrolled", screenshot=True)
-    (OUT / "result.json").write_text(json.dumps({"app": "Mihon 0.20.4", "android": 35,
-        "chapter_reading_validated": False, "sources": results}, indent=2))
+    checkpoint()
     logs = adb("logcat", "-d", "-v", "threadtime", timeout=30)
     (OUT / "logcat.txt").write_text(logs)
     for line in logs.splitlines():

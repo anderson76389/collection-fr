@@ -1,12 +1,15 @@
 name: Android source audit
 
 on:
-  workflow_dispatch:
   push:
     branches: [audit/android-runtime-20260930]
-    paths:
-      - ".github/workflows/android-source-audit.yml"
-      - ".github/scripts/android_source_audit.py"
+    paths: [".github/scripts/android_source_audit.py", ".github/workflows/android-source-audit.yml"]
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Module names separated by commas; empty means all published extensions"
+        type: string
+        default: ""
 
 permissions:
   contents: read
