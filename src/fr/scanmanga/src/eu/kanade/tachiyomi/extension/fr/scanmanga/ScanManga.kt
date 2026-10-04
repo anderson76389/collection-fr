@@ -27,13 +27,14 @@ import keiyoushi.utils.parseAs
 import okhttp3.CookieJar
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import rx.Observable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -168,8 +169,8 @@ abstract class ScanManga :
     }
 
     override fun searchMangaParse(response: Response): MangasPage {
-        val json = response.body.string()
-        if (json == "[]") {
+        val json = response.body.string().trim()
+        if (json.isEmpty() || json == "[]") {
             return MangasPage(emptyList(), false)
         }
 
@@ -232,7 +233,7 @@ abstract class ScanManga :
 
                 SChapter.create().apply {
                     name = if (!extraTitle.isNullOrEmpty()) "$chapterName - $extraTitle" else chapterName
-                    setUrlWithoutDomain(link.absUrl("href"))
+                    setChapterUrl(link.absUrl("href"))
                 }
             }
         } else {
@@ -241,11 +242,22 @@ abstract class ScanManga :
 
                 SChapter.create().apply {
                     name = link.text()
-                    setUrlWithoutDomain(link.absUrl("href"))
+                    setChapterUrl(link.absUrl("href"))
                 }
             }
         }
     }
+
+    private fun SChapter.setChapterUrl(absoluteUrl: String) {
+        if (absoluteUrl.toHttpUrl().topPrivateDomain() == baseUrl.toHttpUrl().topPrivateDomain()) {
+            setUrlWithoutDomain(absoluteUrl)
+        } else {
+            url = absoluteUrl
+        }
+    }
+
+    override fun getChapterUrl(chapter: SChapter): String = chapter.url.toHttpUrlOrNull()?.toString()
+        ?: "$baseUrl${chapter.url}"
 
     // Pages
     private fun decodeHunter(obfuscatedJs: String): String {
@@ -309,12 +321,16 @@ abstract class ScanManga :
 
     override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
         val context = applicationContext
-        val chapterUrl = "$baseUrl${chapter.url}"
+        val chapterUrl = getChapterUrl(chapter)
+        val chapterHost = chapterUrl.toHttpUrl()
+        if (chapterHost.topPrivateDomain() != baseUrl.toHttpUrl().topPrivateDomain()) {
+            return Observable.error(Exception("Ce chapitre est hébergé sur ${chapterHost.host}. Ouvrez-le dans la WebView."))
+        }
         val isReader = Exception().stackTrace.any { it.className.contains("reader") }
 
-        fun fetch(): String? = try {
+        fun fetch(): Document? = try {
             readerClient.newCall(GET(chapterUrl, headers)).execute().use { resp ->
-                resp.body.string().takeIf { CHAPTER_INFO_REGEX.containsMatchIn(it) }
+                resp.asJsoup().takeIf { CHAPTER_INFO_REGEX.containsMatchIn(it.html()) }
             }
         } catch (_: Exception) {
             null
@@ -367,7 +383,7 @@ abstract class ScanManga :
             }
         }
 
-        return Observable.just(parsePageList(Jsoup.parse(body, chapterUrl)))
+        return Observable.just(parsePageList(body))
     }
 
     private val sessionWarmedUp = AtomicBoolean(false)
