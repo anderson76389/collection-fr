@@ -77,6 +77,13 @@ abstract class ScanManga :
             .build()
     }
 
+    // Mobile reader requests are redirected to a separately protected host.
+    private val readerHeaders by lazy {
+        headers.newBuilder()
+            .set("User-Agent", DESKTOP_USER_AGENT)
+            .build()
+    }
+
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .add("upgrade-insecure-requests", "1")
         .add(
@@ -256,8 +263,14 @@ abstract class ScanManga :
         }
     }
 
-    override fun getChapterUrl(chapter: SChapter): String = chapter.url.toHttpUrlOrNull()?.toString()
-        ?: "$baseUrl${chapter.url}"
+    override fun getChapterUrl(chapter: SChapter): String {
+        val url = chapter.url.toHttpUrlOrNull() ?: "$baseUrl${chapter.url}".toHttpUrl()
+        return if (url.host == "m.scan-manga.com") {
+            url.newBuilder().host(domain).build().toString()
+        } else {
+            url.toString()
+        }
+    }
 
     // Pages
     private fun decodeHunter(obfuscatedJs: String): String {
@@ -329,7 +342,7 @@ abstract class ScanManga :
         val isReader = Exception().stackTrace.any { it.className.contains("reader") }
 
         fun fetch(): Document? = try {
-            readerClient.newCall(GET(chapterUrl, headers)).execute().use { resp ->
+            readerClient.newCall(GET(chapterUrl, readerHeaders)).execute().use { resp ->
                 resp.asJsoup().takeIf { CHAPTER_INFO_REGEX.containsMatchIn(it.html()) }
             }
         } catch (_: Exception) {
@@ -399,6 +412,7 @@ abstract class ScanManga :
             val wv = WebView(applicationContext)
             wv.settings.javaScriptEnabled = true
             wv.settings.domStorageEnabled = true
+            wv.settings.userAgentString = DESKTOP_USER_AGENT
 
             val cm = android.webkit.CookieManager.getInstance()
             cm.setAcceptCookie(true)
@@ -461,7 +475,7 @@ abstract class ScanManga :
 
         val requestBody = injectVariables(REQUEST_BODY, availableVariables)
         val pageListUrl = injectVariables(PAGE_LIST_URL, availableVariables)
-        val requestHeaders = headers.newBuilder()
+        val requestHeaders = readerHeaders.newBuilder()
             .add("Origin", "${documentUrl.scheme}://${documentUrl.host}")
             .set("Referer", "${documentUrl.scheme}://${documentUrl.host}/")
             .set("Source", documentUrl.toString())
@@ -492,7 +506,7 @@ abstract class ScanManga :
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 
     override fun imageRequest(page: Page): Request {
-        val imgHeaders = headers.newBuilder()
+        val imgHeaders = readerHeaders.newBuilder()
             .add("Origin", baseUrl)
             .build()
 
@@ -582,6 +596,7 @@ abstract class ScanManga :
     }
 
     companion object {
+        private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
         private val HUNTER_OBFUSCATION_REGEX = Regex(
             """eval\s*\(\s*(?:/\*.*?\*/\s*)?function\s*\(\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*(?:,\s*[^)]+)?\)\s*\{\s*.*?\s*\}\s*\(\s*"([^"]+)"\s*,\s*\d+\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\d+\s*\)\s*\)""",
             RegexOption.DOT_MATCHES_ALL,

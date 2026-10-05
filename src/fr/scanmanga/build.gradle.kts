@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "Scan-Manga"
-    versionCode = 28
+    versionCode = 29
     contentWarning = ContentWarning.NSFW
     libVersion = "1.4"
 
