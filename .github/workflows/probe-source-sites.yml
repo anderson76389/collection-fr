@@ -1,7 +1,7 @@
 name: Probe source site endpoints
 on:
   push:
-    branches: [main]
+    branches: [main, fix/reader-20261004]
     paths:
       - '.github/workflows/probe-source-sites.yml'
       - '.github/scripts/probe_scanmanga.py'

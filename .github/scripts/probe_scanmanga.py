@@ -38,3 +38,19 @@ for host in ('www.scan-manga.com', 'm.scan-manga.com'):
         results.append(result)
         print(json.dumps(result, ensure_ascii=False), flush=True)
 (OUT / 'result.json').write_text(json.dumps(results, indent=2))
+
+# Preserve the site's current public reader code for comparison with the extension.
+for name in ('lel_head', 'lel', 'main'):
+    url = 'https://static.scan-manga.com/js/' + name + '.js?vers=5.8'
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': AGENTS['desktop'], 'Referer': 'https://www.scan-manga.com/'})
+        try:
+            response = urllib.request.urlopen(req, timeout=20)
+        except urllib.error.HTTPError as exc:
+            response = exc
+        with response:
+            body = response.read()
+            print('PUBLIC_SCRIPT', name, response.status, len(body), flush=True)
+        (OUT / (name + '.js')).write_bytes(body)
+    except Exception as exc:
+        print('PUBLIC_SCRIPT_ERROR', name, type(exc).__name__, str(exc), flush=True)
