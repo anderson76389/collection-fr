@@ -14,5 +14,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect public chapter-link markup
+      - name: Compare desktop and mobile reader responses
         run: python .github/scripts/probe_scanmanga.py
+      - name: Preserve public response evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanmanga-reader-responses
+          path: scanmanga-probe/
+          retention-days: 14

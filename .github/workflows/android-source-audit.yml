@@ -1,0 +1,49 @@
+name: Android source audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Module names separated by commas; empty means all published extensions"
+        type: string
+        default: "scanmanga,japscan"
+
+permissions:
+  contents: read
+
+jobs:
+  mihon:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run published APKs in Mihon
+        env:
+          SOURCE_AUDIT_LIMIT: "16"
+          SOURCE_AUDIT_ONLY: ${{ inputs.sources }}
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 3072M
+          disk-size: 6000M
+          disable-animations: true
+          script: python .github/scripts/android_source_audit.py
+      - name: Preserve runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mihon-android-source-audit
+          path: |
+            android-audit/*.xml
+            android-audit/*.png
+            android-audit/*.json
+            android-audit/*.txt
+          retention-days: 14
