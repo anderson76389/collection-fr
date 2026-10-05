@@ -27,6 +27,10 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         assert package and package[1] == info["packageName"], apk.name
         assert int(package[2]) == int(info["versionCode"]), apk.name
         assert "name='tachiyomi.extension'" in output, apk.name
+        certificate = subprocess.check_output(
+            [str(aapt.with_name("apksigner")), "verify", "--print-certs", str(apk)], text=True,
+        )
+        assert os.environ["SIGNING_FINGERPRINT"].lower() in certificate.lower().replace(":", ""), apk.name
         print("VERIFIED_APK", package[1], package[2], label[1], flush=True)
         verified += 1
 assert verified == len(modules), f"Expected {len(modules)} release APKs, verified {verified}"
