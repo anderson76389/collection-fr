@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, fix/reader-20261004]
     paths:
+      - "gradle/build-logic/**"
+      - "src/fr/poseidonscans/**"
+      - "src/fr/raijinscans/**"
       - "src/fr/animesama/**"
       - "src/fr/scanvf/**"
       - "src/fr/japscan/**"
@@ -16,6 +19,9 @@ on:
       - ".github/scripts/publish_index.py"
   pull_request:
     paths:
+      - "gradle/build-logic/**"
+      - "src/fr/poseidonscans/**"
+      - "src/fr/raijinscans/**"
       - "src/fr/animesama/**"
       - "src/fr/scanvf/**"
       - "src/fr/japscan/**"
@@ -49,4 +55,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:japscan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:softepsilonscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:scanmanga:lintRelease :src:fr:animesama:lintRelease :src:fr:scanvf:lintRelease
+        run: ./gradlew --no-daemon :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:bananascan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease

@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
       - ".github/workflows/build-and-publish.yml"
@@ -82,6 +83,8 @@ jobs:
             :src:fr:softepsilonscan
             :src:all:manhuarm
             :src:fr:scanmanga
+            :src:fr:poseidonscans
+            :src:fr:raijinscans
           )
           tasks=()
           for module in "${modules[@]}"; do
@@ -118,7 +121,9 @@ jobs:
           SOURCE_DIR: ${{ github.workspace }}/source
           REPO_DIR: ${{ github.workspace }}/repo
           SIGNING_FINGERPRINT: ${{ steps.signing.outputs.fingerprint }}
-        run: python source/.github/scripts/publish_index.py
+        run: |
+          python source/.github/scripts/verify_apk_branding.py
+          python source/.github/scripts/publish_index.py
 
       - name: Commit and push the Mihon index
         if: ${{ steps.gate.outputs.enabled == 'true' }}

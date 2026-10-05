@@ -32,6 +32,8 @@ EXPECTED_MODULES = {
     "src/fr/softepsilonscan",
     "src/all/manhuarm",
     "src/fr/scanmanga",
+    "src/fr/poseidonscans",
+    "src/fr/raijinscans",
 }
 
 
