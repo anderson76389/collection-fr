@@ -12,6 +12,6 @@ keiyoushi {
 
     source {
         lang = "fr"
-        baseUrl = "https://raijin-scans.fr"
+        baseUrl = "https://aniverse.fr"
     }
 }
