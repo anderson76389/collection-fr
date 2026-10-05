@@ -16,6 +16,8 @@ on:
       - "src/all/manhuarm/**"
       - "src/all/saymanhwa/**"
       - "src/all/kagane/**"
+      - "src/all/lunaranime/**"
+      - "src/all/mangadotnet/**"
       - "src/fr/banchanscan/**"
       - "src/fr/astralmanga/**"
       - "src/fr/scanmanga/**"
@@ -35,6 +37,8 @@ on:
       - "src/all/manhuarm/**"
       - "src/all/saymanhwa/**"
       - "src/all/kagane/**"
+      - "src/all/lunaranime/**"
+      - "src/all/mangadotnet/**"
       - "src/fr/banchanscan/**"
       - "src/fr/astralmanga/**"
       - "src/fr/scanmanga/**"
@@ -63,4 +67,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:all:saymanhwa:lintRelease :src:all:kagane:lintRelease :src:fr:banchanscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:bananascan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease
+        run: ./gradlew --no-daemon :src:all:saymanhwa:lintRelease :src:all:kagane:lintRelease :src:all:lunaranime:lintRelease :src:all:mangadotnet:lintRelease :src:fr:banchanscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:bananascan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease

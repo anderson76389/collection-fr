@@ -10,6 +10,8 @@ on:
       - "src/all/manhuarm/**"
       - "src/all/saymanhwa/**"
       - "src/all/kagane/**"
+      - "src/all/lunaranime/**"
+      - "src/all/mangadotnet/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -90,6 +92,8 @@ jobs:
             :src:fr:banchanscan
             :src:all:saymanhwa
             :src:all:kagane
+            :src:all:lunaranime
+            :src:all:mangadotnet
           )
           tasks=()
           for module in "${modules[@]}"; do

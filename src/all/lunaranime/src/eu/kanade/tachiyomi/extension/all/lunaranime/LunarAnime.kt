@@ -156,10 +156,7 @@ abstract class LunarAnime : KeiSource() {
 
     // ============================== Chapters ==============================
 
-    override fun getChapterUrl(chapter: SChapter): String {
-        val url = chapter.url.substringBefore("?")
-        return baseUrl + url
-    }
+    override fun getChapterUrl(chapter: SChapter): String = baseUrl + chapter.url
 
     private suspend fun fetchChapterList(slug: String): List<SChapter> {
         val passwordUrl = API_URL.toHttpUrl().newBuilder()

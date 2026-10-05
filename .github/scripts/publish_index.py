@@ -37,6 +37,8 @@ EXPECTED_MODULES = {
     "src/fr/banchanscan",
     "src/all/saymanhwa",
     "src/all/kagane",
+    "src/all/lunaranime",
+    "src/all/mangadotnet",
 }
 
 
