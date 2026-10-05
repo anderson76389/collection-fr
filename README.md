@@ -64,3 +64,5 @@ Voir le [rapport du 29 septembre 2026](docs/source-audit-2026-09-29.md) pour les
 ## Sources retirées à la demande de l’utilisateur
 
 Twatt, les deux variantes Phenix Scans, Ono, Lelmanga, Lelscan, Lelscan-VF, Kiwiya Scans, AralosBD, Blue Solo et FMTEAM ont été retirées de `src/fr`. L’index publié contient désormais 16 extensions (15 françaises et Manhuarm). Le rapport de vérification conserve les résultats historiques antérieurs à ces suppressions.
+
+Le 5 octobre, BigSolo, ChaosTrad, Les Poroiniens, l’ancien Sushi-Scan, Siren Scans FR, ScanR, Mangakawaii, MangaHub FR et MangaCorporation ont également été retirés. SushiScan.net (`sushiscanfr`) et Scan Reader sont conservés. Voir les [précisions sur les langues et le nettoyage](docs/languages-and-cleanup-2026-10-05.md).
