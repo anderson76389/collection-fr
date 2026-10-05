@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: Set up browser diagnostic
+        run: python -m pip install --disable-pip-version-check playwright==1.58.0
       - name: Compare desktop and mobile reader responses
         run: python .github/scripts/probe_scanmanga.py
       - name: Preserve public response evidence

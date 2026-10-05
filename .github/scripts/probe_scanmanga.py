@@ -98,3 +98,31 @@ try:
                 print('READER_FIRST_IMAGE', image.status, image.headers.get('Content-Type'), len(data), data[:12].hex(), flush=True)
 except Exception as exc:
     print('READER_API_ERROR', type(exc).__name__, str(exc), flush=True)
+
+# Compare with the site's own JavaScript running in Chrome, without solving challenges.
+try:
+    import shutil
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as pw:
+        executable = shutil.which('google-chrome') or shutil.which('chromium')
+        if not executable:
+            raise RuntimeError('No Chrome executable on diagnostic runner')
+        browser = pw.chromium.launch(executable_path=executable, headless=True, args=['--no-sandbox'])
+        page = browser.new_page(viewport={'width': 1280, 'height': 900})
+        seen = []
+        def record(response):
+            if 'bqj.scan-manga.com/lel/' in response.url:
+                body = response.body()
+                item = {'url': response.url, 'status': response.status, 'bytes': len(body), 'body_start': body[:300].decode(errors='replace')}
+                seen.append(item)
+                print('CHROME_READER_API', json.dumps(item), flush=True)
+        page.on('response', record)
+        page.goto('https://www.scan-manga.com' + CHAPTER, wait_until='domcontentloaded', timeout=45000)
+        page.wait_for_timeout(30000)
+        print('CHROME_PAGE', page.url, page.title(), flush=True)
+        print('CHROME_BODY', page.locator('body').inner_text()[:1200], flush=True)
+        (OUT / 'chrome-api.json').write_text(json.dumps(seen, indent=2))
+        page.screenshot(path=str(OUT / 'chrome-reader.png'))
+        browser.close()
+except Exception as exc:
+    print('CHROME_READER_ERROR', type(exc).__name__, str(exc), flush=True)
