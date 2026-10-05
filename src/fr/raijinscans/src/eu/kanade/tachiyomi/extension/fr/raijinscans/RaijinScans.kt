@@ -108,7 +108,7 @@ abstract class RaijinScans : HttpSource() {
         return data.chapters.map { chapter ->
             SChapter.create().apply {
                 url = "/read/${data.manga.slug}/${chapter.id}"
-                name = "Chapitre ${chapter.number}" + chapter.title.orEmpty().takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
+                name = (if (dateFormat.tryParse(chapter.premiumUntil) > System.currentTimeMillis()) "🔒 " else "") + "Chapitre ${chapter.number}" + chapter.title.orEmpty().takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
                 chapter_number = chapter.number.toFloatOrNull() ?: -1f
                 date_upload = dateFormat.tryParse(chapter.updatedAt)
             }

@@ -14,6 +14,7 @@ import keiyoushi.utils.extractNextJs
 import keiyoushi.utils.extractNextJsRsc
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -151,8 +152,9 @@ abstract class AstralManga : HttpSource() {
             .url(retryUrl)
             .header("Cache-Control", "no-cache")
             .build()
-        val retryResponse = client.newCall(retryRequest).execute()
-        return parseChapters(retryResponse.body.string(), mangaUuid)
+        return client.newCall(retryRequest).execute().use { retryResponse ->
+            parseChapters(retryResponse.body.string(), mangaUuid)
+        }
     }
 
     // ========================== Pages ==========================
@@ -209,7 +211,13 @@ abstract class AstralManga : HttpSource() {
             it is JsonObject && it["urlId"]?.jsonPrimitive?.contentOrNull == mangaUuid
         } ?: return emptyList()
 
-        val chapters = rscBody.extractNextJsRsc<List<RscChapterDto>>()
+        val chapters = rscBody.extractNextJsRsc<List<RscChapterDto>> {
+            it is JsonArray && it.any { chapter ->
+                chapter is JsonObject &&
+                    chapter["orderId"] != null &&
+                    chapter["mangaId"]?.jsonPrimitive?.contentOrNull == manga.id
+            }
+        }
             ?: return emptyList()
 
         val seen = mutableSetOf<String>()

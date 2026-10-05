@@ -30,7 +30,13 @@ class MangaTitle(val userPreferred: String)
 class CoverImage(val large: String)
 
 @Serializable
-class ChapterData(val id: String, val number: String, val title: String?, val updatedAt: String)
+class ChapterData(
+    val id: String,
+    val number: String,
+    val title: String?,
+    val updatedAt: String,
+    val premiumUntil: String? = null,
+)
 
 @Serializable
 class ReaderPayload(val mangaId: String, val publicId: String, val pages: List<ReaderPage>)
