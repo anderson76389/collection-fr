@@ -195,7 +195,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
+            adb("shell", "input", "text", {"scanmanga": "High", "raijinscans": "Chainsaw", "poseidonscans": "Solo"}.get(slug, "One"))
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -217,7 +217,8 @@ def main():
         if not candidates:
             result["status"] = "no_manga_card_available"
             continue
-        preferred = next((c for c in candidates if any("High-Martial" in t for t in texts(c))), candidates[0]) if slug == "scanmanga" else candidates[0]
+        wanted = {"scanmanga": "High-Martial", "raijinscans": "Chainsaw Man", "poseidonscans": "Solo Swordmaster"}.get(slug)
+        preferred = next((c for c in candidates if any(wanted in t for t in texts(c))), candidates[0]) if wanted else candidates[0]
         result["sample_title"] = texts(preferred)
         tap(preferred)
         time.sleep(18)

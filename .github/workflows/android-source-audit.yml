@@ -3,19 +3,22 @@ name: Android source audit
 on:
   push:
     branches: [audit/android-runtime-20260930]
-    paths: [".github/scripts/android_source_audit.py", ".github/workflows/android-source-audit.yml"]
+    paths: [".github/workflows/android-source-audit.yml", ".github/scripts/android_source_audit.py"]
   workflow_dispatch:
     inputs:
       sources:
         description: "Module names separated by commas; empty means all published extensions"
         type: string
-        default: ""
+        default: "scanmanga,japscan"
 
 permissions:
   contents: read
 
 jobs:
   mihon:
+  push:
+    branches: [audit/android-runtime-20260930]
+    paths: [".github/workflows/android-source-audit.yml", ".github/scripts/android_source_audit.py"]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -27,8 +30,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run published APKs in Mihon
         env:
-          SOURCE_AUDIT_LIMIT: "16"
-          SOURCE_AUDIT_ONLY: "scanmanga,japscan"
+          SOURCE_AUDIT_LIMIT: "18"
+          SOURCE_AUDIT_ONLY: "poseidonscans,raijinscans"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35
