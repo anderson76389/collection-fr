@@ -8,6 +8,10 @@ on:
       - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
+      - "src/all/webtoons/**"
+      - "src/all/mangadotnet/**"
+      - "src/all/mangadex/**"
+      - "src/all/lunaranime/**"
       - "lib-multisrc/pam/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
@@ -69,7 +73,6 @@ jobs:
         run: |
           modules=(
             :src:fr:animesama
-            :src:fr:bananascan
             :src:fr:astralmanga
             :src:fr:dassouscan
             :src:fr:japscan
@@ -83,6 +86,10 @@ jobs:
             :src:fr:pantheonscan
             :src:fr:softepsilonscan
             :src:all:manhuarm
+            :src:all:webtoons
+            :src:all:mangadotnet
+            :src:all:mangadex
+            :src:all:lunaranime
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans

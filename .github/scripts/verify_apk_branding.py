@@ -18,6 +18,15 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
     if metadata_file.parent.parent.relative_to(root).as_posix() not in modules:
         continue
     info = json.loads(metadata_file.read_text())
+    expected_languages = {
+        "eu.kanade.tachiyomi.extension.all.webtoons": {"fr"},
+        "eu.kanade.tachiyomi.extension.en.mangadotnet": {"fr"},
+        "eu.kanade.tachiyomi.extension.all.mangadex": {"fr"},
+        "eu.kanade.tachiyomi.extension.all.lunaranime": {"fr", "all"},
+    }.get(info["packageName"])
+    if expected_languages is not None:
+        assert {s["lang"] for s in info["sources"]} == expected_languages, info["packageName"]
+        assert len(info["sources"]) == len(expected_languages), info["packageName"]
     apks = list(metadata_file.parent.glob("outputs/apk/release/*.apk"))
     for apk in apks:
         output = subprocess.check_output([str(aapt), "dump", "badging", str(apk)], text=True)
