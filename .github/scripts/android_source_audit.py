@@ -72,7 +72,16 @@ def main():
     adb("shell", "wm", "density", "420")
     download(APP_URL, OUT / "mihon.apk")
     print("INSTALL_APP", adb("install", "-r", str(OUT / "mihon.apk"), timeout=120), flush=True)
-    download(INDEX_URL, OUT / "index.json")
+    for attempt in range(40):
+        download(INDEX_URL, OUT / "index.json")
+        pending = json.loads((OUT / "index.json").read_text())
+        versions = {e["packageName"].split(".")[-1]: e["versionName"] for e in pending["extensionList"]["extensions"]}
+        if all(versions.get(k) == v for k, v in {"astralmanga": "1.4.50", "softepsilonscan": "1.6.1", "manhuarm": "1.6.1"}.items()):
+            break
+        print("WAIT_FOR_PUBLICATION", versions, flush=True)
+        time.sleep(15)
+    else:
+        raise RuntimeError("Expected repaired APK versions were not published")
     index = json.loads((OUT / "index.json").read_text())
     assert index["signingKey"] == SIGNING_KEY
     extensions = index["extensionList"]["extensions"]
@@ -195,7 +204,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
+            adb("shell", "input", "text", {"astralmanga": "31st", "softepsilonscan": "Polaris", "manhuarm": "Past", "scanmanga": "High"}.get(slug, "One"))
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -217,7 +226,8 @@ def main():
         if not candidates:
             result["status"] = "no_manga_card_available"
             continue
-        preferred = next((c for c in candidates if any("High-Martial" in t for t in texts(c))), candidates[0]) if slug == "scanmanga" else candidates[0]
+        wanted = {"astralmanga": "31st Piece", "softepsilonscan": "The Polaris", "manhuarm": "Past Life Returner", "scanmanga": "High-Martial"}.get(slug, "")
+        preferred = next((c for c in candidates if any(wanted.casefold() in t.casefold() for t in texts(c))), candidates[0])
         result["sample_title"] = texts(preferred)
         tap(preferred)
         time.sleep(18)

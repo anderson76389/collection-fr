@@ -1,6 +1,8 @@
 name: Android source audit
 
 on:
+  push:
+    branches: [audit/three-readers-20261006]
   workflow_dispatch:
     inputs:
       sources:
@@ -24,8 +26,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Run published APKs in Mihon
         env:
-          SOURCE_AUDIT_LIMIT: "16"
-          SOURCE_AUDIT_ONLY: ${{ inputs.sources }}
+          SOURCE_AUDIT_LIMIT: "18"
+          SOURCE_AUDIT_ONLY: "astralmanga,softepsilonscan,manhuarm"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35
