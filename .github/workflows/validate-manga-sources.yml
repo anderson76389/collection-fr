@@ -2,7 +2,7 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main, fix/reader-20261004]
+    branches: [main, fix/reader-20261004, fix/fr-sources-20261006]
     paths:
       - "gradle/build-logic/**"
       - "src/fr/poseidonscans/**"
@@ -14,6 +14,12 @@ on:
       - "src/fr/pantheonscan/**"
       - "src/fr/softepsilonscan/**"
       - "src/all/manhuarm/**"
+      - "src/all/saymanhwa/**"
+      - "src/fr/kagane/**"
+      - "src/fr/lunaranime/**"
+      - "src/fr/mangadotnet/**"
+      - "src/fr/banchanscan/**"
+      - "src/fr/astralmanga/**"
       - "src/fr/scanmanga/**"
       - ".github/workflows/validate-manga-sources.yml"
       - ".github/scripts/publish_index.py"
@@ -29,6 +35,12 @@ on:
       - "src/fr/pantheonscan/**"
       - "src/fr/softepsilonscan/**"
       - "src/all/manhuarm/**"
+      - "src/all/saymanhwa/**"
+      - "src/fr/kagane/**"
+      - "src/fr/lunaranime/**"
+      - "src/fr/mangadotnet/**"
+      - "src/fr/banchanscan/**"
+      - "src/fr/astralmanga/**"
       - "src/fr/scanmanga/**"
       - ".github/workflows/validate-manga-sources.yml"
 
@@ -55,4 +67,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:bananascan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease
+        run: ./gradlew --no-daemon :src:all:saymanhwa:lintRelease :src:fr:kagane:lintRelease :src:fr:lunaranime:lintRelease :src:fr:mangadotnet:lintRelease :src:fr:banchanscan:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:bananascan:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease

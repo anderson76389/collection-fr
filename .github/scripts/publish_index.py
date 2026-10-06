@@ -34,6 +34,11 @@ EXPECTED_MODULES = {
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
+    "src/fr/banchanscan",
+    "src/all/saymanhwa",
+    "src/fr/kagane",
+    "src/fr/lunaranime",
+    "src/fr/mangadotnet",
 }
 
 

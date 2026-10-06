@@ -8,6 +8,10 @@ on:
       - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
+      - "src/all/saymanhwa/**"
+      - "src/fr/kagane/**"
+      - "src/fr/lunaranime/**"
+      - "src/fr/mangadotnet/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -85,6 +89,11 @@ jobs:
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans
+            :src:fr:banchanscan
+            :src:all:saymanhwa
+            :src:fr:kagane
+            :src:fr:lunaranime
+            :src:fr:mangadotnet
           )
           tasks=()
           for module in "${modules[@]}"; do
