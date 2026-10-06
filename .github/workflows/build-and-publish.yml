@@ -73,7 +73,6 @@ jobs:
         run: |
           modules=(
             :src:fr:animesama
-            :src:fr:bananascan
             :src:fr:astralmanga
             :src:fr:dassouscan
             :src:fr:japscan

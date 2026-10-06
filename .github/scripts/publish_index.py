@@ -17,7 +17,6 @@ RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
     "src/fr/animesama",
-    "src/fr/bananascan",
     "src/fr/astralmanga",
     "src/fr/dassouscan",
     "src/fr/japscan",
@@ -149,6 +148,17 @@ def main() -> None:
         apk, jar = outputs_by_package[extension["packageName"]]
         extension["resources"]["apkUrl"] = f"{release_base}/{apk.name}"
         extension["resources"]["jarUrl"] = f"{release_base}/{jar.name}"
+
+    # Its source directory was deleted; retain the already published Harmony APK.
+    previous_index = json.loads((REPO_DIR / "index.json").read_text(encoding="utf-8"))
+    if previous_index["signingKey"] != FINGERPRINT:
+        raise RuntimeError("Cannot retain an APK signed by a different certificate")
+    harmony = next(
+        entry for entry in previous_index["extensionList"]["extensions"]
+        if entry["packageName"] == "eu.kanade.tachiyomi.extension.fr.bananascan"
+    )
+    extensions.append(harmony)
+    extensions.sort(key=lambda item: item["packageName"])
 
     index = {
         "name": "Collection FR",
