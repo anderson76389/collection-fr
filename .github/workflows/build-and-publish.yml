@@ -8,6 +8,7 @@ on:
       - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
+      - "lib-multisrc/pam/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
