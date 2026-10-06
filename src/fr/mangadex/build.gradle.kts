@@ -6,9 +6,10 @@ plugins {
 
 keiyoushi {
     name = "MangaDex"
-    versionCode = 1
+    versionCode = 2
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
+    pkgName = "all.mangadex"
 
     source {
         lang = "fr"

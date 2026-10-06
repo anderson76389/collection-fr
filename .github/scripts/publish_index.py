@@ -3,6 +3,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -30,10 +31,10 @@ EXPECTED_MODULES = {
     "src/fr/pantheonscan",
     "src/fr/softepsilonscan",
     "src/all/manhuarm",
-    "src/all/webtoons",
-    "src/all/mangadotnet",
-    "src/all/mangadex",
-    "src/all/lunaranime",
+    "src/fr/webtoons",
+    "src/fr/mangadotnet",
+    "src/fr/mangadex",
+    "src/fr/lunaranime",
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
@@ -71,6 +72,16 @@ def main() -> None:
         package_name = info["packageName"]
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
+        apk_names = {
+            "src/fr/webtoons": "webtoons.com",
+            "src/fr/mangadotnet": "mangadot",
+            "src/fr/mangadex": "mangadex",
+            "src/fr/lunaranime": "lunar-manga",
+        }
+        if module in apk_names:
+            published_apk = apk.with_name(f"MAKOFF-{apk_names[module]}-v{info['versionName']}.apk")
+            shutil.copyfile(apk, published_apk)
+            apk = published_apk
         assets.extend([apk, jar])
         outputs_by_package[package_name] = (apk, jar)
 

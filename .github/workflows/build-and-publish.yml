@@ -8,10 +8,10 @@ on:
       - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
-      - "src/all/webtoons/**"
-      - "src/all/mangadotnet/**"
-      - "src/all/mangadex/**"
-      - "src/all/lunaranime/**"
+      - "src/fr/webtoons/**"
+      - "src/fr/mangadotnet/**"
+      - "src/fr/mangadex/**"
+      - "src/fr/lunaranime/**"
       - "lib-multisrc/pam/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
@@ -86,10 +86,10 @@ jobs:
             :src:fr:pantheonscan
             :src:fr:softepsilonscan
             :src:all:manhuarm
-            :src:all:webtoons
-            :src:all:mangadotnet
-            :src:all:mangadex
-            :src:all:lunaranime
+            :src:fr:webtoons
+            :src:fr:mangadotnet
+            :src:fr:mangadex
+            :src:fr:lunaranime
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans

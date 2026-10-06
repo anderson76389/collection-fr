@@ -6,11 +6,12 @@ plugins {
 
 keiyoushi {
     name = "Lunar Manga"
-    versionCode = 1
+    versionCode = 2
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
+    pkgName = "all.lunaranime"
 
-    val languages = listOf("fr", "all")
+    val languages = listOf("fr")
 
     languages.forEach { language ->
         source {

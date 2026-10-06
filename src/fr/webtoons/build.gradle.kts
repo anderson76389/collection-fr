@@ -6,9 +6,10 @@ plugins {
 
 keiyoushi {
     name = "Webtoons.com"
-    versionCode = 3
+    versionCode = 4
     contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
+    pkgName = "all.webtoons"
 
     source {
         lang = "fr"
