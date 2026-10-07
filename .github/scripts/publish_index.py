@@ -75,7 +75,6 @@ def main() -> None:
             "src/fr/webtoons": "webtoons.com",
             "src/fr/mangadotnet": "mangadot",
             "src/fr/mangadex": "mangadex",
-            "src/fr/lunaranime": "lunar-manga",
         }
         if module in apk_names:
             published_apk = apk.with_name(f"MAKOFF-{apk_names[module]}-v{info['versionName']}.apk")
@@ -165,7 +164,6 @@ def main() -> None:
         raise RuntimeError("Cannot retain an APK signed by a different certificate")
     for package in (
         "eu.kanade.tachiyomi.extension.fr.bananascan",
-        "eu.kanade.tachiyomi.extension.all.lunaranime",
     ):
         extensions.append(next(
             entry for entry in previous_index["extensionList"]["extensions"]
