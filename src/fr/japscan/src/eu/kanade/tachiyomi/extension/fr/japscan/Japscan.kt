@@ -40,6 +40,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -330,9 +331,13 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
 
-        val response = client.get(chapterUrl)
+        val html = client.get(chapterUrl).use { it.body.string() }
+        val hooks = ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK
+        val head = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)
+            ?: throw IOException("Japscan : page du lecteur absente. Ouvrez ce chapitre dans la WebView.")
+        val readerHtml = html.replaceRange(head.range, head.value + "<script>$hooks</script>")
 
-        return runCatching {
+        return try {
             runWebView<List<String>>(timeout = 3.minutes) {
                 domStorageEnabled = true
                 javaScriptEnabled = true
@@ -364,19 +369,17 @@ abstract class Japscan :
                     }
                 }
 
-                onPageStarted {
-                    evaluateJs(ACLIB_STUB)
-                    evaluateJs(if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK)
-                }
-
                 onPageFinished {
                     evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
                 }
 
-                loadData(chapterUrl, response.body.string())
+                loadData(chapterUrl, readerHtml)
             }
-        }.getOrElse { emptyList() }
-            .takeIf { done } ?: emptyList()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw IOException("Japscan : échec du lecteur (${e.message})", e)
+        }.takeIf { done } ?: throw IOException("Japscan : le lecteur n'a pas terminé le chargement")
     }
 
     private fun savePage(

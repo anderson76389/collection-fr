@@ -2,7 +2,7 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006]
+    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006, fix/reader-runtime-20261007]
     paths:
       - "gradle/build-logic/**"
       - "src/fr/poseidonscans/**"
@@ -67,4 +67,4 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:webtoons:lintRelease :src:fr:mangadotnet:lintRelease :src:fr:mangadex:lintRelease :src:fr:lunaranime:lintRelease :lib-multisrc:pam:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease
+        run: ./gradlew --no-daemon :src:fr:webtoons:lintRelease :src:fr:mangadotnet:lintRelease :src:fr:mangadex:lintRelease :lib-multisrc:pam:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease

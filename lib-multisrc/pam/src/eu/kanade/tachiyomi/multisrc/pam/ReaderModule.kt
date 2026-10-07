@@ -26,9 +26,8 @@ internal class ReaderModule(
 
 /** Rewrites a 64-byte block in place: out[i] = (in[permutation[i]] ^ xor[i]) + add[i]. */
 internal class Unmask(
-    val permutation: IntArray,
-    val xor: IntArray,
-    val add: IntArray,
+    val memoryName: String,
+    val function: String,
 )
 
 internal suspend fun OkHttpClient.fetchReaderModule(baseUrl: String, headers: Headers): ReaderModule {
@@ -76,20 +75,26 @@ internal suspend fun OkHttpClient.fetchReaderModule(baseUrl: String, headers: He
     val importModule = Regex("""var [\w$]+=\{([\w$]+):${Regex.escape(importObject)}\}""").find(glue)?.groupValues?.get(1)
         ?: throw IOException("Unsupported reader signer build")
 
-    // Builds ship one or more unmask imports, each with its own loop shape and table order.
-    val unmasks = UNMASK_REGEX.findAll(glue).associate { match ->
-        val groups = match.groupValues
-        val tables = mapOf(groups[3] to groups[4], groups[5] to groups[6], groups[7] to groups[8])
-            .mapValues { (_, values) -> values.split(',').map(String::toInt).toIntArray() }
-        if (tables.size != 3 || tables.values.any { it.size != UNMASK_SIZE }) {
-            throw IOException("Unsupported reader signer build")
+    // The site's import functions now also use rotation, carry and multiple rounds.
+    // Keep their JavaScript instead of assuming a particular table arrangement.
+    val unmasks = UNMASK_FUNCTION_REGEX.findAll(glue).mapNotNull { match ->
+        val functionStart = glue.indexOf("function", match.range.first)
+        val bodyStart = glue.indexOf('{', functionStart)
+        var depth = 1
+        var cursor = bodyStart + 1
+        while (cursor < glue.length && depth > 0) {
+            when (glue[cursor++]) {
+                '{' -> depth++
+                '}' -> depth--
+            }
         }
-        (importModule to groups[1]) to Unmask(
-            permutation = tables[groups[11]] ?: throw IOException("Unsupported reader signer build"),
-            xor = tables[groups[12]] ?: throw IOException("Unsupported reader signer build"),
-            add = tables[groups[13]] ?: throw IOException("Unsupported reader signer build"),
-        )
-    }
+        if (depth != 0) throw IOException("Reader import function is incomplete")
+        val function = glue.substring(functionStart, cursor)
+        val pointer = Regex.escape(match.groupValues[2])
+        val memory = Regex("""([\w$]+)\.slice\($pointer,$pointer\+64\)""")
+            .find(function)?.groupValues?.get(1) ?: return@mapNotNull null
+        (importModule to match.groupValues[1]) to Unmask(memory, function)
+    }.toMap()
     if (unmasks.isEmpty()) throw IOException("Unsupported reader signer build")
 
     val wasm = WASM_REGEX.find(glue)?.groupValues?.get(1) ?: throw IOException("Reader signer module not found")
@@ -122,8 +127,5 @@ private val RESIZE_IMPORT_REGEX = Regex(
     """([\w$]+)=\{([\w$]+):[\w$]+=>\{var [\w$]+=[\w$]+\.length;if\(\d+<\([\w$]+>>>=0\)\)return!1""",
 )
 
-// name:function(p){var a=[..],b=[..],c=[..],q=mem.slice(p,p+64) ... mem[p+i]=(q[perm[i]]^xor[i])+add[i]&255
-private val UNMASK_REGEX = Regex(
-    """([\w$]+):function\(([\w$]+)\)\{(?:for\()?var ([\w$]+)=\[([\d,]+)\],([\w$]+)=\[([\d,]+)\],([\w$]+)=\[([\d,]+)\],([\w$]+)=[\w$]+\.slice\(\2,\2\+64\)[^}]*?[\w$]+\[\2\+([\w$]+)\]=\(\9\[([\w$]+)\[\10\]\]\^([\w$]+)\[\10\]\)\+([\w$]+)\[\10\]&255""",
-)
+private val UNMASK_FUNCTION_REGEX = Regex("""([\w$]+):function\(([\w$]+)\)\{""")
 private val WASM_REGEX = Regex(""""(AGFzbQ[A-Za-z0-9+/=]+)"""")

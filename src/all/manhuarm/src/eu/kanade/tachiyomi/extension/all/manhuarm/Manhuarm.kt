@@ -27,6 +27,7 @@ import keiyoushi.source.KeiSource
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.runWebView
 import keiyoushi.utils.toJsonRequestBody
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParseDate
@@ -39,11 +40,13 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.io.IOException
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -234,11 +237,11 @@ abstract class Manhuarm :
             .mapNotNull { it.imageUrl() }
             .distinct()
 
-        val dialogues = fetchDialogues(document, chapterUrl).associateBy(PageDto::imageUrl)
+        val dialogues = fetchDialogues(document, chapterUrl).associateBy { it.imageUrl.substringBefore('?').substringAfterLast('/') }
         val language = settings
 
         return images.mapIndexed { index, imageUrl ->
-            val dialogs = dialogues[imageUrl.substringAfterLast('/')]
+            val dialogs = dialogues[imageUrl.substringBefore('?').substringAfterLast('/')]
                 ?.dialogues
                 ?.filter { it.getTextBy(language).isNotBlank() }
                 .orEmpty()
@@ -256,6 +259,33 @@ abstract class Manhuarm :
      * `[cid, token, timestamp, nonce, endpoint, ref]`.
      */
     private suspend fun fetchDialogues(document: Document, chapterUrl: String): List<PageDto> {
+        val script = document.select("script").firstOrNull { "function runOcrScript" in it.data() }
+        if (script != null && "_mrmCfg" in script.data()) {
+            val bridge = "ocr" + UUID.randomUUID().toString().replace("-", "")
+            val callback = Regex("""function runOcrScript\s*\(\s*(\w+)\s*\)\s*\{""")
+            val match = callback.find(script.data()) ?: throw IOException("Lecteur de texte Manhuarm non reconnu")
+            val argument = match.groupValues[1]
+            script.html(script.data().replaceRange(match.range, match.value + "window.$bridge.post($argument);return;"))
+            // Let the site's own reader establish its session and decrypt its OCR response.
+            return runWebView<List<PageDto>>(timeout = 60.seconds) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                blockImages = true
+                headers["User-Agent"]?.let { userAgent = it }
+                jsBridge(bridge) { result ->
+                    val pages = result.parseAs<List<PageDto>>()
+                    if (pages.isEmpty()) {
+                        reject(IOException("Manhuarm a renvoyé une liste de textes vide"))
+                    } else {
+                        resolve(pages)
+                    }
+                }
+                onReceivedError { request, error ->
+                    if (request.isForMainFrame) reject(IOException(error.description.toString()))
+                }
+                loadData(chapterUrl, document.outerHtml())
+            }
+        }
         val vault = document.select("script").firstNotNullOfOrNull { VAULT_REGEX.find(it.data()) }
             ?.groupValues?.get(1)
             ?.parseAs<List<JsonPrimitive>>()
@@ -273,12 +303,11 @@ abstract class Manhuarm :
             .set("X-Gate-Nonce", vault[3])
             .build()
 
-        // Pages are still readable without the translation overlay
         return try {
             client.post(vault[4], ocrHeaders, OcrRequestDto(vault[0], vault[5]).toJsonRequestBody())
                 .parseAs<List<PageDto>>()
-        } catch (_: Exception) {
-            emptyList()
+        } catch (e: Exception) {
+            throw IOException("Impossible de récupérer le texte Manhuarm : ${e.message}", e)
         }
     }
 
