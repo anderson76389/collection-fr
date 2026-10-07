@@ -9,27 +9,6 @@
   "extensionList": {
     "extensions": [
       {
-        "name": "Lunar Manga",
-        "packageName": "eu.kanade.tachiyomi.extension.all.lunaranime",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/b155621/MAKOFF-lunar-manga-v1.6.2.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/lunaranime/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/b155621/tachiyomi-all.lunaranime-v1.6.2.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106002",
-        "versionName": "1.6.2",
-        "contentWarning": "CONTENT_WARNING_MIXED",
-        "sources": [
-          {
-            "id": "8304537992959679621",
-            "name": "Lunar Manga",
-            "language": "fr",
-            "homeUrl": "https://lunarx.to"
-          }
-        ]
-      },
-      {
         "name": "MangaDex",
         "packageName": "eu.kanade.tachiyomi.extension.all.mangadex",
         "resources": {
