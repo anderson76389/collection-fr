@@ -189,6 +189,8 @@ class MangaDex(
             .distinct()
             .toSet()
 
+        if (mangaIds.isEmpty()) return MangasPage(emptyList(), chapterListDto.hasNextPage)
+
         val mangaApiUrl = MDConstants.API_MANGA_URL.toHttpUrl().newBuilder()
             .addQueryParameter("includes[]", MDConstants.COVER_ART)
             .addQueryParameter("limit", mangaIds.size.toString())

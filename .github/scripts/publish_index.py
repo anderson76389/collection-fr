@@ -99,6 +99,11 @@ def main() -> None:
                 }
             )
 
+        original_icon = {
+            "src/fr/astralmanga": "astralmanga.png",
+            "src/fr/poseidonscans": "poseidonscans.png",
+        }.get(module)
+
         extensions.append(
             {
                 "name": info["name"],
@@ -106,8 +111,10 @@ def main() -> None:
                 "resources": {
                     "apkUrl": "",
                     "iconUrl": (
+                        f"https://raw.githubusercontent.com/{REPOSITORY}/main/assets/source-logos/{original_icon}"
+                        if original_icon else
                         f"https://raw.githubusercontent.com/{REPOSITORY}/main/"
-                        f"{module}/res/mipmap-xhdpi/ic_launcher.png"
+                        f"{module}/res/mipmap-xxxhdpi/ic_launcher.png"
                     ),
                     "jarUrl": "",
                 },
