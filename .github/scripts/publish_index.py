@@ -34,7 +34,6 @@ EXPECTED_MODULES = {
     "src/fr/webtoons",
     "src/fr/mangadotnet",
     "src/fr/mangadex",
-    "src/fr/lunaranime",
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
@@ -160,15 +159,18 @@ def main() -> None:
         extension["resources"]["apkUrl"] = f"{release_base}/{apk.name}"
         extension["resources"]["jarUrl"] = f"{release_base}/{jar.name}"
 
-    # Its source directory was deleted; retain the already published Harmony APK.
+    # Retain published APKs whose source directories were already deleted.
     previous_index = json.loads((REPO_DIR / "index.json").read_text(encoding="utf-8"))
     if previous_index["signingKey"] != FINGERPRINT:
         raise RuntimeError("Cannot retain an APK signed by a different certificate")
-    harmony = next(
-        entry for entry in previous_index["extensionList"]["extensions"]
-        if entry["packageName"] == "eu.kanade.tachiyomi.extension.fr.bananascan"
-    )
-    extensions.append(harmony)
+    for package in (
+        "eu.kanade.tachiyomi.extension.fr.bananascan",
+        "eu.kanade.tachiyomi.extension.all.lunaranime",
+    ):
+        extensions.append(next(
+            entry for entry in previous_index["extensionList"]["extensions"]
+            if entry["packageName"] == package
+        ))
     extensions.sort(key=lambda item: item["packageName"])
 
     index = {
