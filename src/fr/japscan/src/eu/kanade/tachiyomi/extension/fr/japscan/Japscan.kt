@@ -13,12 +13,6 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
-import java.io.ByteArrayInputStream
-import java.io.File
-import java.io.IOException
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import keiyoushi.annotation.Source
 import keiyoushi.network.get
 import keiyoushi.network.post
@@ -30,10 +24,6 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebView
 import keiyoushi.utils.tryParseDate
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -48,6 +38,16 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.IOException
+import java.time.format.DateTimeFormatter
+import java.time.ZoneId
+import java.util.Locale
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Source
 abstract class Japscan :

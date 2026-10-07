@@ -7,9 +7,9 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.extension.all.manhuarm.interceptors.ComposedImageInterceptor
 import eu.kanade.tachiyomi.extension.all.manhuarm.interceptors.TranslationInterceptor
-import eu.kanade.tachiyomi.extension.all.manhuarm.translator.TranslatorEngine
 import eu.kanade.tachiyomi.extension.all.manhuarm.translator.bing.BingTranslator
 import eu.kanade.tachiyomi.extension.all.manhuarm.translator.google.GoogleTranslator
+import eu.kanade.tachiyomi.extension.all.manhuarm.translator.TranslatorEngine
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -17,13 +17,6 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
-import java.io.IOException
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
-import java.util.Locale
-import java.util.UUID
 import keiyoushi.annotation.Source
 import keiyoushi.lib.i18n.Intl
 import keiyoushi.lib.i18n.Intl.Companion.createDefaultMessageFileName
@@ -38,8 +31,6 @@ import keiyoushi.utils.runWebView
 import keiyoushi.utils.toJsonRequestBody
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParseDate
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.CacheControl
@@ -49,6 +40,15 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import java.io.IOException
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
+import java.util.Locale
+import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 @Source
 abstract class Manhuarm :

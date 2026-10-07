@@ -6,8 +6,8 @@ import com.dylibso.chicory.runtime.ImportValues
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.FunctionImport
-import java.io.IOException
 import keiyoushi.utils.parseAs
+import java.io.IOException
 
 /**
  * One instance of the site's reader signer. `ecdhInit` keeps the session's shared secret inside
