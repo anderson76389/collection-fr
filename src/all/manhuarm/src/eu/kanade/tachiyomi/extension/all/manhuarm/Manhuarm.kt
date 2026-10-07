@@ -7,9 +7,9 @@ import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.extension.all.manhuarm.interceptors.ComposedImageInterceptor
 import eu.kanade.tachiyomi.extension.all.manhuarm.interceptors.TranslationInterceptor
+import eu.kanade.tachiyomi.extension.all.manhuarm.translator.TranslatorEngine
 import eu.kanade.tachiyomi.extension.all.manhuarm.translator.bing.BingTranslator
 import eu.kanade.tachiyomi.extension.all.manhuarm.translator.google.GoogleTranslator
-import eu.kanade.tachiyomi.extension.all.manhuarm.translator.TranslatorEngine
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -41,10 +41,10 @@ import okhttp3.OkHttpClient
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.IOException
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.time.ZonedDateTime
-import java.time.ZoneOffset
 import java.util.Locale
 import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
@@ -274,8 +274,11 @@ abstract class Manhuarm :
                 headers["User-Agent"]?.let { userAgent = it }
                 jsBridge(bridge) { result ->
                     val pages = result.parseAs<List<PageDto>>()
-                    if (pages.isEmpty()) reject(IOException("Manhuarm a renvoyé une liste de textes vide"))
-                    else resolve(pages)
+                    if (pages.isEmpty()) {
+                        reject(IOException("Manhuarm a renvoyé une liste de textes vide"))
+                    } else {
+                        resolve(pages)
+                    }
                 }
                 onReceivedError { request, error ->
                     if (request.isForMainFrame) reject(IOException(error.description.toString()))
