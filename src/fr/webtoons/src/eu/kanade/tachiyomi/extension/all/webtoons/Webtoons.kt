@@ -96,7 +96,16 @@ abstract class Webtoons :
     private fun mangaFromElement(element: Element): SManga = SManga.create().apply {
         setUrlWithoutDomain(element.absUrl("href"))
         title = element.selectFirst(".title")!!.text()
-        thumbnail_url = element.selectFirst("img")?.absUrl("src")
+        thumbnail_url = originalCover(element.selectFirst("img")?.absUrl("src"))
+    }
+
+    private fun originalCover(url: String?): String? {
+        val image = url?.toHttpUrl() ?: return null
+        return if (image.queryParameter("type") == "q90") {
+            image.newBuilder().removeAllQueryParameters("type").build().toString()
+        } else {
+            url
+        }
     }
 
     override suspend fun getLatestUpdates(page: Int): MangasPage {
@@ -219,7 +228,7 @@ abstract class Webtoons :
                 } else {
                     thumbnail
                 }
-            }
+            }.let(::originalCover)
         }
     }
 
