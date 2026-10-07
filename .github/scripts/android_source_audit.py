@@ -75,7 +75,14 @@ def main():
     download(INDEX_URL, OUT / "index.json")
     index = json.loads((OUT / "index.json").read_text())
     assert index["signingKey"] == SIGNING_KEY
-    extensions = index["extensionList"]["extensions"]
+    candidates = {"japscan": "src/fr/japscan", "softepsilonscan": "src/fr/softepsilonscan", "manhuarm": "src/all/manhuarm"}
+    extensions = [e for e in index["extensionList"]["extensions"] if e["packageName"].split(".")[-1] in candidates]
+    for ext in extensions:
+        module = Path(candidates[ext["packageName"].split(".")[-1]])
+        info = json.loads((module / "build/keiyoushi-source-info.json").read_text())
+        ext["versionCode"] = str(info["versionCode"])
+        ext["versionName"] = str(info["versionName"])
+        ext["resources"]["apkUrl"] = next((module / "build/outputs/apk/release").glob("*.apk")).resolve().as_uri()
     sdk = Path(os.environ["ANDROID_HOME"])
     signer = sorted((sdk / "build-tools").glob("*/apksigner"))[-1]
     for ext in extensions:
@@ -195,7 +202,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", "High" if slug == "scanmanga" else "One")
+            adb("shell", "input", "text", {"japscan": "Martial", "softepsilonscan": "Polaris", "manhuarm": "Past"}.get(slug, "One"))
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -217,7 +224,8 @@ def main():
         if not candidates:
             result["status"] = "no_manga_card_available"
             continue
-        preferred = next((c for c in candidates if any("High-Martial" in t for t in texts(c))), candidates[0]) if slug == "scanmanga" else candidates[0]
+        wanted = {"japscan": "Martial Peak", "softepsilonscan": "Polaris", "manhuarm": "Past Life Returner"}.get(slug, "")
+        preferred = next((c for c in candidates if any(wanted.casefold() in t.casefold() for t in texts(c))), candidates[0])
         result["sample_title"] = texts(preferred)
         tap(preferred)
         time.sleep(18)
