@@ -6,14 +6,13 @@ plugins {
 
 keiyoushi {
     name = "Tappytoon"
-    versionCode = 10
+    pkgName = "all.tappytoon"
+    versionCode = 11
     contentWarning = ContentWarning.MIXED
     libVersion = "1.4"
 
-    listOf("en", "fr", "de").forEach {
-        source {
-            lang = it
-            baseUrl = "https://www.tappytoon.com/$it"
-        }
+    source {
+        lang = "fr"
+        baseUrl = "https://www.tappytoon.com/fr"
     }
 }

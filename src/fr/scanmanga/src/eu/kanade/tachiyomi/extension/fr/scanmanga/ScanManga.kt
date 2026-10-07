@@ -35,6 +35,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import rx.Observable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -94,6 +95,10 @@ abstract class ScanManga :
         .add("accept-language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
         .add("X-Requested-With", "")
 
+    private fun Element.coverUrl(): String? = sequenceOf("data-original", "data-src", "src")
+        .map { absUrl(it) }
+        .firstOrNull { it.toHttpUrlOrNull() != null }
+
     // Popular
     override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/TOP-Manga-Webtoon-45.html", headers)
 
@@ -107,7 +112,7 @@ abstract class ScanManga :
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = element.selectFirst("img")?.absUrl("data-original")
+                    thumbnail_url = element.selectFirst("img")?.coverUrl()
                 }
             }
         } else {
@@ -118,7 +123,7 @@ abstract class ScanManga :
 
                     setUrlWithoutDomain(link.absUrl("href"))
                     title = img?.attr("title")?.takeIf { it.isNotEmpty() } ?: link.text()
-                    thumbnail_url = img?.absUrl("data-original")
+                    thumbnail_url = img?.coverUrl()
                 }
             }
         }
@@ -139,7 +144,7 @@ abstract class ScanManga :
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = element.selectFirst("img")?.absUrl("src")
+                    thumbnail_url = element.selectFirst("img")?.coverUrl()
                 }
             }
         } else {
@@ -150,8 +155,7 @@ abstract class ScanManga :
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = img?.absUrl("data-original")?.takeIf { it.isNotEmpty() }
-                        ?: img?.absUrl("src")
+                    thumbnail_url = img?.coverUrl()
                 }
             }
         }
@@ -222,9 +226,11 @@ abstract class ScanManga :
             }
 
             thumbnail_url = document.selectFirst("div.full_img_serie img[itemprop=image]")
-                ?.absUrl("src")
-                ?.takeIf { it.isNotEmpty() }
-                ?: document.selectFirst("meta[itemprop=image]")?.absUrl("content")
+                ?.coverUrl()
+                ?: document.select("meta[itemprop=image], meta[property=og:image]")
+                    .asSequence()
+                    .map { it.absUrl("content") }
+                    .firstOrNull { it.toHttpUrlOrNull() != null }
         }
     }
 
