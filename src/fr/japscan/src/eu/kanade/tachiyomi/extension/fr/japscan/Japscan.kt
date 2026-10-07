@@ -248,14 +248,14 @@ abstract class Japscan :
             val chapterUrl = baseUrl + chapter.url
             sweepPageCache(applicationContext.cacheDir)
 
-            solveCaptcha(chapterUrl, isReader)
+            val readerHtml = solveCaptcha(chapterUrl, isReader)
 
             // manhwa/manhua use the long-strip reader, everything else the paginated one. The DOM
             // can't tell them apart before the reader JS mounts, and both need different hooks.
             val urlSegment = chapter.url.trimStart('/').substringBefore('/').lowercase()
             val isWebtoon = urlSegment == "manhwa" || urlSegment == "manhua"
 
-            val cachedPages = runReaderWebView(chapterUrl, isWebtoon, urlSegment)
+            val cachedPages = runReaderWebView(chapterUrl, readerHtml, isWebtoon, urlSegment)
             if (cachedPages.isEmpty()) {
                 throw Exception("Erreur lors de la récupération des pages")
             }
@@ -263,16 +263,18 @@ abstract class Japscan :
         }
     }
 
-    private suspend fun captchaPresent(chapterUrl: String): Boolean = client.get(chapterUrl, CacheControl.FORCE_NETWORK).use {
-        CAPTCHA_REGEX.containsMatchIn(it.body.string())
+    private suspend fun fetchReaderHtml(chapterUrl: String): String = client.get(chapterUrl, CacheControl.FORCE_NETWORK).use {
+        it.body.string()
     }
 
-    private suspend fun solveCaptcha(chapterUrl: String, isReader: Boolean) {
-        if (!captchaPresent(chapterUrl)) return
+    private suspend fun solveCaptcha(chapterUrl: String, isReader: Boolean): String {
+        var html = fetchReaderHtml(chapterUrl)
+        if (!CAPTCHA_REGEX.containsMatchIn(html)) return html
 
         // Cold sessions usually get past the captcha after loading the homepage once in a WebView
         warmupWebViewSession()
-        if (!captchaPresent(chapterUrl)) return
+        html = fetchReaderHtml(chapterUrl)
+        if (!CAPTCHA_REGEX.containsMatchIn(html)) return html
 
         val context = applicationContext
         try {
@@ -290,7 +292,8 @@ abstract class Japscan :
         }
         repeat(CAPTCHA_MAX_POLLS) {
             delay(CAPTCHA_POLL_INTERVAL)
-            if (!captchaPresent(chapterUrl)) {
+            html = fetchReaderHtml(chapterUrl)
+            if (!CAPTCHA_REGEX.containsMatchIn(html)) {
                 val closeIntent = Intent().apply {
                     val targetClass = if (isReader) {
                         "eu.kanade.tachiyomi.ui.reader.ReaderActivity"
@@ -301,7 +304,7 @@ abstract class Japscan :
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 }
                 context.startActivity(closeIntent)
-                return
+                return html
             }
         }
         throw Exception("Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
@@ -323,6 +326,7 @@ abstract class Japscan :
 
     private suspend fun runReaderWebView(
         chapterUrl: String,
+        html: String,
         isWebtoon: Boolean,
         urlSegment: String,
     ): List<String> {
@@ -331,7 +335,7 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
 
-        val html = client.get(chapterUrl).use { it.body.string() }
+        // Reuse the successful verification response instead of requesting the chapter again.
         val hooks = ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK
         val head = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)
             ?: throw IOException("Japscan : page du lecteur absente. Ouvrez ce chapitre dans la WebView.")
