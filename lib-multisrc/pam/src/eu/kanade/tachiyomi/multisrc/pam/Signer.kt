@@ -1,11 +1,13 @@
 package eu.kanade.tachiyomi.multisrc.pam
 
+import app.cash.quickjs.QuickJs
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.ImportValues
 import com.dylibso.chicory.runtime.Instance
 import com.dylibso.chicory.runtime.Memory
 import com.dylibso.chicory.wasm.types.FunctionImport
 import java.io.IOException
+import keiyoushi.utils.parseAs
 
 /**
  * One instance of the site's reader signer. `ecdhInit` keeps the session's shared secret inside
@@ -51,9 +53,15 @@ internal class Signer(private val reader: ReaderModule) {
 
     private fun Memory.unmask(ptr: Int, unmask: Unmask) {
         val block = readBytes(ptr, UNMASK_SIZE)
-        val out = ByteArray(UNMASK_SIZE) { i ->
-            ((block[unmask.permutation[i]].toInt() and 0xFF xor unmask.xor[i]) + unmask.add[i]).toByte()
-        }
+        val input = block.joinToString(",") { (it.toInt() and 0xFF).toString() }
+        val output = QuickJs.create().use { engine ->
+            engine.evaluate(
+                "var ${unmask.memoryName} = new Uint8Array([$input]);" +
+                    "(${unmask.function})(0);JSON.stringify(Array.from(${unmask.memoryName}));",
+            ) as String
+        }.parseAs<List<Int>>()
+        if (output.size != UNMASK_SIZE) throw IOException("Invalid reader import result")
+        val out = ByteArray(UNMASK_SIZE) { output[it].toByte() }
         write(ptr, out)
     }
 

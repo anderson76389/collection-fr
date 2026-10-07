@@ -2,7 +2,7 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006]
+    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006, fix/reader-runtime-20261007]
     paths:
       - "gradle/build-logic/**"
       - "src/fr/poseidonscans/**"
