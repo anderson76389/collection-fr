@@ -55,12 +55,15 @@ abstract class Manhuarm :
     KeiSource(),
     ConfigurableSource {
 
+    private val selectedLanguage: String
+        get() = if (lang == "all") preferences.getString(CONTENT_LANGUAGE_PREF, "fr") ?: "fr" else lang
+
     private val language: Language
-        get() = when (lang) {
-            "ar" -> Language(lang, disableFontSettings = true)
-            "fr", "id" -> Language(lang, supportNativeTranslation = true)
-            "pt-BR" -> Language(lang, "pt", supportNativeTranslation = true)
-            else -> Language(lang)
+        get() = when (val code = selectedLanguage) {
+            "ar" -> Language(code, disableFontSettings = true)
+            "fr", "id" -> Language(code, supportNativeTranslation = true)
+            "pt-BR" -> Language(code, "pt", supportNativeTranslation = true)
+            else -> Language(code)
         }
 
     private val preferences by getPreferencesLazy()
@@ -326,6 +329,17 @@ abstract class Manhuarm :
     // ============================= Preferences ============================
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        if (lang == "all") {
+            ListPreference(screen.context).apply {
+                key = CONTENT_LANGUAGE_PREF
+                title = "Langue de lecture"
+                entries = arrayOf("Français", "English", "Español", "Indonesia", "Italiano", "Português (Brasil)", "العربية")
+                entryValues = arrayOf("fr", "en", "es", "id", "it", "pt-BR", "ar")
+                summary = "%s — Fermez puis rouvrez les réglages après modification."
+                setDefaultValue("fr")
+            }.also(screen::addPreference)
+        }
+
         val language = language
         val i18n = Intl(
             language = language.lang,
@@ -461,6 +475,7 @@ abstract class Manhuarm :
         private val TRANSLATORS = arrayOf("Bing", "Google")
 
         const val DEVICE_FONT = "device:"
+        private const val CONTENT_LANGUAGE_PREF = "contentLanguagePref"
         private const val FONT_SIZE_PREF = "fontSizePref"
         private const val FONT_NAME_PREF = "fontNamePref"
         private const val DIALOG_BOX_SCALE_PREF = "dialogBoxScalePref"

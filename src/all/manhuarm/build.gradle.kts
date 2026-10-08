@@ -6,11 +6,11 @@ plugins {
 
 keiyoushi {
     name = "Manhuarm"
-    versionCode = 2
+    versionCode = 3
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
 
-    listOf("ar", "en", "es", "fr", "id", "it", "pt-BR").forEach {
+    listOf("fr", "all").forEach {
         source {
             lang = it
             baseUrl = "https://manhuarmtl.com"

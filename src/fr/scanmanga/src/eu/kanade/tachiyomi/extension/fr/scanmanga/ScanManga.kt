@@ -37,6 +37,7 @@ import okhttp3.Response
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import rx.Observable
+import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -66,6 +67,19 @@ abstract class ScanManga :
     }
 
     override val client = super.client.newBuilder()
+        .addInterceptor { chain ->
+            val request = chain.request()
+            if (request.url.fragment != "series-cover") {
+                return@addInterceptor chain.proceed(request)
+            }
+            val seriesUrl = request.url.newBuilder().fragment(null).build()
+            val cover = chain.proceed(GET(seriesUrl.toString(), headers)).use { response ->
+                if (!response.isSuccessful) throw IOException("Couverture Scan-Manga : HTTP ${response.code}")
+                response.asJsoup().seriesCover()
+                    ?: throw IOException("Couverture introuvable sur la fiche Scan-Manga")
+            }
+            chain.proceed(request.newBuilder().url(cover).header("Referer", seriesUrl.toString()).build())
+        }
         .addNetworkInterceptor(stripEmptyXRequestedWith)
         .build()
 
@@ -98,6 +112,17 @@ abstract class ScanManga :
     private fun Element.coverUrl(): String? = sequenceOf("data-original", "data-src", "src")
         .map { absUrl(it) }
         .firstOrNull { it.toHttpUrlOrNull() != null }
+
+    private fun Document.seriesCover(): String? = select("meta[itemprop=image], meta[property=og:image]")
+        .asSequence()
+        .map { it.absUrl("content") }
+        .firstOrNull { it.toHttpUrlOrNull() != null }
+        ?: selectFirst("div.full_img_serie img[itemprop=image]")?.coverUrl()
+
+    private fun seriesCoverUrl(url: String): String = url.toHttpUrl().newBuilder()
+        .fragment("series-cover")
+        .build()
+        .toString()
 
     // Popular
     override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/TOP-Manga-Webtoon-45.html", headers)
@@ -144,18 +169,17 @@ abstract class ScanManga :
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = element.selectFirst("img")?.coverUrl()
+                    thumbnail_url = seriesCoverUrl(link.absUrl("href"))
                 }
             }
         } else {
             document.select("div.listing:has(a.nom_manga)").map { element ->
                 SManga.create().apply {
                     val link = element.selectFirst("a.nom_manga")!!
-                    val img = element.selectFirst("div.logo_manga img")
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = img?.coverUrl()
+                    thumbnail_url = seriesCoverUrl(link.absUrl("href"))
                 }
             }
         }
@@ -225,12 +249,7 @@ abstract class ScanManga :
                 else -> SManga.UNKNOWN
             }
 
-            thumbnail_url = document.selectFirst("div.full_img_serie img[itemprop=image]")
-                ?.coverUrl()
-                ?: document.select("meta[itemprop=image], meta[property=og:image]")
-                    .asSequence()
-                    .map { it.absUrl("content") }
-                    .firstOrNull { it.toHttpUrlOrNull() != null }
+            thumbnail_url = document.seriesCover()
         }
     }
 
