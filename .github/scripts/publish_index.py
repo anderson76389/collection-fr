@@ -31,6 +31,7 @@ EXPECTED_MODULES = {
     "src/fr/pantheonscan",
     "src/fr/softepsilonscan",
     "src/all/manhuarm",
+    "src/all/asurascans",
     "src/fr/webtoons",
     "src/fr/mangadotnet",
     "src/fr/mangadex",
@@ -73,6 +74,7 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
+            "src/all/asurascans": "asurascans",
             "src/fr/webtoons": "webtoons.com",
             "src/fr/mangadotnet": "mangadot",
             "src/fr/mangadex": "mangadex",
