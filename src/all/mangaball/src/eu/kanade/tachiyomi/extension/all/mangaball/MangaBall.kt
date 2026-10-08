@@ -45,6 +45,7 @@ abstract class MangaBall :
 
     private val siteLang: List<String>
         get() = when (lang) {
+            "all" -> emptyList()
             "ar" -> listOf("ar")
             "bg" -> listOf("bg")
             "bn" -> listOf("bn")
@@ -336,10 +337,11 @@ abstract class MangaBall :
 
         return data.chapters.flatMap { chapter ->
             chapter.translations.mapNotNull { translation ->
-                if (translation.language in siteLang) {
+                if (lang == "all" || translation.language in siteLang) {
                     SChapter.create().apply {
                         url = translation.id
                         name = buildString {
+                            if (lang == "all") append("[${translation.language}] ")
                             val volume = translation.volume.toString().removeSuffix(".0")
                             if (translation.volume > 0) {
                                 append("Vol. ")
