@@ -8,6 +8,7 @@ on:
       - "gradle/build-logic/**"
       - "src/fr/**"
       - "src/all/manhuarm/**"
+      - "src/all/asurascans/**"
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
       - "src/fr/mangadex/**"
@@ -85,6 +86,7 @@ jobs:
             :src:fr:pantheonscan
             :src:fr:softepsilonscan
             :src:all:manhuarm
+            :src:all:asurascans
             :src:fr:webtoons
             :src:fr:mangadotnet
             :src:fr:mangadex

@@ -49,7 +49,6 @@ abstract class ScanManga :
     ConfigurableSource {
 
     private val domain = baseUrl.toHttpUrl().host
-    private val baseImageUrl = "https://static.${domain.removePrefix("www.")}/img/manga"
     private val baseSearchUrl = "https://bqj.${domain.removePrefix("www.")}/search/quick.json"
 
     override val supportsLatest = true
@@ -137,7 +136,7 @@ abstract class ScanManga :
 
                     title = link.text()
                     setUrlWithoutDomain(link.absUrl("href"))
-                    thumbnail_url = element.selectFirst("img")?.coverUrl()
+                    thumbnail_url = seriesCoverUrl(link.absUrl("href"))
                 }
             }
         } else {
@@ -148,7 +147,7 @@ abstract class ScanManga :
 
                     setUrlWithoutDomain(link.absUrl("href"))
                     title = img?.attr("title")?.takeIf { it.isNotEmpty() } ?: link.text()
-                    thumbnail_url = img?.coverUrl()
+                    thumbnail_url = seriesCoverUrl(link.absUrl("href"))
                 }
             }
         }
@@ -214,7 +213,7 @@ abstract class ScanManga :
                 SManga.create().apply {
                     title = it.nom_match
                     setUrlWithoutDomain(it.url)
-                    thumbnail_url = "$baseImageUrl/${it.image}"
+                    thumbnail_url = seriesCoverUrl(baseUrl.toHttpUrl().resolve(it.url)!!.toString())
                 }
             } ?: emptyList(),
             false,
