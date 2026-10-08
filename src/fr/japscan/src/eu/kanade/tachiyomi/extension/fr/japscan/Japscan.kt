@@ -257,24 +257,33 @@ abstract class Japscan :
 
             val cachedPages = runReaderWebView(chapterUrl, readerHtml, isWebtoon, urlSegment)
             if (cachedPages.isEmpty()) {
-                throw Exception("Erreur lors de la récupération des pages")
+                throw IOException("Japscan : vérification passée, mais aucune image extraite du lecteur. Indiquez le titre et le chapitre au mainteneur.")
             }
             return cachedPages.mapIndexed { i, path -> Page(i, imageUrl = "https://$CACHE_HOST$path") }
         }
     }
 
-    private suspend fun fetchReaderHtml(chapterUrl: String): String = client.get(chapterUrl, CacheControl.FORCE_NETWORK).use {
-        it.body.string()
+    private suspend fun fetchReaderHtml(chapterUrl: String): String? = try {
+        client.get(chapterUrl, CacheControl.FORCE_NETWORK).use { it.body.string() }
+    } catch (e: IOException) {
+        // A blocked request must reach the interactive verification flow.
+        null
+    }
+
+    private fun isReaderReady(html: String?): Boolean {
+        if (html == null || CAPTCHA_REGEX.containsMatchIn(html)) return false
+        val document = org.jsoup.Jsoup.parse(html)
+        return document.selectFirst("#full-reader, [id^=single-reader]") != null
     }
 
     private suspend fun solveCaptcha(chapterUrl: String, isReader: Boolean): String {
         var html = fetchReaderHtml(chapterUrl)
-        if (!CAPTCHA_REGEX.containsMatchIn(html)) return html
+        if (isReaderReady(html)) return html!!
 
         // Cold sessions usually get past the captcha after loading the homepage once in a WebView
         warmupWebViewSession()
         html = fetchReaderHtml(chapterUrl)
-        if (!CAPTCHA_REGEX.containsMatchIn(html)) return html
+        if (isReaderReady(html)) return html!!
 
         val context = applicationContext
         try {
@@ -293,7 +302,7 @@ abstract class Japscan :
         repeat(CAPTCHA_MAX_POLLS) {
             delay(CAPTCHA_POLL_INTERVAL)
             html = fetchReaderHtml(chapterUrl)
-            if (!CAPTCHA_REGEX.containsMatchIn(html)) {
+            if (isReaderReady(html)) {
                 val closeIntent = Intent().apply {
                     val targetClass = if (isReader) {
                         "eu.kanade.tachiyomi.ui.reader.ReaderActivity"
@@ -304,7 +313,7 @@ abstract class Japscan :
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 }
                 context.startActivity(closeIntent)
-                return html
+                return html!!
             }
         }
         throw Exception("Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
@@ -334,6 +343,7 @@ abstract class Japscan :
         val sessionTag = "$CACHE_FILE_PREFIX${System.currentTimeMillis()}"
         val savedPaths = mutableListOf<String>()
         var done = false
+        var driverStarted = false
 
         // Reuse the successful verification response instead of requesting the chapter again.
         val hooks = ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK
@@ -374,6 +384,8 @@ abstract class Japscan :
                 }
 
                 onPageFinished {
+                    if (driverStarted) return@onPageFinished
+                    driverStarted = true
                     evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
                 }
 
@@ -459,7 +471,7 @@ abstract class Japscan :
         )
         private val CHAPTER_NUM_REGEX = Regex("""(?i)chapitre\s+([\d.]+)""")
         private val NON_NUMBER_REGEX = Regex("[^0-9.]+")
-        private val CAPTCHA_REGEX = """window\.__captcha\s*=\s*\{\s*needed\s*:\s*true\s*,?""".toRegex()
+        private val CAPTCHA_REGEX = """(?:window\.)?__captcha\s*=\s*\{[^}]*["']?needed["']?\s*:\s*true""".toRegex()
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
         private val PARIS = ZoneId.of("Europe/Paris")
 

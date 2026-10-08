@@ -50,11 +50,14 @@ internal suspend fun OkHttpClient.fetchReaderModule(baseUrl: String, headers: He
         .filter { it.endsWith(".js") && it != entry }
         .distinct()
         .toList()
-        .firstNotNullOfOrNull { name -> asset(name).takeIf { "freeBuffer:\"" in it } }
+        .firstNotNullOfOrNull { name -> asset(name).takeIf { "freeBuffer:\"" in it || "\"freeBuffer\",\"" in it } }
         ?: throw IOException("Reader signer bindings not found")
     val semantic = EXPORT_MAP_REGEX.find(shared)?.value
         ?.let { map -> PAIR_REGEX.findAll(map).associate { it.groupValues[1] to it.groupValues[2] } }
-        ?: throw IOException("Reader export map not found")
+        ?: ARRAY_PAIR_REGEX.findAll(shared).associate { it.groupValues[1] to it.groupValues[2] }
+    if ("freeBuffer" !in semantic || "signAttestation" !in semantic) {
+        throw IOException("Reader export map not found")
+    }
 
     val glue = MAP_DEPS_REGEX.find(shared)?.groupValues?.get(1)
         ?.let { deps -> DEP_REGEX.findAll(deps).map { it.groupValues[1] }.toList() }
@@ -129,3 +132,5 @@ private val RESIZE_IMPORT_REGEX = Regex(
 
 private val UNMASK_FUNCTION_REGEX = Regex("""([\w$]+):function\(([\w$]+)\)\{""")
 private val WASM_REGEX = Regex(""""(AGFzbQ[A-Za-z0-9+/=]+)"""")
+
+private val ARRAY_PAIR_REGEX = Regex("""\["([\w$]+)","(_[\w$]+)"\]""")
