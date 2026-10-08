@@ -91,7 +91,6 @@ jobs:
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans
-            :src:fr:tappytoon
             :src:fr:saymanhwa
           )
           tasks=()
