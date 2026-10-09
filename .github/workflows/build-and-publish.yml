@@ -7,8 +7,7 @@ on:
     paths:
       - "gradle/build-logic/**"
       - "src/fr/**"
-      - "src/all/manhuarm/**"
-      - "src/all/asurascans/**"
+      - "src/all/**"
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
       - "src/fr/mangadex/**"
@@ -87,6 +86,7 @@ jobs:
             :src:fr:softepsilonscan
             :src:all:manhuarm
             :src:all:asurascans
+            :src:all:mangaball
             :src:fr:webtoons
             :src:fr:mangadotnet
             :src:fr:mangadex
