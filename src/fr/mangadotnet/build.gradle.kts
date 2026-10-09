@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "MangaDot"
-    versionCode = 26
+    versionCode = 27
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
     pkgName = "en.mangadotnet"
@@ -15,6 +15,11 @@ keiyoushi {
         lang = "fr"
         baseUrl = "https://mangadot.net"
         id = 6544312035114371248L
+    }
+
+    source {
+        lang = "all"
+        baseUrl = "https://mangadot.net"
     }
 
     deeplink {

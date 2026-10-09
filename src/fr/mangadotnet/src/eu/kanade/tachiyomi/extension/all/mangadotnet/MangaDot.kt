@@ -17,6 +17,8 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
+import java.io.IOException
+import java.util.Locale
 import keiyoushi.annotation.Source
 import keiyoushi.network.get
 import keiyoushi.source.KeiSource
@@ -24,9 +26,12 @@ import keiyoushi.utils.firstInstance
 import keiyoushi.utils.firstInstanceOrNull
 import keiyoushi.utils.getPreferences
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.stringOrNull
 import keiyoushi.utils.toJsonElement
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParse
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
@@ -35,8 +40,10 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import okhttp3.CacheControl
 import okhttp3.Call
 import okhttp3.Callback
@@ -45,10 +52,6 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
-import java.io.IOException
-import java.util.Locale
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Instant
 
 @Source
 abstract class MangaDot :
@@ -125,6 +128,7 @@ abstract class MangaDot :
 
     private val queryLang: String?
         get() = when (lang) {
+            "all" -> null
             "pt-BR" -> "pt-br"
             "es-419" -> "es-la"
             "zh-Hant" -> "zh-hk"
@@ -532,11 +536,15 @@ abstract class MangaDot :
                 }.build()
                 client.get(volumesUrl).use { response ->
                     response.parseAs<List<Volume>>()
-                        .filter { it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
+                        .filter { lang == "all" || it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
                         .map { volume ->
                             SChapter.create().apply {
                                 url = ChapterUrl(volume.id.toString(), volume.source, true).toJsonString()
                                 name = "Volume ${(volume.volume ?: 0f).toString().removeSuffix(".0")}"
+                                if (lang == "all") {
+                                    name = "[${volume.language ?: "?"}] $name"
+                                    memo = buildJsonObject { put("language", volume.language.orEmpty()) }
+                                }
                                 chapter_number = 0f
                                 scanlator = (volume.group ?: volume.scanlator)?.takeIf { it.isNotBlank() }
                                 date_upload = Instant.tryParse(volume.date?.replace(" ", "T"))
@@ -571,10 +579,10 @@ abstract class MangaDot :
             }
 
             val dedupedChapters = mutableListOf<SChapter>()
-            val grouped = allChapters.groupBy { it.chapter_number }
+            val grouped = allChapters.groupBy { it.chapter_number to it.memo["language"]?.stringOrNull }
 
-            for ((chapterNum, chapterGroup) in grouped) {
-                if (chapterNum <= 0f || chapterGroup.size == 1) {
+            for ((chapterKey, chapterGroup) in grouped) {
+                if (chapterKey.first <= 0f || chapterGroup.size == 1) {
                     dedupedChapters.addAll(chapterGroup)
                     continue
                 }
@@ -616,15 +624,19 @@ abstract class MangaDot :
         }.build()
         return client.get(chaptersUrl).use { response ->
             response.parseAs<List<Chapter>>()
-                .filter { it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
+                .filter { lang == "all" || it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
                 .map { chapter ->
                     SChapter.create().apply {
                         url = ChapterUrl(chapter.id.toString(), chapter.source, false).toJsonString()
                         name = buildString {
+                            if (lang == "all") append("[", chapter.language ?: "?", "] ")
                             val number = chapter.number?.toString()?.removeSuffix(".0") ?: "0"
                             val name = chapter.name ?: ""
                             if (!name.contains(number)) append("Chapter ", number, ": ")
                             append(name.trim())
+                        }
+                        if (lang == "all") {
+                            memo = buildJsonObject { put("language", chapter.language.orEmpty()) }
                         }
                         chapter_number = chapter.number ?: 0f
                         scanlator = (chapter.group ?: chapter.scanlator)?.takeIf { it.isNotBlank() }
