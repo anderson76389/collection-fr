@@ -17,8 +17,6 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
-import java.io.IOException
-import java.util.Locale
 import keiyoushi.annotation.Source
 import keiyoushi.network.get
 import keiyoushi.source.KeiSource
@@ -30,8 +28,6 @@ import keiyoushi.utils.stringOrNull
 import keiyoushi.utils.toJsonElement
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParse
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Instant
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
@@ -52,6 +48,10 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
+import java.io.IOException
+import java.util.Locale
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @Source
 abstract class MangaDot :
