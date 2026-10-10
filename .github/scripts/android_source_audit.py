@@ -75,14 +75,8 @@ def main():
     download(INDEX_URL, OUT / "index.json")
     index = json.loads((OUT / "index.json").read_text())
     assert index["signingKey"] == SIGNING_KEY
-    candidates = {"japscan": "src/fr/japscan", "softepsilonscan": "src/fr/softepsilonscan", "manhuarm": "src/all/manhuarm"}
-    extensions = [e for e in index["extensionList"]["extensions"] if e["packageName"].split(".")[-1] in candidates]
-    for ext in extensions:
-        module = Path(candidates[ext["packageName"].split(".")[-1]])
-        info = json.loads((module / "build/keiyoushi-source-info.json").read_text())
-        ext["versionCode"] = str(info["versionCode"])
-        ext["versionName"] = str(info["versionName"])
-        ext["resources"]["apkUrl"] = next((module / "build/outputs/apk/release").glob("*.apk")).resolve().as_uri()
+    selected_packages = {"mangadex", "mangadotnet", "softepsilonscan"}
+    extensions = [e for e in index["extensionList"]["extensions"] if e["packageName"].split(".")[-1] in selected_packages]
     sdk = Path(os.environ["ANDROID_HOME"])
     signer = sorted((sdk / "build-tools").glob("*/apksigner"))[-1]
     for ext in extensions:
