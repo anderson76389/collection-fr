@@ -1,70 +1,189 @@
-# Collection FR — sources indépendantes pour Mihon
+<div align="center">
 
-Ce dépôt contient une copie indépendante du code source des extensions françaises. Il ne réutilise plus les APK signés par Keiyoushi.
+# 📚 Collection FR
 
-## Copie du code source
+### Extensions manga, manhwa et webtoon pour Mihon
 
-Le dépôt `keiyoushi/extensions-source` a été copié une seule fois. Le workflow d’import initial, désormais inutile, a été retiré. Cette copie reste dans `main` même si une source disparaît de l’amont. Les changements personnels sont conservés dans ce dépôt.
+**Ton dépôt personnel d'extensions : indépendant, organisé et orienté lecture en français.**
 
-Le code amont est sous licence GPL-3.0 ; ses fichiers de licence et mentions sont conservés.
+[![Mihon](https://img.shields.io/badge/Compatible-Mihon-6366F1?style=for-the-badge)](https://mihon.app/)
+[![Langue](https://img.shields.io/badge/Langue-Fran%C3%A7ais-2563EB?style=for-the-badge)](#-les-extensions)
+[![Extensions](https://img.shields.io/badge/Index-27%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
+[![Android](https://img.shields.io/badge/Plateforme-Android-404040?style=for-the-badge&logo=android&logoColor=white)](https://github.com/anderson76389/collection-fr/releases)
 
-## État des sources
+[📲 Installer dans Mihon](#-installer-le-dépôt-dans-mihon) · [📖 Extensions](#-les-extensions) · [⚙️ Compilation](#-compiler-et-publier) · [🔎 Vérifications](#-suivi-des-correctifs-et-limitations)
 
-Les extensions explicitement marquées adultes (`NSFW`) ont été retirées de `src/fr`, sauf Scan-Manga réintégrée à la demande de l’utilisateur avec son avertissement conservé. Les sources `Mixed` restent disponibles, conformément au choix de garder les sources pouvant contenir du contenu adulte non exclusif.
+</div>
 
-- **Astral-Manga** est incluse dans la publication en version 1.4.48 et son site répond avec des chapitres récents.
-- **Japscan** reste incluse (https://www.japscan.foo). Les retours indiquent que la lecture des chapitres peut encore échouer après le CAPTCHA ; le site n’est donc pas classé comme fermé.
-- Les erreurs 403 reçues par les runners GitHub ne suffisent pas à conclure qu’un site est hors service : elles peuvent venir de la protection anti-robot.
+---
 
-## Ajouts et limites de vérification
+## 🔗 Le lien essentiel : dépôt Mihon
 
-Blossom Scans (`blossom-scans.com`), Pantheon Scan (`pantheon-scan.com`), Soft Epsilon Scan (`epsilonsoft.to`) et Manhuarm (`manhuarmtl.com`) utilisent les modules présents dans cette copie de Keiyoushi. Manhuarm conserve ses variantes linguistiques, dont le français.
+> [!IMPORTANT]
+> **Adresse officielle de ce dépôt personnel, à ajouter dans Mihon :**
+>
+> **https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json**
+>
+> [**📋 Ouvrir le fichier repo.json**](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json)
 
-La compilation et le lint ne constituent pas un test de lecture dans Mihon. Manhuarm a des signalements amont « No results found » et NullPointerException. Soft Epsilon inclut le correctif PAM du lecteur v2, mais un signalement « Attestation refused » reste ouvert. Scan-Manga est restaurée dans sa dernière version locale, sans prétendre résoudre l’erreur de lecture 404.
-
-## Créer le dépôt Mihon
-
-Le workflow `.github/workflows/build-and-publish.yml` compile quinze extensions françaises et Manhuarm (multilingue), les signe avec ta clé privée, publie les APK comme une release et génère l’index Mihon dans la branche `repo`.
-
-Avant son premier lancement, crée une clé Android locale et ajoute ces secrets dans **Settings → Secrets and variables → Actions** du dépôt :
-
-- `SIGNING_KEY` : contenu de `collection-fr.jks` encodé en Base64
-- `ALIAS` : alias donné à la clé
-- `KEY_STORE_PASSWORD` : mot de passe du keystore
-- `KEY_PASSWORD` : mot de passe de la clé
-
-Exemple pour créer la clé :
-
-```sh
-keytool -genkeypair -v -keystore collection-fr.jks -alias collection-fr -keyalg RSA -keysize 2048 -validity 10000
-base64 -w0 collection-fr.jks
-```
-
-Sur PowerShell, encode le keystore avec :
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("collection-fr.jks"))
-```
-
-Garde le fichier `.jks` hors de GitHub et ne partage pas ces valeurs dans une conversation. Après avoir enregistré les secrets, lance **Actions → Build and publish personal extensions → Run workflow**.
-
-Une fois la première publication terminée, ajoute cette adresse comme dépôt dans Mihon :
-
-```
+~~~text
 https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json
-```
+~~~
 
-La clé de signature est propre à ce dépôt. Si des extensions signées par Keiyoushi sont déjà installées, Android ne les mettra pas à jour par-dessus celles-ci ; il faudra les remplacer par les versions de Collection FR.
+Le fichier est hébergé sur la branche **`repo`** et référence l'index des extensions publiées. Il faut conserver **cette URL exacte** : ce n'est ni le lien de la branche `main`, ni celui d'un APK individuel.
 
+## 📲 Installer le dépôt dans Mihon
 
-## Vérification des lecteurs
+1. Ouvre **Mihon** sur ton téléphone Android.
+2. Va dans **Parcourir → Extensions**, puis ouvre la gestion des **dépôts d'extensions** (le nom du menu peut varier selon ta version).
+3. Ajoute l'URL `repo.json` affichée ci-dessus.
+4. Retourne dans les extensions, actualise la liste, puis installe uniquement les sources qui t'intéressent.
+5. Vérifie les avertissements de contenu et de confiance avant de procéder à l'installation d'APK.
 
-Voir le [rapport Android et réseau des 4–5 octobre](docs/reader-audit-2026-10-05.md) pour les versions récentes, les captures et les limites constatées.
+> [!TIP]
+> **Le dépôt n'est pas une application Android.** Il fournit un index que Mihon utilise pour afficher les extensions disponibles. Les APK sont publiés séparément dans les [Releases GitHub](https://github.com/anderson76389/collection-fr/releases).
 
-Voir le [rapport du 29 septembre 2026](docs/source-audit-2026-09-29.md) pour les tests HTTP, les corrections ciblées et les limites de validation Android. Scan-Manga et Japscan ne sont pas annoncés comme réparés.
+---
 
-## Sources retirées à la demande de l’utilisateur
+## ✨ Pourquoi Collection FR ?
 
-Twatt, les deux variantes Phenix Scans, Ono, Lelmanga, Lelscan, Lelscan-VF, Kiwiya Scans, AralosBD, Blue Solo et FMTEAM ont été retirées de `src/fr`. L’index publié contient désormais 16 extensions (15 françaises et Manhuarm). Le rapport de vérification conserve les résultats historiques antérieurs à ces suppressions.
+| Fonctionnalité | Description |
+|:--|:--|
+| 🇫🇷 **Priorité au français** | Accès à des sources de mangas, manhwas et webtoons en français. |
+| 🧩 **Extensions personnalisées** | Modules sélectionnés, adaptés et maintenus dans une copie indépendante du code source. |
+| 🌍 **Multilingue lorsque nécessaire** | Certaines extensions proposent plusieurs langues ou une version `all` en plus du français. |
+| 📦 **APK et index propres au dépôt** | Publication des fichiers installables et génération d'un index Mihon dédié. |
+| 🛠️ **Évolutions suivies** | Développement, correctifs et rapports de vérification conservés dans GitHub. |
+| 🔐 **Signature indépendante** | Les APK compilés sont signés avec la clé de publication propre à Collection FR. |
 
-Le 5 octobre, BigSolo, ChaosTrad, Les Poroiniens, l’ancien Sushi-Scan, Siren Scans FR, ScanR, Mangakawaii, MangaHub FR et MangaCorporation ont également été retirés. SushiScan.net (`sushiscanfr`) et Scan Reader sont conservés. Voir les [précisions sur les langues et le nettoyage](docs/languages-and-cleanup-2026-10-05.md).
+## 📖 Les extensions
+
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **27 extensions** lors de la vérification du **11 octobre 2026**. La liste peut évoluer au fil des publications.
+
+<details open>
+<summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
+
+**Mangas et scans**
+
+`AnimeSama` · `Astral-Manga` · `Japscan` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Sushiscan.net` · `Manga-Scantrad` · `Mangas-Origines.fr`
+
+**Manhwas, webtoons et autres catalogues**
+
+`MangaDex` · `MangaDot` · `Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+
+</details>
+
+<details>
+<summary><strong>🌍 Extensions multilingues et autres sources publiées</strong></summary>
+
+`Manhuarm` · `Manga Ball` · `Asura Scans`
+
+L'index peut inclure des sources classées `all` ainsi que d'autres extensions réservées à un public adulte. Certaines entrées portent un avertissement `MIXED` ou `NSFW` : respecte l'âge requis et vérifie les informations de chaque extension avant installation. **Collection FR ne garantit pas que tous les résultats soient disponibles en français.**
+
+</details>
+
+> [!NOTE]
+> Une extension présente dans l'index ne signifie pas que **toutes** ses fonctions marchent en permanence. Les sites peuvent changer d'adresse, imposer un CAPTCHA, limiter leur accès ou modifier leurs lecteurs. Les résultats de compilation ne constituent pas une validation complète dans Mihon.
+
+## 🏗️ Organisation du dépôt
+
+Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.
+
+| Emplacement | Rôle |
+|:--|:--|
+| [`main`](https://github.com/anderson76389/collection-fr/tree/main) | Code des extensions, scripts et configuration de compilation |
+| [`src/fr/`](src/fr) | Extensions francophones |
+| [`src/all/`](src/all) | Extensions multilingues |
+| [`lib-multisrc/`](lib-multisrc) | Bibliothèques partagées entre plusieurs sources |
+| [`assets/source-logos/`](assets/source-logos) | Éléments graphiques de certaines sources |
+| [`.github/workflows/`](.github/workflows) | Automatisation des vérifications et publications |
+| [`repo`](https://github.com/anderson76389/collection-fr/tree/repo) | Branche utilisée pour l'index Mihon |
+| [**Releases**](https://github.com/anderson76389/collection-fr/releases) | APK distribués et autres fichiers générés |
+
+La copie du code de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) a été réalisée pour conserver une base de travail indépendante. L'historique d'import est indiqué dans [`.collection-fr-upstream-snapshot`](.collection-fr-upstream-snapshot).
+
+---
+
+## ⚙️ Compiler et publier
+
+Le workflow [**Build and publish personal extensions**](.github/workflows/build-and-publish.yml) compile les modules sélectionnés, signe les APK, prépare les fichiers publiés et actualise l'index sur la branche `repo`.
+
+### 🔑 Configuration de la signature Android
+
+Si tu veux recompiler et publier toi-même les extensions, crée une clé Android **locale** :
+
+~~~sh
+keytool -genkeypair -v -keystore collection-fr.jks -alias collection-fr -keyalg RSA -keysize 2048 -validity 10000
+~~~
+
+Encode le keystore en Base64 :
+
+<details>
+<summary><strong>🐧 Linux</strong></summary>
+
+~~~sh
+base64 -w0 collection-fr.jks
+~~~
+
+</details>
+
+<details>
+<summary><strong>🪟 Windows PowerShell</strong></summary>
+
+~~~powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("collection-fr.jks"))
+~~~
+
+</details>
+
+Dans **Settings → Secrets and variables → Actions**, configure les quatre secrets :
+
+| Nom | Valeur |
+|:--|:--|
+| `SIGNING_KEY` | Contenu Base64 de `collection-fr.jks` |
+| `ALIAS` | Alias défini lors de la création de la clé |
+| `KEY_STORE_PASSWORD` | Mot de passe du keystore |
+| `KEY_PASSWORD` | Mot de passe de la clé de signature |
+
+Lance ensuite **Actions → Build and publish personal extensions → Run workflow**.
+
+> [!CAUTION]
+> **Ne commite jamais le fichier `.jks` et ne partage aucun secret.** Les APK signés avec une clé différente de celle d'une extension déjà installée ne peuvent pas automatiquement remplacer celle-ci sous Android : il peut être nécessaire de désinstaller l'ancienne version. Assure-toi de protéger les données de lecture avant toute migration.
+
+## 🔎 Suivi des correctifs et limitations
+
+Le dépôt contient des rapports de tests et de nettoyage, notamment :
+
+- [🔬 Audit des lecteurs Android — 4–5 octobre 2026](docs/reader-audit-2026-10-05.md) : vérifications du comportement de lecture, contraintes de CAPTCHA et diagnostic réseau.
+- [🧪 Audit des sources — 29 septembre 2026](docs/source-audit-2026-09-29.md) : tests ciblés et suivi de plusieurs dysfonctionnements.
+- [🧹 Nettoyage des sources et langues — 5 octobre 2026](docs/languages-and-cleanup-2026-10-05.md) : explications sur les changements de sélection et de langue.
+
+**Points de vigilance :** Japscan et Scan-Manga ont connu des erreurs de chargement ou de lecture, et certains sites bloquent les accès automatisés avec des réponses HTTP 403. Une erreur dans un robot de test ne prouve pas à elle seule que la source est définitivement hors service.
+
+Des sources ont été retirées ou remplacées au cours du projet. **L'index publié sur la branche `repo` fait foi** pour les APK actuellement proposés dans Mihon ; il peut différer des fichiers de référence conservés sur `main`.
+
+---
+
+## ⚖️ À propos et crédits
+
+Collection FR est un **dépôt personnel et indépendant**, non officiel et non affilié à l'équipe Mihon ni aux plateformes référencées.
+
+Le code repose en partie sur l'écosystème [Keiyoushi](https://github.com/keiyoushi/extensions-source) et sur des bibliothèques tierces. Consulte [LICENSE](LICENSE), les mentions de licence des fichiers concernés et les règles de contribution avant toute redistribution ou modification.
+
+Les extensions facilitent l'accès à des sites externes, mais **n'hébergent pas elles-mêmes les mangas ou webtoons**. Les disponibilités, les droits et les conditions d'utilisation restent propres à chaque service.
+
+---
+
+<div align="center">
+
+### 📲 Prêt à ajouter Collection FR ?
+
+**[Ajouter l'adresse du dépôt à Mihon](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json)**
+
+`https://raw.githubusercontent.com/anderson76389/collection-fr/repo/repo.json`
+
+*Un dépôt personnalisé pour retrouver tes lectures, tes sources et tes extensions au même endroit.*
+
+[⬆️ Retour en haut](#-collection-fr)
+
+</div>
