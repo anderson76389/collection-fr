@@ -33,6 +33,9 @@ EXPECTED_MODULES = {
     "src/all/manhuarm",
     "src/all/asurascans",
     "src/all/mangaball",
+    "src/all/flamecomics",
+    "src/all/hivescans",
+    "src/fr/webnovel",
     "src/all/coomer",
     "src/all/cosplaytele",
     "src/all/elitebabes",
@@ -79,6 +82,9 @@ def main() -> None:
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
             "src/all/asurascans": "asurascans",
+            "src/all/flamecomics": "flamecomics",
+            "src/all/hivescans": "hivetoons",
+            "src/fr/webnovel": "webnovel",
             "src/fr/webtoons": "webtoons.com",
             "src/fr/mangadotnet": "mangadot",
             "src/fr/mangadex": "mangadex",
