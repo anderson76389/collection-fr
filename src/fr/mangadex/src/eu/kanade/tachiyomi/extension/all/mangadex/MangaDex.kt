@@ -45,8 +45,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import java.time.LocalDate
-import java.time.ZoneOffset
 
 @Source
 class MangaDex(
@@ -104,15 +102,6 @@ class MangaDex(
             .addQueryParameter("includes[]", MDConstants.COVER_ART)
             .addQueryParameter("contentRating[]", preferences.contentRating)
             .addQueryParameter("originalLanguage[]", preferences.originalLanguages)
-            .addQueryParameter(
-                "createdAtSince",
-                LocalDate
-                    .now()
-                    .minusDays(30)
-                    .atStartOfDay()
-                    .atZone(ZoneOffset.UTC)
-                    .format(MDConstants.dateFormatterNoOffset),
-            )
             .build()
 
         return parseMangasPage(client.get(url))
