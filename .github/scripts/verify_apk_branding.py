@@ -29,7 +29,6 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         "eu.kanade.tachiyomi.extension.all.saymanhwa": {"fr"},
         "eu.kanade.tachiyomi.extension.all.webtoons": {"fr"},
         "eu.kanade.tachiyomi.extension.en.mangadotnet": {"fr", "all"},
-        "eu.kanade.tachiyomi.extension.all.mangadex": {"fr"},
     }.get(info["packageName"])
     if expected_languages is not None:
         assert {s["lang"] for s in info["sources"]} == expected_languages, info["packageName"]
