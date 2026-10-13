@@ -43,7 +43,7 @@ EXPECTED_MODULES = {
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
-    "src/fr/saymanhwa",
+    "src/all/saymanhwa",
 }
 
 
@@ -84,7 +84,7 @@ def main() -> None:
             "src/all/hivescans": "hivetoons",
             "src/fr/webtoons": "webtoons.com",
             "src/fr/mangadotnet": "mangadot",
-            "src/fr/saymanhwa": "saymanhwa",
+            "src/all/saymanhwa": "saymanhwa",
         }
         if module in apk_names:
             published_apk = apk.with_name(f"MAKOFF-{apk_names[module]}-v{info['versionName']}.apk")
