@@ -69,7 +69,7 @@ L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anders
 
 **Manhwas, webtoons et autres catalogues**
 
-`MangaDex` · `MangaDot` · `Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+`MangaDot` · `Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
 
 </details>
 

@@ -10,7 +10,6 @@ on:
       - "src/all/**"
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
-      - "src/fr/mangadex/**"
       - "lib-multisrc/pam/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
@@ -94,7 +93,6 @@ jobs:
             :src:all:elitebabes
             :src:fr:webtoons
             :src:fr:mangadotnet
-            :src:fr:mangadex
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans

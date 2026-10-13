@@ -40,7 +40,6 @@ EXPECTED_MODULES = {
     "src/all/elitebabes",
     "src/fr/webtoons",
     "src/fr/mangadotnet",
-    "src/fr/mangadex",
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
@@ -85,7 +84,6 @@ def main() -> None:
             "src/all/hivescans": "hivetoons",
             "src/fr/webtoons": "webtoons.com",
             "src/fr/mangadotnet": "mangadot",
-            "src/fr/mangadex": "mangadex",
             "src/fr/saymanhwa": "saymanhwa",
         }
         if module in apk_names:
