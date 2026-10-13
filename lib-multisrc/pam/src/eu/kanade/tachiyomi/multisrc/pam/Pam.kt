@@ -203,11 +203,11 @@ abstract class Pam :
         )
         val data = client.get(getMangaUrl(manga), apiHeaders).parseAs<MangaResponse>().props.serie
 
-        // Some sites leave the chapters out of the page and serve them from a paged API instead.
+        // An absent or empty inline list may be a placeholder for the paged chapter API.
         val sourceChapters = when {
-            data.chapters != null -> data.chapters
-            fetchChapters -> fetchChapterList(data.uid)
-            else -> null
+            !fetchChapters -> null
+            !data.chapters.isNullOrEmpty() -> data.chapters
+            else -> fetchChapterList(data.uid)
         }
 
         return SMangaUpdate(
