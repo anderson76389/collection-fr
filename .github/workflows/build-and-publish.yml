@@ -96,7 +96,7 @@ jobs:
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans
-            :src:fr:saymanhwa
+            :src:all:saymanhwa
           )
           tasks=()
           for module in "${modules[@]}"; do

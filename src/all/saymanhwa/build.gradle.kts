@@ -7,12 +7,13 @@ plugins {
 keiyoushi {
     name = "SayManhwa"
     pkgName = "all.saymanhwa"
-    versionCode = 3
+    versionCode = 4
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
 
     source {
-        lang = "fr"
+        lang = "all"
+        id = 1085765242853690038L
         baseUrl {
             custom("https://saymanhwa.com")
         }
