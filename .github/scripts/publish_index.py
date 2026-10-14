@@ -17,6 +17,12 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
+    "src/all/comix",
+    "src/all/olympusscanlation",
+    "src/all/manhwaweb",
+    "src/all/mangafire",
+    "src/all/mangabuddy",
+
     "src/fr/animesama",
     "src/fr/astralmanga",
     "src/fr/dassouscan",
@@ -79,6 +85,12 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
+            "src/all/comix": "comix",
+            "src/all/olympusscanlation": "olympusscanlation",
+            "src/all/manhwaweb": "manhwaweb",
+            "src/all/mangafire": "mangafire",
+            "src/all/mangabuddy": "mangabuddy",
+
             "src/all/asurascans": "asurascans",
             "src/all/flamecomics": "flamecomics",
             "src/all/hivescans": "hivetoons",
