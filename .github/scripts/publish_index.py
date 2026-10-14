@@ -19,8 +19,6 @@ RELEASE_TAG = COMMIT_SHA[:7]
 EXPECTED_MODULES = {
     "src/fr/bananascan",
     "src/all/olympusscanlation",
-    "src/all/manhwaweb",
-    "src/all/mangafire",
     "src/all/mangabuddy",
 
     "src/fr/animesama",
@@ -43,7 +41,6 @@ EXPECTED_MODULES = {
     "src/all/hivescans",
     "src/all/coomer",
     "src/all/cosplaytele",
-    "src/all/elitebabes",
     "src/fr/webtoons",
     "src/fr/mangadotnet",
     "src/fr/scanmanga",
@@ -86,8 +83,6 @@ def main() -> None:
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
             "src/all/olympusscanlation": "olympusscanlation",
-            "src/all/manhwaweb": "manhwaweb",
-            "src/all/mangafire": "mangafire",
             "src/all/mangabuddy": "mangabuddy",
 
             "src/all/asurascans": "asurascans",

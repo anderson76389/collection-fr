@@ -73,8 +73,6 @@ jobs:
           modules=(
             :src:fr:bananascan
             :src:all:olympusscanlation
-            :src:all:manhwaweb
-            :src:all:mangafire
             :src:all:mangabuddy
 
             :src:fr:animesama
@@ -97,7 +95,6 @@ jobs:
             :src:all:hivescans
             :src:all:coomer
             :src:all:cosplaytele
-            :src:all:elitebabes
             :src:fr:webtoons
             :src:fr:mangadotnet
             :src:fr:scanmanga
