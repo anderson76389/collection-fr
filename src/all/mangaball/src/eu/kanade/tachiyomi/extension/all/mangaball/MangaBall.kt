@@ -184,7 +184,19 @@ abstract class MangaBall :
     private suspend fun getMangaDetails(idOrSlug: String): SManga {
         // Older library URLs ended with the title ID; the new API must receive that ID.
         val legacyId = idOrSlug.substringAfterLast("-")
-        val id = if (Regex("[a-f0-9]{24}").matches(legacyId)) legacyId else idOrSlug
+        val id = if (TITLE_ID.matches(legacyId)) {
+            legacyId
+        } else {
+            // The detail endpoint accepts a slug but can return an unrelated title (one-piece -> one).
+            val searchUrl = "$baseUrl/api/v1/title/search-advanced".toHttpUrl().newBuilder()
+                .addQueryParameter("keyword", idOrSlug.replace('-', ' '))
+                .addQueryParameter("adult_mode", "all")
+                .addQueryParameter("limit", "100")
+                .build()
+            client.get(searchUrl).parseAs<SearchResponse>().data
+                .singleOrNull { it.slug == idOrSlug }?.id
+                ?: throw IOException("Titre introuvable par son ancienne adresse. Recherchez cette œuvre à nouveau dans la source.")
+        }
         return client.get("$baseUrl/api/v1/title/detail/$id")
             .parseAs<TitleResponse>()
             .data
@@ -197,7 +209,7 @@ abstract class MangaBall :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val titleId = manga.memo.getStringOrNull("id")
+        val titleId = manga.url.takeIf(TITLE_ID::matches) ?: manga.memo.getStringOrNull("id")
 
         return if (fetchChapters && titleId != null) {
             coroutineScope {
@@ -282,6 +294,7 @@ abstract class MangaBall :
 
 private const val NSFW_PREF = "nsfw_pref"
 private const val LEGACY_HOST = "mangaball.net"
+private val TITLE_ID = Regex("[a-f0-9]{24}")
 
 // OkHttp 5 appends "; charset=utf-8" when a request body is built from a String, and this API
 // rejects any Content-Type other than a bare "application/json" with HTTP 400.

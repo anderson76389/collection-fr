@@ -75,6 +75,7 @@ class MangaResponse(
     ) {
         @Serializable
         class Manga(
+            val uid: String,
             val slug: String,
             @JsonNames("name")
             val title: String,
@@ -167,6 +168,13 @@ class ReaderResult(
         val variants: List<Int> = emptyList(),
     )
 }
+
+@Serializable
+class ChapterListResponse(
+    val items: List<ChapterListItem>,
+    @SerialName("last_page")
+    val lastPage: Int,
+)
 
 @Serializable
 class ChapterListItem(

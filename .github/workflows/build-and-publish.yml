@@ -11,6 +11,7 @@ on:
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
       - "lib-multisrc/pam/**"
+      - "lib-multisrc/kemono/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -71,10 +72,7 @@ jobs:
         run: |
           modules=(
             :src:fr:bananascan
-            :src:all:comix
             :src:all:olympusscanlation
-            :src:all:manhwaweb
-            :src:all:mangafire
             :src:all:mangabuddy
 
             :src:fr:animesama
@@ -97,7 +95,6 @@ jobs:
             :src:all:hivescans
             :src:all:coomer
             :src:all:cosplaytele
-            :src:all:elitebabes
             :src:fr:webtoons
             :src:fr:mangadotnet
             :src:fr:scanmanga
