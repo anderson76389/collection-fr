@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "Astral-Manga"
-    versionCode = 50
+    versionCode = 51
     contentWarning = ContentWarning.SAFE
     libVersion = "1.4"
 

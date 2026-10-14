@@ -109,10 +109,12 @@ def main() -> None:
                 }
             )
 
-        original_icon = {
-            "src/fr/astralmanga": "astralmanga.png",
-            "src/fr/poseidonscans": "poseidonscans.png",
-        }.get(module)
+        original_icon = f"{Path(module).name}-icon.png"
+        if not (SOURCE_DIR / "assets/source-logos" / original_icon).is_file():
+            original_icon = {
+                "src/fr/astralmanga": "astralmanga.png",
+                "src/fr/poseidonscans": "poseidonscans.png",
+            }.get(module)
 
         extensions.append(
             {
@@ -121,7 +123,7 @@ def main() -> None:
                 "resources": {
                     "apkUrl": "",
                     "iconUrl": (
-                        f"https://raw.githubusercontent.com/{REPOSITORY}/main/assets/source-logos/{original_icon}"
+                        f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT_SHA}/assets/source-logos/{original_icon}"
                         if original_icon else
                         f"https://raw.githubusercontent.com/{REPOSITORY}/main/"
                         f"{module}/res/mipmap-xxxhdpi/ic_launcher.png"
@@ -182,10 +184,15 @@ def main() -> None:
     for package in (
         "eu.kanade.tachiyomi.extension.fr.bananascan",
     ):
-        extensions.append(next(
+        retained = next(
             entry for entry in previous_index["extensionList"]["extensions"]
             if entry["packageName"] == package
-        ))
+        )
+        retained["resources"]["iconUrl"] = (
+            f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT_SHA}/"
+            "assets/source-logos/bananascan-icon.png"
+        )
+        extensions.append(retained)
     extensions.sort(key=lambda item: item["packageName"])
 
     index = {
