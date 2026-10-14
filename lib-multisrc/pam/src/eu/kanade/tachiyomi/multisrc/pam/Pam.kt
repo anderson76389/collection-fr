@@ -14,6 +14,7 @@ import keiyoushi.lib.i18n.Intl
 import keiyoushi.lib.secretstream.SecretStream
 import keiyoushi.lib.secretstream.State
 import keiyoushi.lib.secretstream.X25519
+import keiyoushi.network.get
 import keiyoushi.network.rateLimit
 import keiyoushi.source.KeiSource
 import keiyoushi.utils.firstInstanceOrNull
@@ -141,13 +142,13 @@ abstract class Pam :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val sitePage = sitePages.load(getMangaUrl(manga), SiteRequest(chapters = fetchChapters))
+        val sitePage = sitePages.load(getMangaUrl(manga))
         val data = sitePage.page.parseAs<MangaResponse>().props.serie
 
         val sourceChapters = when {
             !fetchChapters -> null
             !data.chapters.isNullOrEmpty() -> data.chapters
-            else -> sitePage.chapters?.let(::apiChapters)
+            else -> fetchApiChapters(data.uid)
         }
 
         return SMangaUpdate(
@@ -210,6 +211,25 @@ abstract class Pam :
                     }
                 }
             }.asReversed()
+    }
+
+    /** Oldest first, like the inline list. */
+    private suspend fun fetchApiChapters(uid: String): List<MangaResponse.Props.Chapter> {
+        val items = mutableListOf<ChapterListItem>()
+        var page = 1
+        do {
+            val url = baseHttpUrl.newBuilder()
+                .addPathSegments("api/v1/series")
+                .addPathSegment(uid)
+                .addPathSegment("chapters")
+                .addQueryParameter("page", page.toString())
+                .addQueryParameter("sort", "asc")
+                .build()
+            val response = client.get(url).parseAs<ChapterListResponse>()
+            items.addAll(response.items)
+            page++
+        } while (page <= response.lastPage)
+        return apiChapters(items)
     }
 
     /** Oldest first, like the inline list. */

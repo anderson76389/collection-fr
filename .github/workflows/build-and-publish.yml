@@ -11,6 +11,7 @@ on:
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
       - "lib-multisrc/pam/**"
+      - "lib-multisrc/kemono/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -71,7 +72,6 @@ jobs:
         run: |
           modules=(
             :src:fr:bananascan
-            :src:all:comix
             :src:all:olympusscanlation
             :src:all:manhwaweb
             :src:all:mangafire

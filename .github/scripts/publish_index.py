@@ -18,7 +18,6 @@ RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
     "src/fr/bananascan",
-    "src/all/comix",
     "src/all/olympusscanlation",
     "src/all/manhwaweb",
     "src/all/mangafire",
@@ -86,7 +85,6 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
-            "src/all/comix": "comix",
             "src/all/olympusscanlation": "olympusscanlation",
             "src/all/manhwaweb": "manhwaweb",
             "src/all/mangafire": "mangafire",

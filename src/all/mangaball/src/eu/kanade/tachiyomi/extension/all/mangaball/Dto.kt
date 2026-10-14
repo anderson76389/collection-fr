@@ -30,13 +30,13 @@ class SearchResponse(
 
 @Serializable
 class MangaDto(
-    private val id: String,
-    private val slug: String,
+    val id: String,
+    val slug: String,
     private val name: String,
     private val image: ImageDto? = null,
 ) {
     fun toSManga() = SManga.create().apply {
-        url = slug
+        url = id
         title = name
         thumbnail_url = image?.url
         memo = buildJsonObject { put("id", id) }
@@ -70,7 +70,7 @@ class TitleDto(
         }.trim()
 
         return SManga.create().apply {
-            url = slug
+            url = id
             title = name
             thumbnail_url = image?.url
             genre = tags.joinToString { it.name }
