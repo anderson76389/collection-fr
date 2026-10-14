@@ -17,6 +17,7 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
+    "src/fr/bananascan",
     "src/all/comix",
     "src/all/olympusscanlation",
     "src/all/manhwaweb",
@@ -189,22 +190,6 @@ def main() -> None:
         extension["resources"]["apkUrl"] = f"{release_base}/{apk.name}"
         extension["resources"]["jarUrl"] = f"{release_base}/{jar.name}"
 
-    # Retain published APKs whose source directories were already deleted.
-    previous_index = json.loads((REPO_DIR / "index.json").read_text(encoding="utf-8"))
-    if previous_index["signingKey"] != FINGERPRINT:
-        raise RuntimeError("Cannot retain an APK signed by a different certificate")
-    for package in (
-        "eu.kanade.tachiyomi.extension.fr.bananascan",
-    ):
-        retained = next(
-            entry for entry in previous_index["extensionList"]["extensions"]
-            if entry["packageName"] == package
-        )
-        retained["resources"]["iconUrl"] = (
-            f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT_SHA}/"
-            "assets/source-logos/bananascan-icon.png"
-        )
-        extensions.append(retained)
     extensions.sort(key=lambda item: item["packageName"])
 
     index = {
