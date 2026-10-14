@@ -70,6 +70,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
+            :src:fr:bananascan
             :src:all:comix
             :src:all:olympusscanlation
             :src:all:manhwaweb
