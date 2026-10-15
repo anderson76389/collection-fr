@@ -44,7 +44,7 @@ EXPECTED_MODULES = {
     "src/fr/blossomscans",
     "src/fr/pantheonscan",
     "src/fr/softepsilonscan",
-    "src/all/manhuarm",
+    "src/fr/manhuarm",
     "src/all/asurascans",
     "src/fr/mangaball",
     "src/all/flamecomics",

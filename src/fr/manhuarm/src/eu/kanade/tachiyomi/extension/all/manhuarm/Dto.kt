@@ -23,7 +23,7 @@ class PageDto(
 )
 
 @Serializable
-data class Dialog(
+class Dialog(
     val x: Float,
     val y: Float,
     private val _width: Float,
@@ -35,11 +35,12 @@ data class Dialog(
     val height: Float get() = scale * _height
     val width: Float get() = scale * _width
 
-    val text: String get() = textByLanguage["text"] ?: throw Exception("Dialog not found")
-    fun getTextBy(language: Language) = when {
-        !language.disableTranslator -> textByLanguage[language.origin]
-        else -> textByLanguage[language.target]
-    } ?: text
+    fun textFor(code: String) = textByLanguage[code]?.takeIf(String::isNotBlank)
+    val text: String get() = textFor("text") ?: textFor("en") ?: textByLanguage.values.firstOrNull(String::isNotBlank).orEmpty()
+    fun getTextBy(language: Language) = textFor(language.target) ?: textFor(language.origin) ?: text
+
+    fun translated(target: String, text: String) = Dialog(x, y, _width, _height, angle, textByLanguage + (target to text))
+
     val centerY get() = height / 2 + y
     val centerX get() = width / 2 + x
 }
