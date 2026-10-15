@@ -24,7 +24,7 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebView
 import keiyoushi.utils.tryParseDate
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.CacheControl
@@ -243,12 +243,10 @@ abstract class Japscan :
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         pageListMutex.withLock {
-            // Must be read before the first suspension point, while the caller's frames are on the stack.
-            val isReader = Exception().stackTrace.any { it.className.contains("reader") }
             val chapterUrl = baseUrl + chapter.url
             sweepPageCache(applicationContext.cacheDir)
 
-            val readerHtml = solveCaptcha(chapterUrl, isReader)
+            val readerHtml = solveCaptcha(chapterUrl)
 
             // manhwa/manhua use the long-strip reader, everything else the paginated one. The DOM
             // can't tell them apart before the reader JS mounts, and both need different hooks.
@@ -264,7 +262,7 @@ abstract class Japscan :
     }
 
     private suspend fun fetchReaderHtml(chapterUrl: String): String? = try {
-        client.get(chapterUrl, CacheControl.FORCE_NETWORK).use { it.body.string() }
+        client.get(chapterUrl, headers, CacheControl.FORCE_NETWORK).use { it.body.string() }
     } catch (e: IOException) {
         // A blocked request must reach the interactive verification flow.
         null
@@ -276,11 +274,11 @@ abstract class Japscan :
         return document.selectFirst("#full-reader, [id^=single-reader]") != null
     }
 
-    private suspend fun solveCaptcha(chapterUrl: String, isReader: Boolean): String {
+    private suspend fun solveCaptcha(chapterUrl: String): String {
         var html = fetchReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
 
-        // Cold sessions usually get past the captcha after loading the homepage once in a WebView
+        // Use a real navigation with the same user agent before requesting interactive verification.
         warmupWebViewSession()
         html = fetchReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
@@ -292,44 +290,35 @@ abstract class Japscan :
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 putExtra("url_key", chapterUrl)
                 putExtra("source_key", id)
-                putExtra("title_key", "Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
+                putExtra("title_key", "Terminez les vérifications, puis revenez et relancez le chapitre.")
             }
             context.startActivity(intent)
         } catch (_: Exception) {
             // Suwayomi etc.
             throw Exception("Résolvez le captcha de ce chapitre depuis la WebView et réouvrez le chapitre.")
         }
-        repeat(CAPTCHA_MAX_POLLS) {
-            delay(CAPTCHA_POLL_INTERVAL)
-            html = fetchReaderHtml(chapterUrl)
-            if (isReaderReady(html)) {
-                val closeIntent = Intent().apply {
-                    val targetClass = if (isReader) {
-                        "eu.kanade.tachiyomi.ui.reader.ReaderActivity"
-                    } else {
-                        "eu.kanade.tachiyomi.ui.main.MainActivity"
-                    }
-                    component = ComponentName(context, targetClass)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                }
-                context.startActivity(closeIntent)
-                return html!!
-            }
-        }
-        throw Exception("Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
+        // Do not poll or navigate away while the user is completing the site's two checks.
+        throw IOException("Japscan : terminez les vérifications dans la WebView, attendez l’affichage du chapitre, puis revenez et relancez-le.")
     }
 
     private suspend fun warmupWebViewSession() {
-        runCatching {
-            val response = client.get(baseUrl)
-
-            runWebView<Unit>(timeout = 8.seconds) {
-                var finished = false
-                onPageFinished { finished = true }
-                // Settle window that lets Cloudflare's beacon commit cf_clearance before teardown
-                poll(200.milliseconds) { if (finished) resolve(Unit) }
-                loadData(baseUrl, response.body.string())
+        try {
+            runWebView<Unit>(timeout = 12.seconds) {
+                userAgent = headers["User-Agent"]!!
+                poll(250.milliseconds) {
+                    evaluateJs("Boolean(document.querySelector('.mangas-list .manga-block'))") {
+                        if (it == "true") resolve(Unit)
+                    }
+                }
+                onReceivedError { request, error ->
+                    if (request.isForMainFrame) reject(IOException(error.description.toString()))
+                }
+                loadUrl(getHomeUrl())
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // Interactive verification follows if this navigation cannot load the catalogue.
         }
     }
 
@@ -481,8 +470,6 @@ abstract class Japscan :
         private const val CACHE_HOST = "japscan-cache.local"
         private const val CACHE_FILE_PREFIX = "japscan-"
         private val IDLE_TIMEOUT = 45.seconds
-        private val CAPTCHA_POLL_INTERVAL = 5.seconds
-        private const val CAPTCHA_MAX_POLLS = 15
 
         // Under ~1280px wide the long-strip reader lazy-loads tiles on scroll, which a detached
         // WebView can't trigger; above it every tile host is created upfront.
