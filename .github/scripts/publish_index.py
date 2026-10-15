@@ -39,7 +39,6 @@ EXPECTED_MODULES = {
     "src/all/mangaball",
     "src/all/flamecomics",
     "src/all/hivescans",
-    "src/all/coomer",
     "src/all/cosplaytele",
     "src/fr/webtoons",
     "src/fr/mangadotnet",
