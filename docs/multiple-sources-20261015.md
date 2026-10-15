@@ -25,7 +25,7 @@ All implementation files live in this repository; upstream is not fetched at bui
 
 No existing source module, `lib`, `lib-multisrc`, `vendor`, `core`, `common`,
 `compiler`, `gradle`, or settings file is changed. Publication and APK verification
-add only the two modules; all prior 33 APK entries remain selected. The APK
+add only the requested new modules; all prior 33 APK entries remain selected. The APK
 language check requires exactly one `all` source for Comix, MangaDex and SayManhwa.
 GitHub Actions compiles the retained APK set, runs release lint and verifies
 labels, package versions and signatures before publication.
@@ -33,3 +33,36 @@ labels, package versions and signatures before publication.
 MangaDex public API access works from this environment. Comix returns a
 Cloudflare challenge; SayManhwa returns an unavailable stub. Successful Android
 reading is not claimed for those blocked sites.
+
+
+## Extended request
+
+- `src/all/flixnetcoffeemanga`: Flixnet (CoffeeManga), one `all` source. The
+  supplied `https://flixnet.site/bato/` is an advertising iframe wrapper whose
+  main iframe points to `https://www.coffeemanga.art/`, not Batoto. The user
+  explicitly chose its currently displayed content. The source reads that
+  public site directly, including its existing chapter redirects to ZazaManga;
+  it does not run wrapper advertisements or claim to contain the Batoto catalogue.
+- `src/fr/banchanscan`: copied from the same pinned upstream commit, version
+  1.6.2 with page indices normalized to zero after ordering by `sort_order`.
+- `src/fr/mangakawaii`: copied from that pinned upstream commit, version 1.6.2.
+  Chapter pagination follows `data-ch-next`, uses the site's `fetch` request
+  header, and avoids requesting nonexistent pages. Decimal chapter numbers
+  are preserved. Licensed series receive an explicit unavailable message.
+- `src/fr/bdplus`: new KeiSource scaffolded with `ext-bootstrap.py`, implemented
+  against the current public catalogue JSON, series HTML and per-tome pages
+  manifests. Popular uses catalogue ratings; search covers the full catalogue;
+  latest uses the site's visible update list. No shared engine is changed.
+
+There are now 39 selected modules. The new standalone icons are unmodified
+PNG icons downloaded from their respective sites, stored locally. New French
+modules remain `fr`; Flixnet, Comix, MangaDex and existing SayManhwa remain `all`.
+All previous source files and libraries are preserved.
+
+Live checks: Banchan home API returns 408 works, 388 published IDs, 21 chapters
+and six page URLs on a sample. BDPlus catalogue contains 2486 series; a sample
+series has 46 tomes and its first tome has 48 page URLs. CoffeeManga returns
+catalogue/search HTML, 34 chapter links on a sample and reader image URLs.
+MangaKawaii catalogue/search and initial chapter links are accessible, but its
+reader and chapter pagination requests return HTTP 403 in this environment.
+No end-to-end Android reading success is claimed.

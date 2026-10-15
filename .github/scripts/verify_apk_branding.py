@@ -19,6 +19,11 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         continue
     info = json.loads(metadata_file.read_text())
     expected_languages = {
+        "eu.kanade.tachiyomi.extension.all.flixnetcoffeemanga": {"all"},
+        "eu.kanade.tachiyomi.extension.fr.banchanscan": {"fr"},
+        "eu.kanade.tachiyomi.extension.fr.mangakawaii": {"fr"},
+        "eu.kanade.tachiyomi.extension.fr.bdplus": {"fr"},
+
         "eu.kanade.tachiyomi.extension.en.comix": {"all"},
         "eu.kanade.tachiyomi.extension.all.mangadex": {"all"},
         "eu.kanade.tachiyomi.extension.fr.hentaiorigines": {"fr"},
