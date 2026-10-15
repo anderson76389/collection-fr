@@ -5,6 +5,9 @@ on:
     branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006, fix/reader-runtime-20261007]
     paths:
       - "gradle/build-logic/**"
+      - "settings.gradle.kts"
+      - "vendor/extensions-lib/**"
+      - ".github/scripts/verify_local_api.init.gradle.kts"
       - "src/all/**"
       - "src/fr/poseidonscans/**"
       - "src/fr/raijinscans/**"
@@ -27,6 +30,9 @@ on:
   pull_request:
     paths:
       - "gradle/build-logic/**"
+      - "settings.gradle.kts"
+      - "vendor/extensions-lib/**"
+      - ".github/scripts/verify_local_api.init.gradle.kts"
       - "src/all/**"
       - "src/fr/poseidonscans/**"
       - "src/fr/raijinscans/**"
@@ -66,6 +72,20 @@ jobs:
 
       - name: Check publisher syntax
         run: python -m py_compile .github/scripts/publish_index.py
+
+      - name: Verify preserved extension APIs
+        run: |
+          (cd vendor/extensions-lib && sha256sum -c SHA256SUMS)
+          ./gradlew --no-daemon --no-configuration-cache --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
+
+      - name: Build all retained APKs with local APIs
+        run: |
+          tasks=()
+          for build_file in src/*/*/build.gradle.kts; do
+            module="${build_file%/build.gradle.kts}"
+            tasks+=(":${module//\//:}:assembleRelease")
+          done
+          ./gradlew --no-daemon "${tasks[@]}"
 
       - name: Lint the release variants
         run: ./gradlew --no-daemon :src:fr:bananascan:lintRelease :src:all:olympusscanlation:lintRelease :src:all:mangabuddy:lintRelease :src:all:cosplaytele:lintRelease :src:all:flamecomics:lintRelease :src:all:hivescans:lintRelease :src:all:mangaball:lintRelease :src:all:asurascans:lintRelease :src:all:saymanhwa:lintRelease :src:fr:webtoons:lintRelease :src:fr:mangadotnet:lintRelease :lib-multisrc:pam:lintRelease :src:all:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease :src:fr:sushiscanfr:lintRelease
