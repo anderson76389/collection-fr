@@ -20,6 +20,17 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     @Suppress("UnstableApiUsage")
     repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "collectionFrExtensionApi"
+                    url = uri(rootDir.resolve("vendor/extensions-lib/maven"))
+                }
+            }
+            filter {
+                includeModule("com.github.keiyoushi", "extensions-lib")
+            }
+        }
         google()
         mavenCentral()
         maven(url = "https://www.jitpack.io")

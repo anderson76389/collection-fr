@@ -102,6 +102,8 @@ Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.
 
 La copie du code de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) a été réalisée pour conserver une base de travail indépendante. L'historique d'import est indiqué dans [`.collection-fr-upstream-snapshot`](.collection-fr-upstream-snapshot).
 
+Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensions-lib`. Les autres outils et bibliothèques externes restent nécessaires.
+
 ---
 
 ## ⚙️ Compiler et publier
