@@ -13,7 +13,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import eu.kanade.tachiyomi.extension.all.manhuarm.Dialog
 import eu.kanade.tachiyomi.extension.all.manhuarm.Language
-import eu.kanade.tachiyomi.extension.all.manhuarm.Manhuarm.Companion.PAGE_REGEX
 import keiyoushi.utils.parseAs
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -33,13 +32,9 @@ class ComposedImageInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val url = request.url.toString()
 
-        if (!PAGE_REGEX.containsMatchIn(url)) {
-            return chain.proceed(request)
-        }
-
-        val dialogues = request.url.fragment?.parseAs<List<Dialog>>().orEmpty()
+        val dialogues = request.url.fragment?.takeIf { it.startsWith("[") }?.parseAs<List<Dialog>>()
+            ?: return chain.proceed(request)
         val response = chain.proceed(request)
 
         if (!response.isSuccessful || dialogues.isEmpty()) {
@@ -60,7 +55,7 @@ class ComposedImageInterceptor(
             canvas.draw(textPaint, dialogBox, dialog, dialog.x, y)
         }
 
-        val (format, mediaType) = when (url.substringBefore("#").substringAfterLast(".").lowercase()) {
+        val (format, mediaType) = when (request.url.pathSegments.last().substringAfterLast(".").lowercase()) {
             "png" -> Bitmap.CompressFormat.PNG to "image/png"
             "jpeg", "jpg" -> Bitmap.CompressFormat.JPEG to "image/jpeg"
             else -> Bitmap.CompressFormat.WEBP to "image/webp"

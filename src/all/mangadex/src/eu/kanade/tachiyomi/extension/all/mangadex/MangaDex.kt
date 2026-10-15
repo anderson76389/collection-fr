@@ -47,6 +47,7 @@ import okhttp3.Request
 import okhttp3.Response
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.Locale
 
 @Source
 abstract class MangaDex :
@@ -64,6 +65,10 @@ abstract class MangaDex :
         }
 
     private val preferences by getPreferencesLazy { sanitizeExistingUuidPrefs() }
+
+    private val contentLanguage: String
+        get() = preferences.getString(CONTENT_LANGUAGE_PREF, "all")
+            ?.takeIf { it in CONTENT_LANGUAGES } ?: "all"
 
     @Suppress("DEPRECATION")
     private fun isDelegate() = try {
@@ -130,7 +135,7 @@ abstract class MangaDex :
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, contentLanguage, preferences.preferExtensionLangTitle)
         }
 
         return MangasPage(mangaList, mangaListDto.hasNextPage)
@@ -207,7 +212,7 @@ abstract class MangaDex :
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, contentLanguage, preferences.preferExtensionLangTitle)
         }
 
         return MangasPage(mangaList, chapterListDto.hasNextPage)
@@ -293,6 +298,7 @@ abstract class MangaDex :
 
             val url = MDConstants.API_MANGA_URL.toHttpUrl().newBuilder()
                 .addQueryParameter("ids[]", query.removePrefix(MDConstants.PREFIX_ID_SEARCH))
+                .addLanguageQuery("availableTranslatedLanguage[]")
                 .addQueryParameter("includes[]", MDConstants.COVER_ART)
                 .addQueryParameter("contentRating[]", MDConstants.allContentRatings)
                 .build()
@@ -301,6 +307,7 @@ abstract class MangaDex :
         }
 
         val tempUrl = MDConstants.API_MANGA_URL.toHttpUrl().newBuilder()
+            .addLanguageQuery("availableTranslatedLanguage[]")
             .addQueryParameter("limit", MDConstants.MANGA_LIMIT.toString())
             .addQueryParameter("offset", helper.getMangaListOffset(page))
             .addQueryParameter("includes[]", MDConstants.COVER_ART)
@@ -338,7 +345,7 @@ abstract class MangaDex :
         return helper.mdFilters.addFiltersToUrl(
             url = tempUrl,
             filters = filters.ifEmpty { getFilterList() },
-            dexLang = dexLang,
+            dexLang = contentLanguage,
         )
     }
 
@@ -354,6 +361,7 @@ abstract class MangaDex :
         val minIndex = (page - 1) * MDConstants.MANGA_LIMIT
 
         val tempUrl = MDConstants.API_MANGA_URL.toHttpUrl().newBuilder()
+            .addLanguageQuery("availableTranslatedLanguage[]")
             .addQueryParameter("limit", MDConstants.MANGA_LIMIT.toString())
             .addQueryParameter("offset", "0")
             .addQueryParameter("includes[]", MDConstants.COVER_ART)
@@ -368,7 +376,7 @@ abstract class MangaDex :
         val finalUrl = helper.mdFilters.addFiltersToUrl(
             url = tempUrl,
             filters = filters.ifEmpty { getFilterList() },
-            dexLang = dexLang,
+            dexLang = contentLanguage,
         )
 
         val mangaRequest = GET(finalUrl, headers, CacheControl.FORCE_NETWORK)
@@ -400,7 +408,7 @@ abstract class MangaDex :
                     .firstInstanceOrNull<CoverArtDto>()
                     ?.attributes?.fileName
             }
-            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, dexLang, preferences.preferExtensionLangTitle)
+            helper.createBasicManga(mangaDataDto, fileName, coverSuffix, contentLanguage, preferences.preferExtensionLangTitle)
         }
 
         return mangaList
@@ -458,9 +466,9 @@ abstract class MangaDex :
 
         return helper.createManga(
             manga.data!!,
-            fetchSimpleChapterList(manga, dexLang),
+            fetchSimpleChapterList(manga, contentLanguage),
             fetchFirstVolumeCover(manga),
-            dexLang,
+            contentLanguage,
             preferences.coverQuality,
             preferences.altTitlesInDesc,
             preferences.preferExtensionLangTitle,
@@ -580,7 +588,7 @@ abstract class MangaDex :
     /**
      * Required because the chapter list API endpoint is paginated.
      */
-    private fun paginatedChapterListUrl(mangaId: String, offset: Int): HttpUrl = helper.getChapterEndpoint(mangaId, offset, dexLang).toHttpUrl().newBuilder()
+    private fun paginatedChapterListUrl(mangaId: String, offset: Int): HttpUrl = helper.getChapterEndpoint(mangaId, offset, contentLanguage).toHttpUrl().newBuilder()
         .addQueryParameter("contentRating[]", MDConstants.allContentRatings)
         .addQueryParameter("excludedGroups[]", preferences.blockedGroups)
         .addQueryParameter("excludedUploaders[]", preferences.blockedUploaders)
@@ -626,6 +634,24 @@ abstract class MangaDex :
 
     @Suppress("UNCHECKED_CAST")
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        ListPreference(screen.context).apply {
+            key = CONTENT_LANGUAGE_PREF
+            title = "Langue des œuvres et des chapitres"
+            entries = CONTENT_LANGUAGES.map { code ->
+                when (code) {
+                    "all" -> "Toutes les langues"
+                    "es-la" -> "Espagnol (Amérique latine)"
+                    "zh" -> "Chinois simplifié"
+                    "zh-hk" -> "Chinois traditionnel"
+                    else -> Locale.forLanguageTag(code).getDisplayName(Locale.FRENCH)
+                        .replaceFirstChar { it.titlecase(Locale.FRENCH) }
+                }
+            }.toTypedArray()
+            entryValues = CONTENT_LANGUAGES
+            summary = "%s — Actualisez les listes et les chapitres après modification."
+            setDefaultValue("all")
+        }.also(screen::addPreference)
+
         val coverQualityPref = ListPreference(screen.context).apply {
             key = MDConstants.getCoverQualityPreferenceKey(dexLang)
             title = helper.intl["cover_quality"]
@@ -862,7 +888,7 @@ abstract class MangaDex :
         SMangaUpdate(mangaDeferred.await(), chaptersDeferred.await())
     }
 
-    private fun HttpUrl.Builder.addLanguageQuery(name: String, language: String = dexLang) = apply {
+    private fun HttpUrl.Builder.addLanguageQuery(name: String, language: String = contentLanguage) = apply {
         if (language != "all") addQueryParameter(name, language)
     }
 
@@ -972,3 +998,69 @@ abstract class MangaDex :
             .apply()
     }
 }
+
+private const val CONTENT_LANGUAGE_PREF = "contentLanguage"
+private val CONTENT_LANGUAGES = arrayOf(
+    "all",
+    "fr",
+    "af",
+    "sq",
+    "ar",
+    "az",
+    "eu",
+    "be",
+    "bn",
+    "bg",
+    "my",
+    "ca",
+    "zh",
+    "zh-hk",
+    "cv",
+    "hr",
+    "cs",
+    "da",
+    "nl",
+    "en",
+    "eo",
+    "et",
+    "tl",
+    "fi",
+    "ka",
+    "de",
+    "el",
+    "he",
+    "hi",
+    "hu",
+    "ga",
+    "id",
+    "it",
+    "ja",
+    "jv",
+    "kk",
+    "ko",
+    "la",
+    "lt",
+    "ms",
+    "mn",
+    "ne",
+    "no",
+    "fa",
+    "pl",
+    "pt-br",
+    "pt",
+    "ro",
+    "ru",
+    "sr",
+    "sk",
+    "es-la",
+    "es",
+    "sv",
+    "ta",
+    "te",
+    "th",
+    "tr",
+    "uk",
+    "ur",
+    "uz",
+    "vi",
+)

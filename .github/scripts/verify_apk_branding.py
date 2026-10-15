@@ -35,6 +35,7 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         "eu.kanade.tachiyomi.extension.en.infernalvoidscans": {"all"},
         "eu.kanade.tachiyomi.extension.all.cosplaytele": {"all"},
         "eu.kanade.tachiyomi.extension.all.mangaball": {"fr"},
+        "eu.kanade.tachiyomi.extension.all.manhuarm": {"fr"},
         "eu.kanade.tachiyomi.extension.en.asurascans": {"all"},
         "eu.kanade.tachiyomi.extension.all.saymanhwa": {"all"},
         "eu.kanade.tachiyomi.extension.all.webtoons": {"fr"},

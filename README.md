@@ -69,14 +69,14 @@ L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anders
 
 **Manhwas, webtoons et autres catalogues**
 
-`Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+`Webtoons.com` · `Manhuarm` · `Manga Ball` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
 
 </details>
 
 <details>
 <summary><strong>🌍 Extensions multilingues et autres sources publiées</strong></summary>
 
-`Manhuarm` · `Manga Ball` · `Asura Scans`
+`Asura Scans`
 
 L'index peut inclure des sources classées `all` ainsi que d'autres extensions réservées à un public adulte. Certaines entrées portent un avertissement `MIXED` ou `NSFW` : respecte l'âge requis et vérifie les informations de chaque extension avant installation. **Collection FR ne garantit pas que tous les résultats soient disponibles en français.**
 

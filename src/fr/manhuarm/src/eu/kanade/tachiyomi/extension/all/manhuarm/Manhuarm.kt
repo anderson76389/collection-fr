@@ -55,16 +55,7 @@ abstract class Manhuarm :
     KeiSource(),
     ConfigurableSource {
 
-    private val selectedLanguage: String
-        get() = if (lang == "all") preferences.getString(CONTENT_LANGUAGE_PREF, "fr") ?: "fr" else lang
-
-    private val language: Language
-        get() = when (val code = selectedLanguage) {
-            "ar" -> Language(code, disableFontSettings = true)
-            "fr", "id" -> Language(code, supportNativeTranslation = true)
-            "pt-BR" -> Language(code, "pt", supportNativeTranslation = true)
-            else -> Language(code)
-        }
+    private val language = Language("fr", supportNativeTranslation = true)
 
     private val preferences by getPreferencesLazy()
 
@@ -160,28 +151,34 @@ abstract class Manhuarm :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
+        if (!fetchDetails && !fetchChapters) return SMangaUpdate(manga, chapters)
         val document = client.get(getMangaUrl(manga)).asJsoup()
-        val details = document.parseDetails().apply { url = manga.url }
+        val details = if (fetchDetails) document.parseDetails().apply { url = manga.url } else manga
 
         val language = settings
         if (fetchDetails && language.translateSynopsis && language.target != language.origin) {
             details.description = details.description?.let { translator.translate(language.origin, language.target, it) }
         }
 
-        val chapterList = document.select("li.wp-manga-chapter").map { element ->
-            val link = element.selectFirst("a")!!
-            SChapter.create().apply {
-                setUrlWithoutDomain(link.absUrl("href"))
-                name = link.text()
-                date_upload = parseChapterDate(element.selectFirst(".chapter-release-date")?.text())
-            }
-        }.filter { language.target == language.origin || it.date_upload > TRANSLATION_AVAILABILITY }
+        val chapterList = if (fetchChapters) {
+            document.select("li.wp-manga-chapter").map { element ->
+                val link = element.selectFirst("a")!!
+                SChapter.create().apply {
+                    setUrlWithoutDomain(link.absUrl("href"))
+                    name = link.text()
+                    date_upload = parseChapterDate(element.selectFirst(".chapter-release-date")?.text())
+                }
+            }.filter { it.date_upload == 0L || it.date_upload > TRANSLATION_AVAILABILITY }
+        } else {
+            chapters
+        }
 
         return SMangaUpdate(details, chapterList)
     }
 
     private fun Document.parseDetails() = SManga.create().apply {
-        title = selectFirst("h1.mrm-hero__title")!!.text()
+        title = selectFirst("h1.mrm-hero__title")?.text()
+            ?: throw IOException("Fiche Manhuarm indisponible. Vérifiez l’accès au site dans la WebView.")
         thumbnail_url = selectFirst(".mrm-hero__cover img")?.imageUrl()
         author = select(".author-content a").eachText().joinToString().ifEmpty { null }
         artist = select(".artist-content a").eachText().joinToString().ifEmpty { null }
@@ -240,10 +237,15 @@ abstract class Manhuarm :
             .mapNotNull { it.imageUrl() }
             .distinct()
 
-        val dialogues = fetchDialogues(document, chapterUrl).associateBy { it.imageUrl.substringBefore('?').substringAfterLast('/') }
+        if (images.isEmpty()) throw IOException("Manhuarm ne renvoie aucune image pour ce chapitre.")
+        val ocrPages = fetchDialogues(document, chapterUrl)
+        if (ocrPages.none { it.dialogues.isNotEmpty() }) {
+            throw IOException("Le texte de ce chapitre est indisponible sur Manhuarm. Ouvrez le chapitre dans la WebView pour vérifier le lecteur.")
+        }
+        val dialogues = ocrPages.associateBy { it.imageUrl.substringBefore('?').substringAfterLast('/') }
         val language = settings
 
-        return images.mapIndexed { index, imageUrl ->
+        val pages = images.mapIndexed { index, imageUrl ->
             val dialogs = dialogues[imageUrl.substringBefore('?').substringAfterLast('/')]
                 ?.dialogues
                 ?.filter { it.getTextBy(language).isNotBlank() }
@@ -251,10 +253,13 @@ abstract class Manhuarm :
             if (dialogs.isEmpty()) {
                 Page(index, imageUrl = imageUrl)
             } else {
-                // '#' would end the fragment early
-                Page(index, imageUrl = "$imageUrl#${dialogs.toJsonString().replace("#", "*")}")
+                Page(index, imageUrl = imageUrl.toHttpUrl().newBuilder().fragment(dialogs.toJsonString()).build().toString())
             }
         }
+        if (pages.none { it.imageUrl?.toHttpUrl()?.fragment != null }) {
+            throw IOException("Le texte Manhuarm ne correspond pas aux images de ce chapitre. Actualisez le chapitre dans la WebView.")
+        }
+        return pages
     }
 
     /**
@@ -329,17 +334,6 @@ abstract class Manhuarm :
     // ============================= Preferences ============================
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        if (lang == "all") {
-            ListPreference(screen.context).apply {
-                key = CONTENT_LANGUAGE_PREF
-                title = "Langue de lecture"
-                entries = arrayOf("Français", "English", "Español", "Indonesia", "Italiano", "Português (Brasil)", "العربية")
-                entryValues = arrayOf("fr", "en", "es", "id", "it", "pt-BR", "ar")
-                summary = "%s — Fermez puis rouvrez les réglages après modification."
-                setDefaultValue("fr")
-            }.also(screen::addPreference)
-        }
-
         val language = language
         val i18n = Intl(
             language = language.lang,
@@ -464,8 +458,6 @@ abstract class Manhuarm :
     }
 
     companion object {
-        val PAGE_REGEX = Regex(".*?\\.(webp|png|jpg|jpeg)#\\[.*?]", RegexOption.IGNORE_CASE)
-
         private val VAULT_REGEX = Regex("""_0xvault\s*=\s*(\[.*?])""", RegexOption.DOT_MATCHES_ALL)
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH)
 
@@ -475,7 +467,6 @@ abstract class Manhuarm :
         private val TRANSLATORS = arrayOf("Bing", "Google")
 
         const val DEVICE_FONT = "device:"
-        private const val CONTENT_LANGUAGE_PREF = "contentLanguagePref"
         private const val FONT_SIZE_PREF = "fontSizePref"
         private const val FONT_NAME_PREF = "fontNamePref"
         private const val DIALOG_BOX_SCALE_PREF = "dialogBoxScalePref"

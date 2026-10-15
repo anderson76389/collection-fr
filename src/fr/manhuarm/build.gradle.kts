@@ -6,15 +6,16 @@ plugins {
 
 keiyoushi {
     name = "Manhuarm"
-    versionCode = 3
+    versionCode = 4
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
 
-    listOf("fr", "all").forEach {
-        source {
-            lang = it
-            baseUrl = "https://manhuarmtl.com"
-        }
+    pkgName = "all.manhuarm"
+
+    source {
+        lang = "fr"
+        baseUrl = "https://manhuarmtl.com"
+        id = 8537659881437820380L
     }
 
     deeplink {

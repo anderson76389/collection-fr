@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.mangakawaii
 
+import android.util.LruCache
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -23,6 +24,8 @@ import java.util.Locale
 @Source
 abstract class MangaKawaii : KeiSource() {
 
+    private val pageCursors = LruCache<String, MutableMap<Int, Int>>(8)
+
     override fun Headers.Builder.configureHeaders() = set("Referer", "$baseUrl/")
 
     // ============================== Popular ==============================
@@ -31,8 +34,7 @@ abstract class MangaKawaii : KeiSource() {
             .addQueryParameter("sort", "views")
             .addQueryParameter("page", page.toString())
             .build()
-        val document = client.get(url).asJsoup()
-        return MangasPage(parseMangaCards(document), hasNextPage(document, page))
+        return cataloguePage(url, page)
     }
 
     // ============================== Latest ==============================
@@ -42,27 +44,41 @@ abstract class MangaKawaii : KeiSource() {
             .addQueryParameter("dir", "desc")
             .addQueryParameter("page", page.toString())
             .build()
-        val document = client.get(url).asJsoup()
-        return MangasPage(parseMangaCards(document), hasNextPage(document, page))
+        return cataloguePage(url, page)
     }
 
     // ============================== Search ==============================
     override suspend fun getSearchMangaList(page: Int, query: String, filters: FilterList): MangasPage {
-        val url = if (query.isBlank()) {
-            "$baseUrl/mangas".toHttpUrl().newBuilder()
-                .addQueryParameter("page", page.toString())
-                .build()
+        // The global search omits licence badges; the manga catalogue exposes them.
+        val url = "$baseUrl/mangas".toHttpUrl().newBuilder()
+            .addQueryParameter("q", query)
+            .addQueryParameter("page", page.toString())
+            .build()
+        return cataloguePage(url, page)
+    }
+
+    private suspend fun cataloguePage(url: HttpUrl, page: Int): MangasPage {
+        val key = url.newBuilder().removeAllQueryParameters("page").build().toString()
+        val cursors = if (page == 1) {
+            mutableMapOf(1 to 1).also { pageCursors.put(key, it) }
         } else {
-            "$baseUrl/recherche".toHttpUrl().newBuilder()
-                .addQueryParameter("q", query)
-                .addQueryParameter("page", page.toString())
-                .build()
+            pageCursors.get(key) ?: mutableMapOf<Int, Int>().also { pageCursors.put(key, it) }
         }
-        val document = client.get(url).asJsoup()
-        return MangasPage(parseMangaCards(document), hasNextPage(document, page))
+        var upstreamPage = synchronized(cursors) { cursors[page] ?: page }
+        while (true) {
+            val document = client.get(url.newBuilder().setQueryParameter("page", upstreamPage.toString()).build()).asJsoup()
+            val mangas = parseMangaCards(document)
+            val hasNext = hasNextPage(document, upstreamPage)
+            if (mangas.isNotEmpty() || !hasNext) {
+                synchronized(cursors) { cursors[page + 1] = upstreamPage + 1 }
+                return MangasPage(mangas, hasNext)
+            }
+            upstreamPage++
+        }
     }
 
     private fun parseMangaCards(document: Document): List<SManga> = document.select("""a.mk-card[href*="/manga/"]""").mapNotNull { element ->
+        if (element.select("span").any { it.ownText().equals("LICENCIÉ", ignoreCase = true) }) return@mapNotNull null
         val img = element.selectFirst("img")
         val title = element.selectFirst("p.mk-display")?.text() ?: img?.attr("alt")
         if (title.isNullOrBlank()) return@mapNotNull null
@@ -97,6 +113,11 @@ abstract class MangaKawaii : KeiSource() {
         fetchChapters: Boolean,
     ): SMangaUpdate {
         val document = client.get(getMangaUrl(manga)).asJsoup()
+        if (document.select("span[title]").any { it.attr("title").startsWith("Licencié", ignoreCase = true) } ||
+            document.select("[data-ch-list]").text().contains("Licencié", ignoreCase = true)
+        ) {
+            throw IOException("Cette œuvre licenciée est désactivée par MangaKawaii et exclue de cette extension.")
+        }
         val updatedManga = parseDetails(document).apply {
             url = manga.url
             if (title.isEmpty()) {

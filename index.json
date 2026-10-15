@@ -34,7 +34,7 @@
         "packageName": "eu.kanade.tachiyomi.extension.all.manhuarm",
         "resources": {
           "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/f9f1fff/tachiyomi-all.manhuarm-v1.6.2.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/all/manhuarm/res/mipmap-xhdpi/ic_launcher.png",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/manhuarm/res/mipmap-xhdpi/ic_launcher.png",
           "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/f9f1fff/tachiyomi-all.manhuarm-v1.6.2.jar"
         },
         "extensionLib": "1.6",
@@ -43,45 +43,9 @@
         "contentWarning": "CONTENT_WARNING_MIXED",
         "sources": [
           {
-            "id": "797946349800265191",
-            "name": "Manhuarm",
-            "language": "ar",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
-            "id": "7690709834650404718",
-            "name": "Manhuarm",
-            "language": "en",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
-            "id": "8547169224512757621",
-            "name": "Manhuarm",
-            "language": "es",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
             "id": "8537659881437820380",
             "name": "Manhuarm",
             "language": "fr",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
-            "id": "6421419166134585378",
-            "name": "Manhuarm",
-            "language": "id",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
-            "id": "7611240442736670513",
-            "name": "Manhuarm",
-            "language": "it",
-            "homeUrl": "https://manhuarmtl.com"
-          },
-          {
-            "id": "5618121635049025093",
-            "name": "Manhuarm",
-            "language": "pt-BR",
             "homeUrl": "https://manhuarmtl.com"
           }
         ]

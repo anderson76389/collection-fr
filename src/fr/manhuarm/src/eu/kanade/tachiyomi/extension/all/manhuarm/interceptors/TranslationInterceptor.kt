@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.extension.all.manhuarm.interceptors
 
 import eu.kanade.tachiyomi.extension.all.manhuarm.Dialog
 import eu.kanade.tachiyomi.extension.all.manhuarm.Language
-import eu.kanade.tachiyomi.extension.all.manhuarm.Manhuarm.Companion.PAGE_REGEX
 import eu.kanade.tachiyomi.extension.all.manhuarm.translator.TranslatorEngine
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.toJsonString
@@ -20,29 +19,28 @@ class TranslationInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val url = request.url.toString()
         val language = settings()
 
-        if (!PAGE_REGEX.containsMatchIn(url) || language.disableTranslator || language.target == language.origin) {
-            return chain.proceed(request)
-        }
-
-        val dialogues = request.url.fragment?.parseAs<List<Dialog>>()
+        if (language.disableTranslator || language.target == language.origin) return chain.proceed(request)
+        val dialogues = request.url.fragment?.takeIf { it.startsWith("[") }?.parseAs<List<Dialog>>()
             ?: return chain.proceed(request)
+        if (dialogues.all { it.textFor(language.target) != null }) return chain.proceed(request)
 
         val engine = translator()
         val translated = runBlocking(Dispatchers.IO) {
             dialogues.map { dialog ->
                 async {
-                    dialog.copy(
-                        textByLanguage = mapOf("text" to engine.translate(language.origin, language.target, dialog.text)),
-                    )
+                    if (dialog.textFor(language.target) != null || dialog.text.isBlank()) {
+                        dialog
+                    } else {
+                        dialog.translated(language.target, engine.translate(language.origin, language.target, dialog.text))
+                    }
                 }
             }.awaitAll()
         }
 
         val newRequest = request.newBuilder()
-            .url("${url.substringBeforeLast("#")}#${translated.toJsonString()}")
+            .url(request.url.newBuilder().fragment(translated.toJsonString()).build())
             .build()
 
         return chain.proceed(newRequest)
