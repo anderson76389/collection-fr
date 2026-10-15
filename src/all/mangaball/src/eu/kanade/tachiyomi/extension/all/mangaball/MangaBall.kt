@@ -236,14 +236,23 @@ abstract class MangaBall :
     private suspend fun getChapterList(titleId: String): List<SChapter> {
         val body = TitleIdRequest(titleId).toJsonBody()
 
-        val chapters = client.post("$baseUrl/api/v1/chapter/chapter-listing-by-title-id", headers, body)
+        val response = client.post("$baseUrl/api/v1/chapter/chapter-listing-by-title-id", headers, body)
             .parseAs<ChapterListResponse>()
-            .data
-            .mapNotNull { it.toSChapter(siteLang) }
+        if (response.data.isEmpty()) {
+            throw IOException("MangaBall : le serveur renvoie une liste vide pour cette œuvre (ID : $titleId).")
+        }
 
+        val chapters = response.data.mapNotNull { it.toSChapter(siteLang) }
+        if (chapters.isEmpty()) {
+            throw IOException("MangaBall : des chapitres existent, mais aucun ne correspond au français. Essayez la source Multiple.")
+        }
         preferences.rememberScanlators(chapters.mapNotNull { it.scanlator })
 
-        return chapters.filterBlacklistedScanlators(preferences.scanlatorBlacklist())
+        return chapters.filterBlacklistedScanlators(preferences.scanlatorBlacklist()).also {
+            if (it.isEmpty()) {
+                throw IOException("MangaBall : tous les chapitres sont masqués par la liste noire des équipes. Vérifiez les réglages de l’extension.")
+            }
+        }
     }
 
     override fun getChapterUrl(chapter: SChapter): String = "$baseUrl/chapter-detail/${chapter.url}"
@@ -253,6 +262,9 @@ abstract class MangaBall :
             .parseAs<ChapterDetailResponse>()
             .data.chapter.pages
 
+        if (pages.isEmpty()) {
+            throw IOException("MangaBall : le serveur ne renvoie aucune page pour ce chapitre (ID : ${chapter.url}).")
+        }
         updateViews(chapter.url)
 
         return pages.mapIndexed { index, url -> Page(index, getChapterUrl(chapter), url) }
