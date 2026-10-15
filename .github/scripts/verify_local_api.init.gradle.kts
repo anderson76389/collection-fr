@@ -1,7 +1,8 @@
 import org.gradle.api.attributes.Usage
 
-gradle.projectsEvaluated {
-    val root = gradle.rootProject
+gradle.beforeProject {
+    if (path != ":") return@beforeProject
+    val root = this
     root.tasks.register("verifyLocalExtensionApis") {
         group = "verification"
         description = "Verify that both extension API artifacts resolve from the checked-in Maven repository."

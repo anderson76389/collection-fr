@@ -76,7 +76,7 @@ jobs:
       - name: Verify preserved extension APIs
         run: |
           (cd vendor/extensions-lib && sha256sum -c SHA256SUMS)
-          ./gradlew --no-daemon --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
+          ./gradlew --no-daemon --no-configuration-cache --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
 
       - name: Build all retained APKs with local APIs
         run: |

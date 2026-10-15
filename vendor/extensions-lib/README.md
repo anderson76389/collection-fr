@@ -30,7 +30,7 @@ Pour vérifier la résolution locale des deux AAR :
 
 ```sh
 (cd vendor/extensions-lib && sha256sum -c SHA256SUMS)
-./gradlew --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
+./gradlew --no-configuration-cache --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
 ```
 
 Les archives source permettent également de consulter ou reconstruire les API.
