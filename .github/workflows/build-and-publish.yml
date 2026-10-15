@@ -10,8 +10,7 @@ on:
       - "src/all/**"
       - "src/fr/webtoons/**"
       - "src/fr/mangadotnet/**"
-      - "lib-multisrc/pam/**"
-      - "lib-multisrc/kemono/**"
+      - "lib-multisrc/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -93,7 +92,6 @@ jobs:
             :src:all:mangaball
             :src:all:flamecomics
             :src:all:hivescans
-            :src:all:coomer
             :src:all:cosplaytele
             :src:fr:webtoons
             :src:fr:mangadotnet
