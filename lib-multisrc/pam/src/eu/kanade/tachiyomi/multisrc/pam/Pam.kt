@@ -17,6 +17,7 @@ import keiyoushi.lib.secretstream.X25519
 import keiyoushi.network.get
 import keiyoushi.network.rateLimit
 import keiyoushi.source.KeiSource
+import keiyoushi.utils.asJsoup
 import keiyoushi.utils.firstInstanceOrNull
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
@@ -83,7 +84,7 @@ abstract class Pam :
                 addQueryParameter("q", query)
             }.build()
 
-            val data = sitePages.load("$baseUrl/library", SiteRequest(fetch = search.toString())).fetched().parseAs<SearchResponse>().data
+            val data = client.get(search, apiHeaders).parseAs<SearchResponse>().data
 
             return MangasPage(
                 mangas = data.map { it.toSManga(::createThumbnailUrl) },
@@ -120,12 +121,15 @@ abstract class Pam :
             }
         }.build()
 
-        // Later pages are loaded by the library page itself, as it does when scrolled.
+        // The catalogue is embedded in HTML; later pages use the site's JSON endpoint.
         val data = if (page > 1) {
             val next = url.newBuilder().addQueryParameter("page", page.toString()).build()
-            sitePages.load(url.toString(), SiteRequest(fetch = next.toString())).fetched().parseAs<LibraryResponse>().series
+            client.get(next, apiHeaders).parseAs<LibraryResponse>().series
         } else {
-            sitePages.load(url.toString()).page.parseAs<LibraryPage>().props.series
+            val document = client.get(url, headers).asJsoup()
+            val pageData = document.selectFirst("#app[data-page]")?.attr("data-page")
+                ?: throw IOException("Catalogue indisponible. Ouvrez la source dans WebView pour vérifier l’accès au site.")
+            pageData.parseAs<LibraryPage>().props.series
         }
 
         return MangasPage(
@@ -133,6 +137,11 @@ abstract class Pam :
             hasNextPage = data.meta?.let { it.current < it.last } ?: false,
         )
     }
+
+    private val apiHeaders get() = headers.newBuilder()
+        .set("Accept", "application/json")
+        .set("X-Requested-With", "XMLHttpRequest")
+        .build()
 
     override fun getMangaUrl(manga: SManga): String = "$baseUrl/serie/${manga.url}"
 
