@@ -103,13 +103,17 @@ abstract class Bdplus : KeiSource() {
     ): SMangaUpdate {
         val document = client.get(getMangaUrl(manga)).asJsoup()
         val updated = if (fetchDetails) details(document).apply { url = manga.url } else manga
-        val tomes = if (fetchChapters) document.select("#tl a.tr[data-k]").map { row ->
-            SChapter.create().apply {
-                setUrlWithoutDomain(row.absUrl("href"))
-                name = listOf(row.select(".tn").text(), row.select(".tt").text()).filter { it.isNotBlank() }.joinToString(" · ")
-                memo = buildJsonObject { put("directory", "/_converted/${row.attr("data-k")}/") }
-            }
-        }.asReversed() else chapters
+        val tomes = if (fetchChapters) {
+            document.select("#tl a.tr[data-k]").map { row ->
+                SChapter.create().apply {
+                    setUrlWithoutDomain(row.absUrl("href"))
+                    name = listOf(row.select(".tn").text(), row.select(".tt").text()).filter { it.isNotBlank() }.joinToString(" · ")
+                    memo = buildJsonObject { put("directory", "/_converted/${row.attr("data-k")}/") }
+                }
+            }.asReversed()
+        } else {
+            chapters
+        }
         return SMangaUpdate(updated, tomes)
     }
 

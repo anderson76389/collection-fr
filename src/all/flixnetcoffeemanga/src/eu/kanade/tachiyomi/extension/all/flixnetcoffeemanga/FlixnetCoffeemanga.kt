@@ -76,27 +76,35 @@ abstract class FlixnetCoffeemanga : KeiSource() {
         fetchChapters: Boolean,
     ): SMangaUpdate {
         val document = client.get(getMangaUrl(manga)).asJsoup()
-        val updated = if (fetchDetails) SManga.create().apply {
-            url = manga.url
-            title = document.selectFirst(".post-title h1, h1")?.text().orEmpty()
-            thumbnail_url = document.selectFirst(".summary_image img")?.absUrl("src")
-            description = document.select(".summary__content, .description-summary .summary__content").text()
-            author = document.select(".author-content a").eachText().distinct().joinToString()
-            artist = document.select(".artist-content a").eachText().distinct().joinToString()
-            genre = document.select(".genres-content a").eachText().distinct().joinToString()
-            val state = document.select(".post-status .summary-content").text().lowercase()
-            status = when {
-                "ongoing" in state -> SManga.ONGOING
-                "completed" in state -> SManga.COMPLETED
-                else -> SManga.UNKNOWN
+        val updated = if (fetchDetails) {
+            SManga.create().apply {
+                url = manga.url
+                title = document.selectFirst(".post-title h1, h1")?.text().orEmpty()
+                thumbnail_url = document.selectFirst(".summary_image img")?.absUrl("src")
+                description = document.select(".summary__content, .description-summary .summary__content").text()
+                author = document.select(".author-content a").eachText().distinct().joinToString()
+                artist = document.select(".artist-content a").eachText().distinct().joinToString()
+                genre = document.select(".genres-content a").eachText().distinct().joinToString()
+                val state = document.select(".post-status .summary-content").text().lowercase()
+                status = when {
+                    "ongoing" in state -> SManga.ONGOING
+                    "completed" in state -> SManga.COMPLETED
+                    else -> SManga.UNKNOWN
+                }
             }
-        } else manga
-        val chapterList = if (fetchChapters) document.select(".chapter-list a[href*=/chapter-]").map { link ->
-            SChapter.create().apply {
-                setUrlWithoutDomain(link.absUrl("href"))
-                name = link.text()
-            }
-        }.distinctBy { it.url } else chapters
+        } else {
+            manga
+        }
+        val chapterList = if (fetchChapters) {
+            document.select(".chapter-list a[href*=/chapter-]").map { link ->
+                SChapter.create().apply {
+                    setUrlWithoutDomain(link.absUrl("href"))
+                    name = link.text()
+                }
+            }.distinctBy { it.url }
+        } else {
+            chapters
+        }
         return SMangaUpdate(updated, chapterList)
     }
 
