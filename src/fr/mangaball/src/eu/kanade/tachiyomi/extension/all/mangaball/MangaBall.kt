@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.extension.all.mangaball
 
 import android.util.Log
 import androidx.preference.PreferenceScreen
-import androidx.preference.SwitchPreferenceCompat
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.source.ConfigurableSource
@@ -42,53 +41,7 @@ abstract class MangaBall :
     KeiSource(),
     ConfigurableSource {
 
-    private val siteLang: List<String>
-        get() = when (lang) {
-            "all" -> emptyList()
-            "ar" -> listOf("ar")
-            "bg" -> listOf("bg")
-            "bn" -> listOf("bn")
-            "ca" -> listOf("ca", "ca-ad", "ca-es", "ca-fr", "ca-it", "ca-pt")
-            "cs" -> listOf("cs")
-            "da" -> listOf("da")
-            "de" -> listOf("de")
-            "el" -> listOf("el")
-            "en" -> listOf("en")
-            "es" -> listOf("es", "es-ar", "es-mx", "es-es", "es-la", "es-419")
-            "fa" -> listOf("fa")
-            "fi" -> listOf("fi")
-            "fr" -> listOf("fr")
-            "he" -> listOf("he")
-            "hi" -> listOf("hi")
-            "hu" -> listOf("hu")
-            "id" -> listOf("id")
-            "it" -> listOf("it", "it-it")
-            "is" -> listOf("ib", "ib-is", "is")
-            "ja" -> listOf("ja", "jp")
-            "ko" -> listOf("ko", "kr")
-            "kn" -> listOf("kn", "kn-in", "kn-my", "kn-sg", "kn-tw")
-            "ml" -> listOf("ml", "ml-in", "ml-my", "ml-sg", "ml-tw")
-            "ms" -> listOf("ms")
-            "ne" -> listOf("ne")
-            "nl" -> listOf("nl", "nl-be")
-            "no" -> listOf("no")
-            "pl" -> listOf("pl")
-            "pt-BR" -> listOf("pt-br", "pt-pt")
-            "ro" -> listOf("ro")
-            "ru" -> listOf("ru")
-            "sk" -> listOf("sk")
-            "sl" -> listOf("sl")
-            "sq" -> listOf("sq")
-            "sr" -> listOf("sr", "sr-cyrl")
-            "sv" -> listOf("sv")
-            "ta" -> listOf("ta")
-            "th" -> listOf("th", "th-hk", "th-kh", "th-la", "th-my", "th-sg")
-            "tr" -> listOf("tr")
-            "uk" -> listOf("uk")
-            "vi" -> listOf("vi")
-            "zh" -> listOf("zh", "zh-cn", "zh-hk", "zh-mo", "zh-sg", "zh-tw", "cn")
-            else -> listOf(lang)
-        }
+    private val siteLang = listOf("fr")
 
     private val preferences by getPreferencesLazy()
 
@@ -119,7 +72,8 @@ abstract class MangaBall :
                 addQueryParameter("sort_order", sortOrder ?: sort?.sortOrder ?: "desc")
             }
             addQueryParameter("tag_mode", filters.firstInstanceOrNull<TagModeFilter>()?.selected ?: "AND")
-            addQueryParameter("adult_mode", if (hideNsfwPreference()) "no_18" else "all")
+            addQueryParameter("adult_mode", "no_18")
+            addQueryParameter("translated_languages", "fr")
 
             if (query.isNotBlank()) {
                 addQueryParameter("keyword", query.trim())
@@ -137,7 +91,7 @@ abstract class MangaBall :
                 addQueryParameter("included_tags", included.joinToString(","))
             }
 
-            val excluded = filters.filterIsInstance<TriStateGroupFilter<String>>().flatMap { it.excluded }
+            val excluded = (filters.filterIsInstance<TriStateGroupFilter<String>>().flatMap { it.excluded } + ADULT_TAG_IDS).distinct()
             if (excluded.isNotEmpty()) {
                 addQueryParameter("excluded_tags", excluded.joinToString(","))
             }
@@ -190,7 +144,9 @@ abstract class MangaBall :
             // The detail endpoint accepts a slug but can return an unrelated title (one-piece -> one).
             val searchUrl = "$baseUrl/api/v1/title/search-advanced".toHttpUrl().newBuilder()
                 .addQueryParameter("keyword", idOrSlug.replace('-', ' '))
-                .addQueryParameter("adult_mode", "all")
+                .addQueryParameter("adult_mode", "no_18")
+                .addQueryParameter("translated_languages", "fr")
+                .addQueryParameter("excluded_tags", ADULT_TAG_IDS.joinToString(","))
                 .addQueryParameter("limit", "100")
                 .build()
             client.get(searchUrl).parseAs<SearchResponse>().data
@@ -200,6 +156,7 @@ abstract class MangaBall :
         return client.get("$baseUrl/api/v1/title/detail/$id")
             .parseAs<TitleResponse>()
             .data
+            .also { it.requireFrenchNonAdult() }
             .toSManga()
     }
 
@@ -213,7 +170,7 @@ abstract class MangaBall :
 
         return if (fetchChapters && titleId != null) {
             coroutineScope {
-                val mangaDeferred = async { if (fetchDetails) getMangaDetails(titleId) else manga }
+                val mangaDeferred = async { getMangaDetails(titleId) }
                 val chaptersDeferred = async { getChapterList(titleId) }
 
                 SMangaUpdate(mangaDeferred.await(), chaptersDeferred.await())
@@ -244,7 +201,7 @@ abstract class MangaBall :
 
         val chapters = response.data.mapNotNull { it.toSChapter(siteLang) }
         if (chapters.isEmpty()) {
-            throw IOException("MangaBall : des chapitres existent, mais aucun ne correspond au français. Essayez la source Multiple.")
+            throw IOException("MangaBall : des chapitres existent, mais aucun ne correspond au français. Cette source propose uniquement les chapitres français.")
         }
         preferences.rememberScanlators(chapters.mapNotNull { it.scanlator })
 
@@ -291,20 +248,10 @@ abstract class MangaBall :
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        SwitchPreferenceCompat(screen.context).apply {
-            key = NSFW_PREF
-            title = "Hide NSFW content"
-            summary = "Hide titles marked as 18+"
-            setDefaultValue(false)
-        }.also(screen::addPreference)
-
         screen.addScanlatorBlacklistPreference(preferences)
     }
-
-    private fun hideNsfwPreference() = preferences.getBoolean(NSFW_PREF, false)
 }
 
-private const val NSFW_PREF = "nsfw_pref"
 private const val LEGACY_HOST = "mangaball.net"
 private val TITLE_ID = Regex("[a-f0-9]{24}")
 
