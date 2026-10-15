@@ -80,6 +80,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
+            :src:all:flixnetcoffeemanga
+            :src:fr:banchanscan
+            :src:fr:mangakawaii
+            :src:fr:bdplus
+
+            :src:all:comix
+            :src:all:mangadex
+
             :src:fr:hentaiorigines
             :src:fr:histoiredhentai
             :src:fr:scanhentaimenu

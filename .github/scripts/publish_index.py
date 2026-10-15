@@ -17,6 +17,14 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
+    "src/all/flixnetcoffeemanga",
+    "src/fr/banchanscan",
+    "src/fr/mangakawaii",
+    "src/fr/bdplus",
+
+    "src/all/comix",
+    "src/all/mangadex",
+
     "src/fr/hentaiorigines",
     "src/fr/histoiredhentai",
     "src/fr/scanhentaimenu",
@@ -87,6 +95,14 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
+            "src/all/flixnetcoffeemanga": "flixnetcoffeemanga",
+            "src/fr/banchanscan": "banchanscan",
+            "src/fr/mangakawaii": "mangakawaii",
+            "src/fr/bdplus": "bdplus",
+
+            "src/all/comix": "comix",
+            "src/all/mangadex": "mangadex",
+
             "src/fr/hentaiorigines": "hentai-origines",
             "src/fr/histoiredhentai": "hhentai",
             "src/fr/scanhentaimenu": "x-manga",
