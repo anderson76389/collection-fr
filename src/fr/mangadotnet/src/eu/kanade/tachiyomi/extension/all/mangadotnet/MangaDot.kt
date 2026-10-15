@@ -478,22 +478,17 @@ abstract class MangaDot :
         chapters: List<SChapter>,
         fetchDetails: Boolean,
         fetchChapters: Boolean,
-    ): SMangaUpdate = coroutineScope {
-        val detailsDeferred = async {
-            if (fetchDetails) {
-                val url = "$baseUrl/manga/${manga.url}.data?_routes=pages/MangaDetailPage".toHttpUrl()
-                val data = client.get(url).use { it.decodeRscAs<Data<MangaData>>().data }
-                data.mangaData.manga.toSManga(baseUrl, showTagsPref(), data.mangaData.volumeCount)
-            } else {
-                manga
-            }
+    ): SMangaUpdate {
+        val updatedManga = if (fetchDetails) {
+            val url = "$baseUrl/manga/${manga.url}.data?_routes=pages/MangaDetailPage".toHttpUrl()
+            val data = client.get(url).use { it.decodeRscAs<Data<MangaData>>().data }
+            data.mangaData.manga.toSManga(baseUrl, showTagsPref(), data.mangaData.volumeCount)
+        } else {
+            manga
         }
-
-        val chaptersDeferred = async {
-            if (fetchChapters) fetchChapterListInternal(manga) else chapters
-        }
-
-        SMangaUpdate(detailsDeferred.await(), chaptersDeferred.await())
+        // Use the ID returned by the details response for its chapter requests.
+        val updatedChapters = if (fetchChapters) fetchChapterListInternal(updatedManga) else chapters
+        return SMangaUpdate(updatedManga, updatedChapters)
     }
 
     override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> = coroutineScope {
@@ -531,39 +526,19 @@ abstract class MangaDot :
             }
         }
         val volumes = async {
-            if (mode != "chapters") {
-                val volumesUrl = "$baseUrl/api/manga/${manga.url}/volumes".toHttpUrl().newBuilder().apply {
-                    queryLang?.let { addQueryParameter("lang", it) }
-                }.build()
-                client.get(volumesUrl).use { response ->
-                    response.parseAs<List<Volume>>()
-                        .filter { lang == "all" || it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
-                        .map { volume ->
-                            SChapter.create().apply {
-                                url = ChapterUrl(volume.id.toString(), volume.source, true).toJsonString()
-                                name = "Volume ${(volume.volume ?: 0f).toString().removeSuffix(".0")}"
-                                if (lang == "all") {
-                                    name = "[${volume.language ?: "?"}] $name"
-                                    memo = buildJsonObject { put("language", volume.language.orEmpty()) }
-                                }
-                                chapter_number = 0f
-                                scanlator = (volume.group ?: volume.scanlator)?.takeIf { it.isNotBlank() }
-                                date_upload = Instant.tryParse(volume.date?.replace(" ", "T"))
-                            }
-                        }
-                }
-            } else {
-                emptyList()
-            }
+            if (mode != "chapters") fetchVolumesList(manga) else emptyList()
         }
 
         val chaptersResult = chapters.await()
         val volumesResult = volumes.await()
 
-        val allChapters = if (mode == "volumes" && volumesResult.isEmpty()) {
-            fetchChaptersList(manga)
-        } else {
-            chaptersResult + volumesResult
+        val allChapters = when {
+            mode == "volumes" && volumesResult.isEmpty() -> fetchChaptersList(manga)
+            mode == "chapters" && chaptersResult.isEmpty() -> fetchVolumesList(manga)
+            else -> chaptersResult + volumesResult
+        }
+        if (allChapters.isEmpty()) {
+            throw IOException("MangaDot : aucun chapitre ni volume français renvoyé pour cette fiche (ID : ${manga.url}).")
         }
 
         val finalChapters = if (deduplicate && allChapters.isNotEmpty()) {
@@ -617,6 +592,29 @@ abstract class MangaDot :
         }
 
         finalChapters
+    }
+
+    private suspend fun fetchVolumesList(manga: SManga): List<SChapter> {
+        val volumesUrl = "$baseUrl/api/manga/${manga.url}/volumes".toHttpUrl().newBuilder().apply {
+            queryLang?.let { addQueryParameter("lang", it) }
+        }.build()
+        return client.get(volumesUrl).use { response ->
+            response.parseAs<List<Volume>>()
+                .filter { lang == "all" || it.language == null || it.language.equals(lang, true) || it.language.equals(queryLang, true) }
+                .map { volume ->
+                    SChapter.create().apply {
+                        url = ChapterUrl(volume.id.toString(), volume.source, true).toJsonString()
+                        name = "Volume ${(volume.volume ?: 0f).toString().removeSuffix(".0")}"
+                        if (lang == "all") {
+                            name = "[${volume.language ?: "?"}] $name"
+                            memo = buildJsonObject { put("language", volume.language.orEmpty()) }
+                        }
+                        chapter_number = 0f
+                        scanlator = (volume.group ?: volume.scanlator)?.takeIf { it.isNotBlank() }
+                        date_upload = Instant.tryParse(volume.date?.replace(" ", "T"))
+                    }
+                }
+        }
     }
 
     private suspend fun fetchChaptersList(manga: SManga): List<SChapter> {
