@@ -8,7 +8,7 @@
 
 [![Mihon](https://img.shields.io/badge/Compatible-Mihon-6366F1?style=for-the-badge)](https://mihon.app/)
 [![Langue](https://img.shields.io/badge/Langue-Fran%C3%A7ais-2563EB?style=for-the-badge)](#-les-extensions)
-[![Extensions](https://img.shields.io/badge/Index-27%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
+[![Extensions](https://img.shields.io/badge/Index-34%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
 [![Android](https://img.shields.io/badge/Plateforme-Android-404040?style=for-the-badge&logo=android&logoColor=white)](https://github.com/anderson76389/collection-fr/releases)
 
 [📲 Installer dans Mihon](#-installer-le-dépôt-dans-mihon) · [📖 Extensions](#-les-extensions) · [⚙️ Compilation](#-compiler-et-publier) · [🔎 Vérifications](#-suivi-des-correctifs-et-limitations)
@@ -58,7 +58,7 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **27 extensions** lors de la vérification du **11 octobre 2026**. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **34 extensions** après le retrait des cinq sources demandé le **15 octobre 2026**. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
@@ -69,7 +69,7 @@ L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anders
 
 **Manhwas, webtoons et autres catalogues**
 
-`MangaDot` · `Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+`Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
 
 </details>
 
@@ -102,17 +102,7 @@ Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.
 
 La copie du code de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) a été réalisée pour conserver une base de travail indépendante. L'historique d'import est indiqué dans [`.collection-fr-upstream-snapshot`](.collection-fr-upstream-snapshot).
 
-Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensions-lib`. Les autres outils et bibliothèques externes restent nécessaires.
-
----
-
-## ⚙️ Compiler et publier
-
-Le workflow [**Build and publish personal extensions**](.github/workflows/build-and-publish.yml) compile les modules sélectionnés, signe les APK, prépare les fichiers publiés et actualise l'index sur la branche `repo`.
-
-### 🔑 Configuration de la signature Android
-
-Si tu veux recompiler et publier toi-même les extensions, crée une clé Android **locale** :
+Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensio…110 tokens truncated…u veux recompiler et publier toi-même les extensions, crée une clé Android **locale** :
 
 ~~~sh
 keytool -genkeypair -v -keystore collection-fr.jks -alias collection-fr -keyalg RSA -keysize 2048 -validity 10000

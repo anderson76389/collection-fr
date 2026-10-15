@@ -108,27 +108,6 @@
         ]
       },
       {
-        "name": "MangaDot",
-        "packageName": "eu.kanade.tachiyomi.extension.en.mangadotnet",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/f9f1fff/MAKOFF-mangadot-v1.6.26.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/mangadotnet/res/mipmap-xhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/f9f1fff/tachiyomi-en.mangadotnet-v1.6.26.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106026",
-        "versionName": "1.6.26",
-        "contentWarning": "CONTENT_WARNING_MIXED",
-        "sources": [
-          {
-            "id": "6544312035114371248",
-            "name": "MangaDot",
-            "language": "fr",
-            "homeUrl": "https://mangadot.net"
-          }
-        ]
-      },
-      {
         "name": "AnimeSama",
         "packageName": "eu.kanade.tachiyomi.extension.fr.animesama",
         "resources": {
