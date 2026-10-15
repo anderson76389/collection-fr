@@ -17,6 +17,12 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
+    "src/fr/hentaiorigines",
+    "src/fr/histoiredhentai",
+    "src/fr/scanhentaimenu",
+    "src/fr/ortegascans",
+    "src/fr/lelmanga",
+
     "src/fr/bananascan",
     "src/all/olympusscanlation",
     "src/all/mangabuddy",
@@ -81,6 +87,12 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
+            "src/fr/hentaiorigines": "hentai-origines",
+            "src/fr/histoiredhentai": "hhentai",
+            "src/fr/scanhentaimenu": "x-manga",
+            "src/fr/ortegascans": "ortegascans",
+            "src/fr/lelmanga": "lelmanga",
+
             "src/all/olympusscanlation": "olympusscanlation",
             "src/all/mangabuddy": "mangabuddy",
 

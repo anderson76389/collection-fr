@@ -80,6 +80,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
+            :src:fr:hentaiorigines
+            :src:fr:histoiredhentai
+            :src:fr:scanhentaimenu
+            :src:fr:ortegascans
+            :src:fr:lelmanga
+
             :src:fr:bananascan
             :src:all:olympusscanlation
             :src:all:mangabuddy
