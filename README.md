@@ -102,7 +102,17 @@ Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.
 
 La copie du code de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) a été réalisée pour conserver une base de travail indépendante. L'historique d'import est indiqué dans [`.collection-fr-upstream-snapshot`](.collection-fr-upstream-snapshot).
 
-Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensio…110 tokens truncated…u veux recompiler et publier toi-même les extensions, crée une clé Android **locale** :
+Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensions-lib`. Les autres outils et bibliothèques externes restent nécessaires.
+
+---
+
+## ⚙️ Compiler et publier
+
+Le workflow [**Build and publish personal extensions**](.github/workflows/build-and-publish.yml) compile les modules sélectionnés, signe les APK, prépare les fichiers publiés et actualise l'index sur la branche `repo`.
+
+### 🔑 Configuration de la signature Android
+
+Si tu veux recompiler et publier toi-même les extensions, crée une clé Android **locale** :
 
 ~~~sh
 keytool -genkeypair -v -keystore collection-fr.jks -alias collection-fr -keyalg RSA -keysize 2048 -validity 10000
