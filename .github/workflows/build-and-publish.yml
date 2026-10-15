@@ -12,7 +12,6 @@ on:
       - "src/fr/**"
       - "src/all/**"
       - "src/fr/webtoons/**"
-      - "src/fr/mangadotnet/**"
       - "lib-multisrc/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
@@ -80,23 +79,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
-            :src:all:flixnetcoffeemanga
             :src:fr:banchanscan
             :src:fr:mangakawaii
-            :src:fr:bdplus
 
             :src:all:comix
             :src:all:mangadex
 
             :src:fr:hentaiorigines
-            :src:fr:histoiredhentai
             :src:fr:scanhentaimenu
             :src:fr:ortegascans
             :src:fr:lelmanga
 
             :src:fr:bananascan
             :src:all:olympusscanlation
-            :src:all:mangabuddy
 
             :src:fr:animesama
             :src:fr:astralmanga
@@ -118,7 +113,6 @@ jobs:
             :src:all:hivescans
             :src:all:cosplaytele
             :src:fr:webtoons
-            :src:fr:mangadotnet
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans

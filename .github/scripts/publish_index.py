@@ -17,23 +17,19 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
-    "src/all/flixnetcoffeemanga",
     "src/fr/banchanscan",
     "src/fr/mangakawaii",
-    "src/fr/bdplus",
 
     "src/all/comix",
     "src/all/mangadex",
 
     "src/fr/hentaiorigines",
-    "src/fr/histoiredhentai",
     "src/fr/scanhentaimenu",
     "src/fr/ortegascans",
     "src/fr/lelmanga",
 
     "src/fr/bananascan",
     "src/all/olympusscanlation",
-    "src/all/mangabuddy",
 
     "src/fr/animesama",
     "src/fr/astralmanga",
@@ -55,7 +51,6 @@ EXPECTED_MODULES = {
     "src/all/hivescans",
     "src/all/cosplaytele",
     "src/fr/webtoons",
-    "src/fr/mangadotnet",
     "src/fr/scanmanga",
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
@@ -95,28 +90,23 @@ def main() -> None:
         apk = find_output(info_file.parent, "outputs/apk/release/*.apk", package_name)
         jar = find_output(info_file.parent, "outputs/jar/release/*.jar", package_name)
         apk_names = {
-            "src/all/flixnetcoffeemanga": "flixnetcoffeemanga",
             "src/fr/banchanscan": "banchanscan",
             "src/fr/mangakawaii": "mangakawaii",
-            "src/fr/bdplus": "bdplus",
 
             "src/all/comix": "comix",
             "src/all/mangadex": "mangadex",
 
             "src/fr/hentaiorigines": "hentai-origines",
-            "src/fr/histoiredhentai": "hhentai",
             "src/fr/scanhentaimenu": "x-manga",
             "src/fr/ortegascans": "ortegascans",
             "src/fr/lelmanga": "lelmanga",
 
             "src/all/olympusscanlation": "olympusscanlation",
-            "src/all/mangabuddy": "mangabuddy",
 
             "src/all/asurascans": "asurascans",
             "src/all/flamecomics": "flamecomics",
             "src/all/hivescans": "hivetoons",
             "src/fr/webtoons": "webtoons.com",
-            "src/fr/mangadotnet": "mangadot",
             "src/all/saymanhwa": "saymanhwa",
         }
         if module in apk_names:

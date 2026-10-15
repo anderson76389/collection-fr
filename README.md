@@ -8,7 +8,7 @@
 
 [![Mihon](https://img.shields.io/badge/Compatible-Mihon-6366F1?style=for-the-badge)](https://mihon.app/)
 [![Langue](https://img.shields.io/badge/Langue-Fran%C3%A7ais-2563EB?style=for-the-badge)](#-les-extensions)
-[![Extensions](https://img.shields.io/badge/Index-27%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
+[![Extensions](https://img.shields.io/badge/Index-34%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
 [![Android](https://img.shields.io/badge/Plateforme-Android-404040?style=for-the-badge&logo=android&logoColor=white)](https://github.com/anderson76389/collection-fr/releases)
 
 [📲 Installer dans Mihon](#-installer-le-dépôt-dans-mihon) · [📖 Extensions](#-les-extensions) · [⚙️ Compilation](#-compiler-et-publier) · [🔎 Vérifications](#-suivi-des-correctifs-et-limitations)
@@ -58,7 +58,7 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **27 extensions** lors de la vérification du **11 octobre 2026**. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **34 extensions** après le retrait des cinq sources demandé le **15 octobre 2026**. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
@@ -69,7 +69,7 @@ L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anders
 
 **Manhwas, webtoons et autres catalogues**
 
-`MangaDot` · `Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+`Webtoons.com` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
 
 </details>
 
