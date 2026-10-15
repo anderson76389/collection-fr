@@ -6,15 +6,16 @@ plugins {
 
 keiyoushi {
     name = "Manga Ball"
-    versionCode = 5
-    contentWarning = ContentWarning.MIXED
+    versionCode = 6
+    contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
 
-    listOf("fr", "all").forEach {
-        source {
-            lang = it
-            baseUrl = "https://mangaball.com"
-        }
+    pkgName = "all.mangaball"
+
+    source {
+        lang = "fr"
+        baseUrl = "https://mangaball.com"
+        id = 4804845656972446863L
     }
 
     deeplink {

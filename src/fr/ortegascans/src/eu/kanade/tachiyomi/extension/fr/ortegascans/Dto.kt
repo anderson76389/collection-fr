@@ -6,6 +6,7 @@ import keiyoushi.utils.tryParse
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlin.time.Instant
 
 @Serializable
@@ -25,7 +26,7 @@ class SeriesDto(
         url = slug
         memo = buildJsonObject { put("id", id) }
         title = this@SeriesDto.title
-        thumbnail_url = "$baseUrl/${coverImage.replace("storage/", "api/")}"
+        thumbnail_url = coverUrl(baseUrl, coverImage)
     }
 }
 
@@ -52,7 +53,7 @@ class MangaDto(
         url = slug
         memo = buildJsonObject { put("id", id) }
         title = this@MangaDto.title
-        thumbnail_url = "$baseUrl/${coverImage.replace("storage/", "api/")}"
+        thumbnail_url = coverUrl(baseUrl, coverImage)
         description = listOfNotNull(
             this@MangaDto.description,
             this@MangaDto.alternativeNames?.let { "Noms alternatifs : $it" },
@@ -112,3 +113,22 @@ private fun parseStatus(status: String?): Int = when (status?.lowercase()) {
     "annulé", "canceled" -> SManga.CANCELLED
     else -> SManga.UNKNOWN
 }
+
+internal fun coverUrl(baseUrl: String, coverImage: String): String? {
+    val base = baseUrl.toHttpUrl()
+    val url = base.resolve(coverImage) ?: return null
+    if (url.host != base.host) return url.toString()
+
+    val path = url.encodedPath.replaceFirst("/storage/", "/api/")
+    val builder = url.newBuilder().encodedPath(path)
+    if (path.startsWith("/api/covers/")) {
+        // The current reader moves the stored filename hash into a cache-version query.
+        COVER_FILENAME.matchEntire(url.pathSegments.last())?.destructured?.let { (name, hash, extension) ->
+            builder.encodedPath("/api/covers/$name.$extension")
+                .setQueryParameter("v", hash)
+        }
+    }
+    return builder.build().toString()
+}
+
+private val COVER_FILENAME = Regex("(.+)_([a-fA-F0-9]{8})\\.([a-zA-Z0-9]+)")

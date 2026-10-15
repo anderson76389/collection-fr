@@ -25,7 +25,7 @@ class SearchResponse(
         fun hasNextPage() = page < totalPages
     }
 
-    fun toMangasPage() = MangasPage(data.map { it.toSManga() }, pagination.hasNextPage())
+    fun toMangasPage() = MangasPage(data.filter { it.isFrenchNonAdult() }.map { it.toSManga() }, pagination.hasNextPage())
 }
 
 @Serializable
@@ -34,7 +34,12 @@ class MangaDto(
     val slug: String,
     private val name: String,
     private val image: ImageDto? = null,
+    private val availableTranslatedLanguages: List<String> = emptyList(),
+    private val is18plus: Boolean = false,
+    private val tags: List<TagDto> = emptyList(),
 ) {
+    fun isFrenchNonAdult() = "fr" in availableTranslatedLanguages && !is18plus && tags.none { it.isAdult() }
+
     fun toSManga() = SManga.create().apply {
         url = id
         title = name
@@ -59,7 +64,18 @@ class TitleDto(
     private val tags: List<TagDto> = emptyList(),
     private val author: List<AuthorDto> = emptyList(),
     private val status: String? = null,
+    private val availableTranslatedLanguages: List<String> = emptyList(),
+    private val is18plus: Boolean = false,
 ) {
+    fun requireFrenchNonAdult() {
+        if (is18plus || tags.any { it.isAdult() }) {
+            throw java.io.IOException("MangaBall : le contenu adulte est exclu de cette source.")
+        }
+        if ("fr" !in availableTranslatedLanguages) {
+            throw java.io.IOException("MangaBall : cette œuvre ne propose pas de traduction française.")
+        }
+    }
+
     fun toSManga(): SManga {
         val altNames = alternateName.joinToString("\n") { "- $it" }
         val description = buildString {
@@ -121,7 +137,11 @@ class CoverDto(
 @Serializable
 class TagDto(
     val name: String,
-)
+) {
+    fun isAdult() = name.lowercase() in ADULT_TAGS
+}
+
+private val ADULT_TAGS = setOf("hentai", "pornographic", "erotica", "smut", "manhwa 18+", "adult", "18+", "mature", "loli", "shota")
 
 @Serializable
 class AuthorDto(
@@ -213,4 +233,14 @@ class ViewRequest(
     private val objectId: String,
     @SerialName("object_type")
     private val objectType: String,
+)
+
+internal val ADULT_TAG_IDS = setOf(
+    "689371f0a943baf927094f03",
+    "68932d11a943baf927094e7b",
+    "689371f2a943baf927094f04",
+    "68bfceaf4dbc442a26519889",
+    "685148d715e8b86aae68e506",
+    "68f5f5ce5f29d3c1863dec3a",
+    "685148d115e8b86aae68e4ed",
 )
