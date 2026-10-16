@@ -20,7 +20,6 @@ EXPECTED_MODULES = {
     "src/fr/banchanscan",
     "src/fr/mangakawaii",
 
-    "src/all/comix",
     "src/all/mangadex",
 
     "src/fr/hentaiorigines",
@@ -92,7 +91,6 @@ def main() -> None:
             "src/fr/banchanscan": "banchanscan",
             "src/fr/mangakawaii": "mangakawaii",
 
-            "src/all/comix": "comix",
             "src/all/mangadex": "mangadex",
 
             "src/fr/hentaiorigines": "hentai-origines",

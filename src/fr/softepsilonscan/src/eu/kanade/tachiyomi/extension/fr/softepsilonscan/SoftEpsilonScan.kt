@@ -6,11 +6,23 @@ import eu.kanade.tachiyomi.multisrc.pam.SortFilter
 import eu.kanade.tachiyomi.multisrc.pam.TriStateGroupFilter
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.SChapter
 import keiyoushi.annotation.Source
 import kotlinx.serialization.json.JsonElement
+import okhttp3.OkHttpClient
 
 @Source
 abstract class SoftEpsilonScan : Pam() {
+
+    private val renderedReader by lazy { RenderedReader() }
+
+    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder {
+        addInterceptor(renderedReader::intercept)
+        return super.configureClient()
+    }
+
+    override suspend fun getPageList(chapter: SChapter) = renderedReader.pages("$baseUrl${chapter.url}", headers)
+        ?: super.getPageList(chapter)
 
     override val popularFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(3, false)))
     override val latestFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(2, false)))

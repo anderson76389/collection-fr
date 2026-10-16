@@ -317,15 +317,15 @@ internal fun paginatedDriver(interfaceName: String) = $$"""
                                     // waitForBlob already means "a blob arrived and stopped changing
                                     // for 400ms", which is exactly the settle condition — a fixed
                                     // sleep was both slower here and too short on a loaded device.
-                                    await waitForBlob(10000);
-                                    window.__japscanLastBlob = null;
-
-                                    nav(nextBtn, 'ArrowRight');
-                                    await waitForBlob(8000);
-                                    window.__japscanLastBlob = null;
-
-                                    nav(prevBtn, 'ArrowLeft');
-                                    var t0 = await waitForBlob(8000);
+                                    var t0 = await waitForBlob(10000);
+                                    if (total > 1) {
+                                        window.__japscanLastBlob = null;
+                                        nav(nextBtn, 'ArrowRight');
+                                        await waitForBlob(8000);
+                                        window.__japscanLastBlob = null;
+                                        nav(prevBtn, 'ArrowLeft');
+                                        t0 = await waitForBlob(8000);
+                                    }
                                     var u0 = window.__japscanLastBlob;
                                     window.__japscanLastBlob = null;
                                     if (total > 1) nav(nextBtn, 'ArrowRight');
@@ -344,7 +344,7 @@ internal fun paginatedDriver(interfaceName: String) = $$"""
 
                                     console.log('[japscan] done, ' + saved + ' / ' + total + ' pages saved');
                                     try {
-                                        window.$${interfaceName}_passDone.post("");
+                                        window.$${interfaceName}_passDone.post(JSON.stringify({ pages: saved, expected: total }));
                                     } catch(e) {
                                         console.log('[japscan] passDone failed: ' + e);
                                     }
@@ -566,6 +566,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                     // already drawn, we're done in <1s. Only fall back to the
                                     // slow scroll-and-discover loop if a tile is still missing.
                                     var tilesEmitted = 0;
+                                    var tilesExpected = 0;
                                     function expectedTileCount(container){
                                         var wrap = findTileWrapper(container);
                                         if (!wrap) return 1;
@@ -609,6 +610,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                         await sleep(100);
                                         var savedHosts = new Set();
                                         await captureOnce(container, pageLabel, savedHosts);
+                                        expected = Math.max(expected, expectedTileCount(container));
                                         // If something is still missing (rare — only the lazy
                                         // single-tile path), fall back to the scroll loop with
                                         // a short total budget.
@@ -621,8 +623,10 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                                 window.scrollTo(0, baseY + sy - 100);
                                                 await sleep(400);
                                                 await captureOnce(container, pageLabel, savedHosts);
+                                                expected = Math.max(expected, expectedTileCount(container));
                                             }
                                         }
+                                        tilesExpected += expected;
                                         window.__jlog('[japscan] ' + pageLabel + ' completed: ' + savedHosts.size + '/' + expected + ' tile(s)');
                                         try {
                                             if (container.parentNode) container.parentNode.removeChild(container);
@@ -630,7 +634,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                         dImgContainers[i] = null;
                                     }
                                     window.__jlog('[japscan] webtoon done, ' + tilesEmitted + ' tile(s) saved across ' + total + ' d-img containers');
-                                    try { window.$${interfaceName}_passDone.post(""); } catch(e) {}
+                                    try { window.$${interfaceName}_passDone.post(JSON.stringify({ pages: tilesEmitted, expected: tilesExpected })); } catch(e) {}
                                     return;
                                 }
 
@@ -641,6 +645,31 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                 // work; if this ever fires, the fix is to reload the WebView with
                                 // the paginated hooks, not a third capture technique.
                                 window.__jlog('[japscan] MISMATCH: url hinted webtoon but the DOM mounted the paginated reader — giving up');
-                                try { window.$${interfaceName}_passDone.post(""); } catch(e) {}
+                                try { window.$${interfaceName}_passDone.post(JSON.stringify({ pages: 0, expected: 1 })); } catch(e) {}
                             })();
+""".trimIndent()
+
+// onPageFinished can precede the async reader mount and its first canvas/blob.
+internal fun readerPreparation(webtoon: Boolean) = """
+    (function () {
+        if (!$webtoon) {
+            var pages = document.getElementById('pages');
+            return !!(window.__japscanLastBlob && (!pages || pages.options.length));
+        }
+        var first = document.querySelector('#full-reader div[id^="d-img-"]');
+        if (!first) return false;
+        first.scrollIntoView({ block: 'start' });
+        function painted(root) {
+            var nodes = root.querySelectorAll('*');
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i];
+                if (node.canvas && node.canvas.width && node.canvas.height) return true;
+                if (node.tagName === 'CANVAS' && node.width && node.height && window.__japscanLastDraw) return true;
+                var shadow = window.__japscanShadowRootFor ? window.__japscanShadowRootFor(node) : node.shadowRoot;
+                if (shadow && painted(shadow)) return true;
+            }
+            return false;
+        }
+        return painted(first);
+    })();
 """.trimIndent()
