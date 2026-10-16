@@ -1,0 +1,108 @@
+name: Validate selected sources
+
+on:
+  push:
+    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006, fix/reader-runtime-20261007]
+    paths:
+      - "gradle/build-logic/**"
+      - "settings.gradle.kts"
+      - "vendor/extensions-lib/**"
+      - ".github/scripts/verify_local_api.init.gradle.kts"
+      - "src/fr/hentaiorigines/**"
+      - "src/fr/scanhentaimenu/**"
+      - "src/fr/ortegascans/**"
+      - "src/fr/lelmanga/**"
+      - "src/fr/mangaball/**"
+      - "src/fr/manhuarm/**"
+      - "src/fr/banchanscan/**"
+      - "src/fr/mangakawaii/**"
+      - "src/all/**"
+      - "src/fr/poseidonscans/**"
+      - "src/fr/raijinscans/**"
+      - "src/fr/animesama/**"
+      - "src/fr/bananascan/**"
+      - "src/fr/scanvf/**"
+      - "src/fr/japscan/**"
+      - "src/fr/blossomscans/**"
+      - "src/fr/pantheonscan/**"
+      - "src/fr/softepsilonscan/**"
+      - "src/fr/webtoons/**"
+      - "src/fr/lunaranime/**"
+      - "src/fr/astralmanga/**"
+      - "lib-multisrc/**"
+      - "src/fr/scanmanga/**"
+      - "src/all/saymanhwa/**"
+      - ".github/workflows/validate-manga-sources.yml"
+      - ".github/scripts/publish_index.py"
+  pull_request:
+    paths:
+      - "gradle/build-logic/**"
+      - "settings.gradle.kts"
+      - "vendor/extensions-lib/**"
+      - ".github/scripts/verify_local_api.init.gradle.kts"
+      - "src/fr/hentaiorigines/**"
+      - "src/fr/scanhentaimenu/**"
+      - "src/fr/ortegascans/**"
+      - "src/fr/lelmanga/**"
+      - "src/fr/mangaball/**"
+      - "src/fr/manhuarm/**"
+      - "src/fr/banchanscan/**"
+      - "src/fr/mangakawaii/**"
+      - "src/all/**"
+      - "src/fr/poseidonscans/**"
+      - "src/fr/raijinscans/**"
+      - "src/fr/animesama/**"
+      - "src/fr/scanvf/**"
+      - "src/fr/japscan/**"
+      - "src/fr/blossomscans/**"
+      - "src/fr/pantheonscan/**"
+      - "src/fr/softepsilonscan/**"
+      - "src/fr/webtoons/**"
+      - "src/fr/lunaranime/**"
+      - "src/fr/astralmanga/**"
+      - "lib-multisrc/**"
+      - "src/fr/scanmanga/**"
+      - "src/all/saymanhwa/**"
+      - ".github/workflows/validate-manga-sources.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Check publisher syntax
+        run: python -m py_compile .github/scripts/publish_index.py
+
+      - name: Test reader capture regressions
+        run: node --test src/fr/softepsilonscan/tests/rendered-reader.test.mjs src/fr/japscan/tests/paginated-reader.test.mjs
+
+      - name: Verify preserved extension APIs
+        run: |
+          (cd vendor/extensions-lib && sha256sum -c SHA256SUMS)
+          ./gradlew --no-daemon --no-configuration-cache --init-script .github/scripts/verify_local_api.init.gradle.kts verifyLocalExtensionApis
+
+      - name: Build all retained APKs with local APIs
+        run: |
+          tasks=()
+          for build_file in src/*/*/build.gradle.kts; do
+            module="${build_file%/build.gradle.kts}"
+            tasks+=(":${module//\//:}:assembleRelease")
+          done
+          ./gradlew --no-daemon "${tasks[@]}"
+
+      - name: Lint the release variants
+        run: ./gradlew --no-daemon :src:fr:banchanscan:lintRelease :src:fr:mangakawaii:lintRelease :src:all:mangadex:lintRelease :src:fr:hentaiorigines:lintRelease :src:fr:scanhentaimenu:lintRelease :src:fr:ortegascans:lintRelease :src:fr:lelmanga:lintRelease :src:fr:bananascan:lintRelease :src:all:olympusscanlation:lintRelease :src:all:cosplaytele:lintRelease :src:all:flamecomics:lintRelease :src:all:hivescans:lintRelease :src:fr:mangaball:lintRelease :src:all:asurascans:lintRelease :src:all:saymanhwa:lintRelease :src:fr:webtoons:lintRelease :lib-multisrc:pam:lintRelease :src:fr:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:japscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:softepsilonscan:lintRelease

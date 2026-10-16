@@ -1,0 +1,53 @@
+[
+  {
+    "file": "mangadex.svg",
+    "source": "https://mangadex.org/favicon.svg",
+    "size": "vector",
+    "bytes": 3321
+  },
+  {
+    "file": "mangadex.png",
+    "source": "https://mangadex.org/pwa/icons/icon-180.png",
+    "size": [
+      180,
+      180
+    ],
+    "bytes": 4504
+  },
+  {
+    "file": "astralmanga.png",
+    "source": "https://astral-manga.fr/images/logo.png",
+    "size": [
+      1100,
+      1100
+    ],
+    "bytes": 995337
+  },
+  {
+    "file": "softepsilonscan.webp",
+    "source": "https://epsilonsoft.to/epsilon-soft.webp",
+    "size": [
+      1616,
+      179
+    ],
+    "bytes": 16360
+  },
+  {
+    "file": "poseidonscans.png",
+    "source": "https://poseidon-scans.net/logo.png",
+    "size": [
+      875,
+      875
+    ],
+    "bytes": 8009
+  },
+  {
+    "file": "pantheonscan.png",
+    "source": "https://pantheon-scan.com/wp-content/uploads/2017/10/cropped-pantheon-scan-modified2-e1646672360695-192x192.png",
+    "size": [
+      192,
+      192
+    ],
+    "bytes": 15004
+  }
+]

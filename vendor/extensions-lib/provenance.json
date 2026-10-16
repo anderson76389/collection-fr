@@ -1,0 +1,20 @@
+[
+  {
+    "api": "v14",
+    "revision": "18a8e26be2",
+    "source_commit": "18a8e26be2320b48bdaa11840170479b62989e23",
+    "source_repository": "https://github.com/keiyoushi/extensions-lib",
+    "artifact_origin": "https://jitpack.io/com/github/keiyoushi/extensions-lib/18a8e26be2/",
+    "source_archive": "sources/18a8e26be2320b48bdaa11840170479b62989e23.tar.gz",
+    "license": "licenses/18a8e26be2320b48bdaa11840170479b62989e23.txt"
+  },
+  {
+    "api": "v16",
+    "revision": "42255ee5fa",
+    "source_commit": "42255ee5fa96d9425697b7c143587483207308d1",
+    "source_repository": "https://github.com/keiyoushi/extensions-lib",
+    "artifact_origin": "https://jitpack.io/com/github/keiyoushi/extensions-lib/42255ee5fa/",
+    "source_archive": "sources/42255ee5fa96d9425697b7c143587483207308d1.tar.gz",
+    "license": "licenses/42255ee5fa96d9425697b7c143587483207308d1.txt"
+  }
+]
