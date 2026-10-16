@@ -15,11 +15,16 @@
     const plates = Array.from(document.querySelectorAll(".reader-plates > [data-reader-plate]"));
     const plate = plates[index];
     if (!plate) return { state: "waiting" };
-    plate.scrollIntoView({ block: "center", behavior: "instant" });
     if (plate.querySelector("button")) return { state: "error", error: `Le site n’a pas pu charger la page ${index + 1}.` };
-    if (plate.querySelector(".animate-spin")) return { state: "waiting" };
+    if (plate.querySelector(".animate-spin")) {
+        plate.scrollIntoView({ block: "center", behavior: "instant" });
+        return { state: "waiting" };
+    }
     const canvas = plate.querySelector("canvas");
-    if (!canvas) return { state: "waiting" };
+    if (!canvas) {
+        plate.scrollIntoView({ block: "center", behavior: "instant" });
+        return { state: "waiting" };
+    }
     // Bitmap export is blocked by the site. Only locate the visible surface for Android.
     return { state: "ready", total: plates.length, element: canvas };
 }
