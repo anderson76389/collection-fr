@@ -22,7 +22,6 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         "eu.kanade.tachiyomi.extension.fr.banchanscan": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.mangakawaii": {"fr"},
 
-        "eu.kanade.tachiyomi.extension.en.comix": {"all"},
         "eu.kanade.tachiyomi.extension.all.mangadex": {"all"},
         "eu.kanade.tachiyomi.extension.fr.hentaiorigines": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.scanhentaimenu": {"fr"},

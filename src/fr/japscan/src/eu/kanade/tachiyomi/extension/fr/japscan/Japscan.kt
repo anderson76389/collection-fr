@@ -27,6 +27,7 @@ import keiyoushi.utils.tryParseDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
 import okhttp3.CacheControl
 import okhttp3.FormBody
 import okhttp3.HttpUrl
@@ -44,6 +45,7 @@ import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -278,9 +280,8 @@ abstract class Japscan :
         var html = fetchReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
 
-        // Use a real navigation with the same user agent before requesting interactive verification.
-        warmupWebViewSession()
-        html = fetchReaderHtml(chapterUrl)
+        // Clearance can work in the browser while an OkHttp navigation is still refused.
+        html = fetchBrowserReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
 
         val context = applicationContext
@@ -301,26 +302,33 @@ abstract class Japscan :
         throw IOException("Japscan : terminez les vérifications dans la WebView, attendez l’affichage du chapitre, puis revenez et relancez-le.")
     }
 
-    private suspend fun warmupWebViewSession() {
-        try {
-            runWebView<Unit>(timeout = 12.seconds) {
-                userAgent = headers["User-Agent"]!!
-                poll(250.milliseconds) {
-                    evaluateJs("Boolean(document.querySelector('.mangas-list .manga-block'))") {
-                        if (it == "true") resolve(Unit)
+    private suspend fun fetchBrowserReaderHtml(chapterUrl: String): String? = try {
+        val script = javaClass.getResource("/assets/verified_reader_html.js")!!.readText()
+        runWebView<String>(timeout = 15.seconds) {
+            userAgent = headers["User-Agent"]!!
+            poll(250.milliseconds) {
+                evaluateJs("($script)()") { value ->
+                    val result = value.parseAs<BrowserReaderDocument>()
+                    when (result.state) {
+                        "ready" -> result.html?.let(::resolve)
+                        "error" -> reject(IOException(result.error))
                     }
                 }
-                onReceivedError { request, error ->
-                    if (request.isForMainFrame) reject(IOException(error.description.toString()))
-                }
-                loadUrl(getHomeUrl())
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            // Interactive verification follows if this navigation cannot load the catalogue.
+            onReceivedError { request, error ->
+                if (request.isForMainFrame) reject(IOException(error.description.toString()))
+            }
+            loadUrl(chapterUrl)
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        // Interactive verification follows if this chapter still cannot load.
+        null
     }
+
+    @Serializable
+    private class BrowserReaderDocument(val state: String, val html: String? = null, val error: String? = null)
 
     private suspend fun runReaderWebView(
         chapterUrl: String,
@@ -333,6 +341,7 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
         var driverStarted = false
+        val lastProgress = AtomicLong(System.nanoTime())
 
         // Reuse the successful verification response instead of requesting the chapter again.
         val hooks = ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK
@@ -352,19 +361,27 @@ abstract class Japscan :
                 }
 
                 jsBridge("${interfaceName}_savePage") { dataUri ->
-                    savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
+                    val path = savePage(dataUri, sessionTag, savedPaths.size)
+                        ?: return@jsBridge reject(IOException("Japscan : impossible d’enregistrer une image rendue"))
+                    savedPaths.add(path)
+                    lastProgress.set(System.nanoTime())
                 }
 
-                jsBridge("${interfaceName}_passDone") {
-                    done = true
-                    resolve(savedPaths)
+                jsBridge("${interfaceName}_passDone") { payload ->
+                    val completion = payload.parseAs<ReaderCompletion>()
+                    if (completion.expected <= 0 || completion.pages != completion.expected || savedPaths.size != completion.expected) {
+                        reject(IOException("Japscan : ${savedPaths.size}/${completion.expected} images récupérées ; le chapitre incomplet n’a pas été renvoyé."))
+                    } else {
+                        done = true
+                        resolve(savedPaths.toList())
+                    }
                 }
 
                 // The reader pulls rotating ad hosts whose modals break the detached descrambler,
                 // so only the origins the reader needs are allowed.
                 interceptRequest { request ->
                     val host = request.url.host ?: return@interceptRequest null
-                    if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
+                    if (host == baseUrl.toHttpUrl().host || ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
                         null
                     } else {
                         // A null body keeps some WebView builds pending, stalling the capture
@@ -372,20 +389,33 @@ abstract class Japscan :
                     }
                 }
 
-                onPageFinished {
-                    if (driverStarted) return@onPageFinished
-                    driverStarted = true
-                    evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+                poll(250.milliseconds) {
+                    if (System.nanoTime() - lastProgress.get() > IDLE_TIMEOUT.inWholeNanoseconds) {
+                        reject(IOException("Japscan : le lecteur n’a produit aucune nouvelle image depuis 45 secondes (${savedPaths.size} récupérées)."))
+                    } else if (!driverStarted) {
+                        evaluateJs(readerPreparation(isWebtoon)) { ready ->
+                            if (ready == "true" && !driverStarted) {
+                                driverStarted = true
+                                lastProgress.set(System.nanoTime())
+                                evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+                            }
+                        }
+                    }
                 }
 
                 loadData(chapterUrl, readerHtml)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
+            savedPaths.forEach { File(it).delete() }
             throw e
         } catch (e: Exception) {
+            savedPaths.forEach { File(it).delete() }
             throw IOException("Japscan : échec du lecteur (${e.message})", e)
         }.takeIf { done } ?: throw IOException("Japscan : le lecteur n'a pas terminé le chargement")
     }
+
+    @Serializable
+    private class ReaderCompletion(val pages: Int, val expected: Int)
 
     private fun savePage(
         dataUri: String,
