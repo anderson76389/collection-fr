@@ -57,7 +57,7 @@
         return null;
     };
 
-    const requestPage = async (target) => {
+    const requestPage = async (target, attempt = 0) => {
         let error = `Chapter page ${target} never arrived`;
         try {
             chaptersApi = chaptersApi || await findChaptersApi();
@@ -78,8 +78,13 @@
             error = `Chapter page ${target} came back in a shape the extension doesn't recognise`;
         } catch (e) {
             const status = e && e.response && e.response.status;
-            error = status === 502
-                ? `Comix blocked chapter page ${target} (HTTP 502). Try again later, or change the user agent in Advanced settings`
+            if ([502, 503, 504, 522, 523].includes(status) && attempt < 2 && !done) {
+                await new Promise((resolve) => setTimeout(resolve, 2500 * (attempt + 1)));
+                if (!done) return requestPage(target, attempt + 1);
+                return;
+            }
+            error = [502, 503, 504, 522, 523].includes(status)
+                ? `Comix ne fournit pas la page de chapitres ${target} (HTTP ${status}, après trois tentatives). Réessayez plus tard.`
                 : `Chapter page ${target} failed: ${status ? `HTTP ${status}` : e && e.message || e}`;
         }
         // Captured pages are handed over on a 0 ms timer, before this one

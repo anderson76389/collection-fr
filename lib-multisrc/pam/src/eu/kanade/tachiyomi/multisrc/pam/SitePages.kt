@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import org.jsoup.nodes.Document
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -31,6 +32,7 @@ internal class SitePage(
     val chapters: List<ChapterListItem>? = null,
     val reader: ReaderResult? = null,
     val pageHeaders: Map<String, String> = emptyMap(),
+    val document: Document? = null,
 ) {
     fun fetched() = fetched ?: throw IOException("Missing API response")
 }
@@ -65,13 +67,13 @@ internal class SitePages(
     }
 
     /** Loads [url] and reads its Inertia page data; with [reader], also the reader v2 manifest, page key and page request headers. */
-    suspend fun load(url: String, request: SiteRequest = SiteRequest(), reader: Boolean = false): SitePage = mutex.withLock {
+    suspend fun load(url: String, request: SiteRequest = SiteRequest(), reader: Boolean = false, document: Document? = null): SitePage = mutex.withLock {
         if (failure?.isActive() == true) throw IOException(SOLVE_IN_WEBVIEW)
         lastLoad?.let { delay(LOAD_INTERVAL - it.elapsedNow()) }
         lastLoad = TimeSource.Monotonic.markNow()
 
         val bridge = "k" + ByteArray(8).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
-        val readScript = "(${asset("site.js")})(\"$bridge\", ${request.toJsonString()})"
+        val readScript = "(${asset("site.js")})(\"$bridge\", ${request.toJsonString()}, $reader)"
         val readerScript = if (reader) "(${asset("reader.js")})(\"$bridge\")" else null
         var site: SitePage? = null
         var challengePolls = 0
@@ -143,7 +145,13 @@ internal class SitePages(
                         }
                     }
                 }
-                loadUrl(url)
+                if (document != null && readerScript != null) {
+                    // Install the reader hook before the site's module imports its page key.
+                    val html = document.clone().apply { head().prependElement("script").append(readerScript) }.outerHtml()
+                    loadData(url, html)
+                } else {
+                    loadUrl(url)
+                }
             }
         } catch (e: CancellationException) {
             throw e
