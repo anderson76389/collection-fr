@@ -48,14 +48,14 @@ class MangaDexFilters {
     }
 
     private class HasAvailableChaptersFilter(intl: Intl) :
-        Filter.CheckBox(intl["has_available_chapters"]),
+        Filter.CheckBox(intl["has_available_chapters"], true),
         UrlQueryFilter {
 
         override fun addQueryParameter(url: HttpUrl.Builder, dexLang: String) {
             if (state) {
                 url.addQueryParameter("hasAvailableChapters", "true")
                 if (dexLang != "all") {
-                    url.addQueryParameter("availableTranslatedLanguage[]", dexLang)
+                    url.setQueryParameter("availableTranslatedLanguage[]", dexLang)
                 }
             }
         }
