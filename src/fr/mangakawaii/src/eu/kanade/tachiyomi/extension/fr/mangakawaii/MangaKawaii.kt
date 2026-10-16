@@ -46,11 +46,11 @@ abstract class MangaKawaii : KeiSource() {
         set("Referer", "$baseUrl/")
         set("Accept", HTML_ACCEPT)
         set("Accept-Language", "fr-FR,fr;q=0.9")
-        browserUserAgent?.let { set("User-Agent", it) }
     }
 
     private suspend fun document(url: String, requestHeaders: Headers = headers): Document {
-        val response = client.get(url, requestHeaders, cacheControl = CacheControl.FORCE_NETWORK, ensureSuccess = false)
+        val effectiveHeaders = browserUserAgent?.let { requestHeaders.newBuilder().set("User-Agent", it).build() } ?: requestHeaders
+        val response = client.get(url, effectiveHeaders, cacheControl = CacheControl.FORCE_NETWORK, ensureSuccess = false)
         val code = response.code
         if (response.isSuccessful) return response.asJsoup()
         response.close()
@@ -344,6 +344,7 @@ abstract class MangaKawaii : KeiSource() {
     override fun imageRequest(page: Page) = GET(
         page.imageUrl!!,
         headers.newBuilder()
+            .apply { browserUserAgent?.let { set("User-Agent", it) } }
             .set("Accept", "image/avif,image/webp,image/*,*/*;q=0.8")
             .set("Sec-Fetch-Dest", "image")
             .set("Sec-Fetch-Mode", "no-cors")
@@ -373,7 +374,7 @@ abstract class MangaKawaii : KeiSource() {
             val target = base.resolve(url) ?: return null
             if (target.host != base.host || !target.encodedPath.startsWith(base.encodedPath.trimEnd('/') + "/")) return null
             return SChapter.create().apply {
-                setUrlWithoutDomain(target.toString())
+                this.url = target.encodedPath + target.encodedQuery?.let { "?$it" }.orEmpty()
                 name = "Ch. $n"
                 chapter_number = n.toFloatOrNull() ?: -1f
             }
