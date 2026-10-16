@@ -1,5 +1,7 @@
 # Lecture WebView : Japscan et Soft Epsilon
 
+Le lecteur Epsilon actuellement observé (`CSL6ERowb.js`, SHA-256 `da5588ba50ac251776531af00e565fedac67cd25e42b8101ec5272387ee18d1a`) remplace lui-même les méthodes d’export canvas par des erreurs ; ce blocage est distinct de Cloudflare.
+
 Le chapitre est ouvert dans la WebView habituelle de Mihon. Terminez manuellement les vérifications du site, attendez que les images du chapitre soient visibles, puis appuyez sur **Importer ce chapitre dans Mihon**. Gardez cette fenêtre au premier plan jusqu’au retour au lecteur.
 
 L’import utilise le rendu visible de cette même fenêtre Android. Il ne recharge pas son HTML dans une seconde WebView et n’utilise pas les exports canvas que le lecteur Epsilon bloque explicitement (`SecurityError: Canvas is blocked.`). Aucun CAPTCHA n’est résolu automatiquement, aucune restriction de fenêtre sécurisée n’est désactivée.

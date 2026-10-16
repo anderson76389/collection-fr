@@ -5,7 +5,6 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Bundle
 import android.view.Gravity
@@ -154,8 +153,7 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
             var index = 0
             var total: Int? = null
             var offset = 0.0
-            var bitmap: Bitmap? = null
-            var partTop = 0
+            var assembler: PageAssembler? = null
             var deadline = TimeSource.Monotonic.markNow()
             try {
                 while (coroutineContext.isActive) {
@@ -181,9 +179,6 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
                     val stable = evaluate(webView, "($geometry)(($locator),$index,$offset)")
                     if (!snapshot.sameTile(stable)) continue
                     val scale = webView.width / snapshot.viewportWidth
-                    if (bitmap != null && bitmap.width != (snapshot.width * scale).roundToInt()) {
-                        throw IOException("L’orientation ou le zoom a changé pendant l’import.")
-                    }
                     val rect = Rect(
                         (snapshot.x * scale).roundToInt(),
                         (snapshot.y * scale).roundToInt(),
@@ -193,12 +188,13 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
                     if (rect.width() <= 0 || rect.height() <= 0 || rect.left < 0 || rect.top < 0 || rect.right > webView.width || rect.bottom > webView.height) {
                         throw IOException("La page sort de la zone visible. Réinitialisez le zoom de la WebView.")
                     }
-                    if (bitmap == null) {
-                        val fullHeight = (snapshot.pageHeight * scale).roundToInt()
-                        // Long webtoon pages are split into consecutive parts to bound memory use.
-                        val height = minOf(fullHeight - partTop, MAX_PIXELS / rect.width())
-                        if (height <= 0) throw IOException("Dimensions de page invalides")
-                        bitmap = Bitmap.createBitmap(rect.width(), height, Bitmap.Config.ARGB_8888)
+                    if (assembler == null) {
+                        assembler = PageAssembler(rect.width(), (snapshot.pageHeight * scale).roundToInt()) {
+                            save(it, pages, dir, session)
+                        }
+                    }
+                    if (assembler.width != rect.width() || assembler.height != (snapshot.pageHeight * scale).roundToInt()) {
+                        throw IOException("L’orientation ou la taille de la page a changé pendant l’import.")
                     }
                     val location = IntArray(2)
                     webView.getLocationInWindow(location)
@@ -211,44 +207,24 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
                         Bitmap.createScaledBitmap(copied, copied.width, rowsWanted, true).also { copied.recycle() }
                     }
                     try {
-                        var consumed = 0
-                        val absoluteTop = (offset * scale).roundToInt()
-                        while (consumed < tile.height) {
-                            val target = bitmap!!
-                            val top = absoluteTop + consumed - partTop
-                            val rows = minOf(tile.height - consumed, target.height - top)
-                            if (top < 0 || rows <= 0) throw IOException("La taille du lecteur a changé pendant l’import.")
-                            Canvas(target).drawBitmap(tile, Rect(0, consumed, tile.width, consumed + rows), Rect(0, top, target.width, top + rows), null)
-                            consumed += rows
-                            if (top + rows == target.height) {
-                                save(target, pages, dir, session)
-                                partTop += target.height
-                                target.recycle()
-                                bitmap = null
-                                val remaining = (snapshot.pageHeight * scale).roundToInt() - partTop
-                                if (remaining > 0) bitmap = Bitmap.createBitmap(rect.width(), minOf(remaining, MAX_PIXELS / rect.width()), Bitmap.Config.ARGB_8888)
-                            }
-                        }
+                        assembler.append(tile, (offset * scale).roundToInt())
                     } finally {
                         tile.recycle()
                     }
                     offset += snapshot.height
                     deadline = TimeSource.Monotonic.markNow()
                     if (offset >= snapshot.pageHeight - 0.01) {
-                        bitmap?.let {
-                            save(it, pages, dir, session)
-                            it.recycle()
-                        }
-                        bitmap = null
+                        assembler.finish()
+                        assembler.close()
+                        assembler = null
                         index++
                         offset = 0.0
-                        partTop = 0
                         if (index == total) return pages
                     }
                 }
                 throw IOException("Import interrompu")
             } finally {
-                bitmap?.recycle()
+                assembler?.close()
             }
         } finally {
             app.unregisterActivityLifecycleCallbacks(callbacks)
@@ -299,7 +275,6 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
     companion object {
         private const val HOST = "reader-window.local"
         private const val WEBVIEW_ACTIVITY = "eu.kanade.tachiyomi.ui.webview.WebViewActivity"
-        private const val MAX_PIXELS = 8_000_000
         private val SESSION = Regex("[a-f0-9-]{36}")
         private val FILE = Regex("[0-9]+\\.png")
 

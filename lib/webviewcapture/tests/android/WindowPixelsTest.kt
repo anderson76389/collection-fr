@@ -1,6 +1,7 @@
 package keiyoushi.lib.webviewcapture
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
 import android.view.WindowManager
@@ -47,6 +48,40 @@ class WindowPixelsTest {
             } finally {
                 bitmap.recycle()
             }
+        }
+    }
+
+    @Test
+    fun assemblesEveryRowAcrossBoundedPartsAndRejectsIncompletePages() = runBlocking {
+        val saved = mutableListOf<Bitmap>()
+        PageAssembler(4, 10, maxPixels = 12) { saved.add(it.copy(Bitmap.Config.ARGB_8888, false)) }.use { assembler ->
+            for ((top, height, color) in listOf(Triple(0, 4, Color.RED), Triple(4, 6, Color.BLUE))) {
+                val tile = Bitmap.createBitmap(4, height, Bitmap.Config.ARGB_8888)
+                tile.eraseColor(color)
+                assembler.append(tile, top)
+                tile.recycle()
+            }
+            assembler.finish()
+        }
+        try {
+            assertEquals(listOf(3, 3, 3, 1), saved.map { it.height })
+            assertEquals(
+                List(4) { Color.RED } + List(6) { Color.BLUE },
+                saved.flatMap { image ->
+                    (0 until image.height).map { image.getPixel(1, it) }
+                },
+            )
+        } finally {
+            saved.forEach { it.recycle() }
+        }
+        PageAssembler(4, 10) { }.use { incomplete ->
+            var rejected = false
+            try {
+                incomplete.finish()
+            } catch (_: IOException) {
+                rejected = true
+            }
+            assertTrue("Partial pages must be rejected", rejected)
         }
     }
 
