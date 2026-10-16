@@ -23,13 +23,19 @@
     }
     if (plate.querySelector(".animate-spin")) return { state: "waiting" };
     const canvas = plate.querySelector("canvas");
-    // A fresh canvas is 300 x 150 but has no explicit dimensions and no decoded page.
-    if (!canvas || !canvas.hasAttribute("width") || !canvas.hasAttribute("height") || !canvas.width || !canvas.height) {
-        return { state: "waiting" };
-    }
+    if (!canvas) return { state: "waiting" };
     try {
         const data = canvas.toDataURL("image/png");
         if (!data.startsWith("data:image/png;base64,")) return { state: "waiting" };
+        // Worker-rendered canvas bitmaps can resize without changing HTML attributes.
+        const header = atob(data.slice("data:image/png;base64,".length, "data:image/png;base64,".length + 48));
+        const uint32 = offset => Array.from(header.slice(offset, offset + 4))
+            .reduce((n, byte) => n * 256 + byte.charCodeAt(0), 0);
+        const width = uint32(16), height = uint32(20);
+        if (!width || !height) return { state: "waiting" };
+        if ((!canvas.hasAttribute("width") || !canvas.hasAttribute("height")) && width === 300 && height === 150) {
+            return { state: "waiting" };
+        }
         return { state: "page", index, total: plates.length, data };
     } catch (_) {
         return { state: "error", error: `Le navigateur ne permet pas de transférer la page ${index + 1} vers Mihon.` };

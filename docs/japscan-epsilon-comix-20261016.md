@@ -54,8 +54,8 @@ validation interactive reste inchangé et aucune validation n’est simulée.
 ## Contrôles et limites
 
 `node --test src/fr/softepsilonscan/tests/rendered-reader.test.mjs src/fr/japscan/tests/paginated-reader.test.mjs`
-exécute 13 tests de régression sur fixtures : lecture mono/multipage, ordre,
-capture partielle, montage asynchrone, canvas vide, chargement, ancien lecteur,
+exécute 14 tests de régression sur fixtures : lecture mono/multipage, ordre,
+capture partielle, montage asynchrone, canvas vide, rendu par worker, chargement, ancien lecteur,
 refus du site et restriction d’export. Ils ne constituent pas un test Android.
 
 Le 16 octobre, le catalogue Epsilon et une page de chapitre répondent HTTP 200 ;

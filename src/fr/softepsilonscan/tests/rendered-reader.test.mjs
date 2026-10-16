@@ -4,14 +4,17 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const source = `(${await readFile(new URL('../assets/rendered_page.js', import.meta.url), 'utf8')})`;
-function fixture({ total = 4, spinner = false, dimensions = true, denied = false, broken = false, legacy = false, captureThrows = false } = {}) {
+function fixture({ total = 4, spinner = false, dimensions = true, offscreen = false, denied = false, broken = false, legacy = false, captureThrows = false } = {}) {
     let scrolls = 0;
     const canvas = {
         width: 1080, height: 2200,
         hasAttribute: () => dimensions,
         toDataURL: () => {
             if (captureThrows) throw new Error('capture unavailable');
-            return 'data:image/png;base64,iVBORw0KGgo=';
+            const header = Buffer.alloc(32);
+            header.writeUInt32BE(dimensions || offscreen ? 1080 : 300, 16);
+            header.writeUInt32BE(dimensions || offscreen ? 2200 : 150, 20);
+            return `data:image/png;base64,${header.toString('base64')}`;
         },
     };
     const plates = Array.from({ length: total }, () => ({
@@ -23,7 +26,7 @@ function fixture({ total = 4, spinner = false, dimensions = true, denied = false
         getElementById: () => ({ dataset: { page: JSON.stringify({ props: { reader_v2: !legacy, page_count: 0 } }) } }),
         querySelectorAll: () => plates,
     };
-    const context = vm.createContext({ window: {}, document });
+    const context = vm.createContext({ window: {}, document, atob });
     // The old implementation adds a setter to Object.prototype; this reader must not need it.
     vm.runInContext('Object.freeze(Object.prototype)', context);
     const read = vm.runInContext(source, context);
@@ -42,6 +45,10 @@ test('uses the actual rendered page count even when page_count is zero', () => {
 
 test('a default blank canvas is not delivered as a page', () => {
     assert.equal(fixture({ dimensions: false }).read(0).state, 'waiting');
+});
+
+test('worker-rendered pages work even when the HTML width/height attributes were not updated', () => {
+    assert.equal(fixture({ dimensions: false, offscreen: true }).read(0).state, 'page');
 });
 
 test('loading placeholders cannot be exported before drawing completes', () => {
