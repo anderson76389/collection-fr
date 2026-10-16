@@ -6,11 +6,11 @@ import okhttp3.OkHttpClient;
 
 // Java can delegate this member-extension override to Pam without changing the shared theme.
 public abstract class ReaderClient extends Pam {
-    protected abstract Interceptor renderedPageInterceptor();
+  protected abstract Interceptor renderedPageInterceptor();
 
-    @Override
-    protected OkHttpClient.Builder configureClient(OkHttpClient.Builder builder) {
-        builder.addInterceptor(renderedPageInterceptor());
-        return super.configureClient(builder);
-    }
+  @Override
+  protected OkHttpClient.Builder configureClient(OkHttpClient.Builder builder) {
+    builder.addInterceptor(renderedPageInterceptor());
+    return super.configureClient(builder);
+  }
 }
