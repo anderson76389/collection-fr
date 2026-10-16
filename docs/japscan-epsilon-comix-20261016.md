@@ -39,7 +39,13 @@ n’est changé. Les CAPTCHA doivent toujours être validés par l’utilisateur
 ## Japscan 1.6.7
 
 L’utilisateur confirme que les images du chapitre sont visibles dans la WebView
-Mihon. La capture attend maintenant le montage asynchrone du lecteur : premier
+Mihon. Si la requête OkHttp reste refusée, l’extension navigue vers le chapitre
+dans une WebView et récupère le document via un fetch de cette session navigateur,
+avec ses cookies, transport, user-agent et Referer, avant la capture. Ce repli
+remplace l’ancien préchargement de la page d’accueil suivi d’une nouvelle requête
+OkHttp. Il ne valide pas un CAPTCHA et ne prend jamais un challenge pour le lecteur.
+
+La capture attend maintenant le montage asynchrone du lecteur : premier
 blob en mode paginé, premier canvas dessiné en mode webtoon. Elle ne démarre
 plus sur le seul événement `onPageFinished`, qui peut précéder ces étapes.
 
@@ -54,9 +60,10 @@ validation interactive reste inchangé et aucune validation n’est simulée.
 ## Contrôles et limites
 
 `node --test src/fr/softepsilonscan/tests/rendered-reader.test.mjs src/fr/japscan/tests/paginated-reader.test.mjs`
-exécute 14 tests de régression sur fixtures : lecture mono/multipage, ordre,
+exécute 19 tests de régression sur fixtures : lecture mono/multipage, ordre,
 capture partielle, montage asynchrone, canvas vide, rendu par worker, chargement, ancien lecteur,
-refus du site et restriction d’export. Ils ne constituent pas un test Android.
+refus du site, récupération via la session navigateur et restriction d’export.
+Ils ne constituent pas un test Android.
 
 Le 16 octobre, le catalogue Epsilon et une page de chapitre répondent HTTP 200 ;
 ce chapitre annonce `reader_v2: true` et `page_count: 0`. Le nouveau chemin lit

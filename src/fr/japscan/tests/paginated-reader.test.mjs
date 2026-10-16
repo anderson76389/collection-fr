@@ -78,3 +78,63 @@ test('the first webtoon container alone is insufficient until a canvas has been 
     context.window.__japscanLastDraw = 123;
     assert.equal(vm.runInNewContext(script, context), true);
 });
+
+const browserDocumentScript = `(${await readFile(new URL('../assets/verified_reader_html.js', import.meta.url), 'utf8')})`;
+function browserDocumentFixture({ challenge = false, mounted = true, returnedReader = true, status = 200 } = {}) {
+    let calls = 0;
+    let options;
+    class DOMParser {
+        parseFromString() {
+            return { querySelector: selector => selector.startsWith('script') ? null : returnedReader ? {} : null };
+        }
+    }
+    const context = vm.createContext({
+        window: challenge ? { _cf_chl_opt: {} } : {},
+        document: { querySelector: () => mounted ? {} : null },
+        location: { href: 'https://www.japscan.foo/manga/example/1/' },
+        DOMParser,
+        fetch: async (_, opts) => {
+            calls++;
+            options = opts;
+            return { ok: status === 200, status, text: async () => '<html>reader</html>' };
+        },
+    });
+    return { read: vm.runInContext(browserDocumentScript, context), get calls() { return calls; }, get options() { return options; } };
+}
+
+test('reader HTML is fetched once through the browser session with same-origin cookies', async () => {
+    const env = browserDocumentFixture();
+    assert.equal(env.read().state, 'waiting');
+    await new Promise(setImmediate);
+    assert.equal(env.read().state, 'ready');
+    assert.equal(env.read().html, '<html>reader</html>');
+    assert.equal(env.calls, 1);
+    assert.equal(env.options.credentials, 'same-origin');
+});
+
+test('Cloudflare blocks transfer until the user completes verification', () => {
+    const env = browserDocumentFixture({ challenge: true });
+    assert.equal(env.read().state, 'challenge');
+    assert.equal(env.calls, 0);
+});
+
+test('browser-session retrieval waits for a reader instead of fetching an unrelated page', () => {
+    const env = browserDocumentFixture({ mounted: false });
+    assert.equal(env.read().state, 'waiting');
+    assert.equal(env.calls, 0);
+});
+
+test('a challenge returned by the browser fetch is not mistaken for a reader', async () => {
+    const env = browserDocumentFixture({ returnedReader: false });
+    env.read();
+    await new Promise(setImmediate);
+    assert.equal(env.read().state, 'challenge');
+});
+
+test('a browser HTTP failure remains an explicit error', async () => {
+    const env = browserDocumentFixture({ status: 403 });
+    env.read();
+    await new Promise(setImmediate);
+    assert.equal(env.read().state, 'error');
+    assert.match(env.read().error, /HTTP 403/);
+});

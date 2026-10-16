@@ -280,9 +280,8 @@ abstract class Japscan :
         var html = fetchReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
 
-        // Use a real navigation with the same user agent before requesting interactive verification.
-        warmupWebViewSession()
-        html = fetchReaderHtml(chapterUrl)
+        // Clearance can work in the browser while an OkHttp navigation is still refused.
+        html = fetchBrowserReaderHtml(chapterUrl)
         if (isReaderReady(html)) return html!!
 
         val context = applicationContext
@@ -303,26 +302,33 @@ abstract class Japscan :
         throw IOException("Japscan : terminez les vérifications dans la WebView, attendez l’affichage du chapitre, puis revenez et relancez-le.")
     }
 
-    private suspend fun warmupWebViewSession() {
-        try {
-            runWebView<Unit>(timeout = 12.seconds) {
-                userAgent = headers["User-Agent"]!!
-                poll(250.milliseconds) {
-                    evaluateJs("Boolean(document.querySelector('.mangas-list .manga-block'))") {
-                        if (it == "true") resolve(Unit)
+    private suspend fun fetchBrowserReaderHtml(chapterUrl: String): String? = try {
+        val script = javaClass.getResource("/assets/verified_reader_html.js")!!.readText()
+        runWebView<String>(timeout = 15.seconds) {
+            userAgent = headers["User-Agent"]!!
+            poll(250.milliseconds) {
+                evaluateJs("($script)()") { value ->
+                    val result = value.parseAs<BrowserReaderDocument>()
+                    when (result.state) {
+                        "ready" -> result.html?.let(::resolve)
+                        "error" -> reject(IOException(result.error))
                     }
                 }
-                onReceivedError { request, error ->
-                    if (request.isForMainFrame) reject(IOException(error.description.toString()))
-                }
-                loadUrl(getHomeUrl())
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            // Interactive verification follows if this navigation cannot load the catalogue.
+            onReceivedError { request, error ->
+                if (request.isForMainFrame) reject(IOException(error.description.toString()))
+            }
+            loadUrl(chapterUrl)
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        // Interactive verification follows if this chapter still cannot load.
+        null
     }
+
+    @Serializable
+    private class BrowserReaderDocument(val state: String, val html: String? = null, val error: String? = null)
 
     private suspend fun runReaderWebView(
         chapterUrl: String,
