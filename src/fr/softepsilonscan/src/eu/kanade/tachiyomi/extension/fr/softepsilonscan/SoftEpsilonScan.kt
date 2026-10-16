@@ -13,11 +13,13 @@ import okhttp3.Interceptor
 @Source
 abstract class SoftEpsilonScan : ReaderClient() {
 
-    private val renderedReader by lazy { RenderedReader() }
+    private val renderedReader by lazy {
+        keiyoushi.lib.webviewcapture.ReaderWindow(id, javaClass.getResource("/assets/rendered_page.js")!!.readText())
+    }
 
     override fun renderedPageInterceptor() = Interceptor(renderedReader::intercept)
 
-    override suspend fun getPageList(chapter: SChapter) = renderedReader.pages("$baseUrl${chapter.url}", headers)
+    override suspend fun getPageList(chapter: SChapter) = renderedReader.pages("$baseUrl${chapter.url}")
         ?: super.getPageList(chapter)
 
     override val popularFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(3, false)))

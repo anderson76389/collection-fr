@@ -1,9 +1,5 @@
 package eu.kanade.tachiyomi.extension.fr.japscan
 
-import android.content.ComponentName
-import android.content.Intent
-import android.util.Base64
-import android.webkit.WebResourceResponse
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
@@ -18,37 +14,20 @@ import keiyoushi.network.get
 import keiyoushi.network.post
 import keiyoushi.network.rateLimit
 import keiyoushi.source.KeiSource
-import keiyoushi.utils.applicationContext
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
-import keiyoushi.utils.runWebView
 import keiyoushi.utils.tryParseDate
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.Serializable
-import okhttp3.CacheControl
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import java.io.ByteArrayInputStream
-import java.io.File
 import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @Source
@@ -58,20 +37,11 @@ abstract class Japscan :
 
     private val preferences by getPreferencesLazy()
 
-    // Pages are captured from the reader's canvases and spooled to the cache dir; their imageUrl
-    // points at a sentinel host that this interceptor serves from disk, ahead of the rate limiter.
-    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor { chain ->
-        val request = chain.request()
-        if (request.url.host != CACHE_HOST) return@addInterceptor chain.proceed(request)
-        val bytes = File("/" + request.url.pathSegments.joinToString("/")).takeIf(File::exists)?.readBytes()
-        Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(if (bytes != null) 200 else 404)
-            .message(if (bytes != null) "OK" else "Not Found")
-            .body((bytes ?: ByteArray(0)).toResponseBody("image/jpeg".toMediaType()))
-            .build()
-    }.rateLimit(1, 2.seconds)
+    private val readerWindow by lazy {
+        keiyoushi.lib.webviewcapture.ReaderWindow(id, javaClass.getResource("/assets/visible_page.js")!!.readText())
+    }
+
+    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor(readerWindow::intercept).rateLimit(1, 2.seconds)
 
     // Sometimes an adblock blocker will pop up, preventing the user from opening
     // a cloudflare protected page
@@ -241,210 +211,8 @@ abstract class Japscan :
         }
     }
 
-    private val pageListMutex = Mutex()
-
-    override suspend fun getPageList(chapter: SChapter): List<Page> {
-        pageListMutex.withLock {
-            val chapterUrl = baseUrl + chapter.url
-            sweepPageCache(applicationContext.cacheDir)
-
-            val readerHtml = solveCaptcha(chapterUrl)
-
-            // manhwa/manhua use the long-strip reader, everything else the paginated one. The DOM
-            // can't tell them apart before the reader JS mounts, and both need different hooks.
-            val urlSegment = chapter.url.trimStart('/').substringBefore('/').lowercase()
-            val isWebtoon = urlSegment == "manhwa" || urlSegment == "manhua"
-
-            val cachedPages = runReaderWebView(chapterUrl, readerHtml, isWebtoon, urlSegment)
-            if (cachedPages.isEmpty()) {
-                throw IOException("Japscan : vérification passée, mais aucune image extraite du lecteur. Indiquez le titre et le chapitre au mainteneur.")
-            }
-            return cachedPages.mapIndexed { i, path -> Page(i, imageUrl = "https://$CACHE_HOST$path") }
-        }
-    }
-
-    private suspend fun fetchReaderHtml(chapterUrl: String): String? = try {
-        client.get(chapterUrl, headers, CacheControl.FORCE_NETWORK).use { it.body.string() }
-    } catch (e: IOException) {
-        // A blocked request must reach the interactive verification flow.
-        null
-    }
-
-    private fun isReaderReady(html: String?): Boolean {
-        if (html == null || CAPTCHA_REGEX.containsMatchIn(html)) return false
-        val document = org.jsoup.Jsoup.parse(html)
-        return document.selectFirst("#full-reader, [id^=single-reader]") != null
-    }
-
-    private suspend fun solveCaptcha(chapterUrl: String): String {
-        var html = fetchReaderHtml(chapterUrl)
-        if (isReaderReady(html)) return html!!
-
-        // Clearance can work in the browser while an OkHttp navigation is still refused.
-        html = fetchBrowserReaderHtml(chapterUrl)
-        if (isReaderReady(html)) return html!!
-
-        val context = applicationContext
-        try {
-            val intent = Intent().apply {
-                component = ComponentName(context, "eu.kanade.tachiyomi.ui.webview.WebViewActivity")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("url_key", chapterUrl)
-                putExtra("source_key", id)
-                putExtra("title_key", "Terminez les vérifications, puis revenez et relancez le chapitre.")
-            }
-            context.startActivity(intent)
-        } catch (_: Exception) {
-            // Suwayomi etc.
-            throw Exception("Résolvez le captcha de ce chapitre depuis la WebView et réouvrez le chapitre.")
-        }
-        // Do not poll or navigate away while the user is completing the site's two checks.
-        throw IOException("Japscan : terminez les vérifications dans la WebView, attendez l’affichage du chapitre, puis revenez et relancez-le.")
-    }
-
-    private suspend fun fetchBrowserReaderHtml(chapterUrl: String): String? = try {
-        val script = javaClass.getResource("/assets/verified_reader_html.js")!!.readText()
-        runWebView<String>(timeout = 15.seconds) {
-            userAgent = headers["User-Agent"]!!
-            poll(250.milliseconds) {
-                evaluateJs("($script)()") { value ->
-                    val result = value.parseAs<BrowserReaderDocument>()
-                    when (result.state) {
-                        "ready" -> result.html?.let(::resolve)
-                        "error" -> reject(IOException(result.error))
-                    }
-                }
-            }
-            onReceivedError { request, error ->
-                if (request.isForMainFrame) reject(IOException(error.description.toString()))
-            }
-            loadUrl(chapterUrl)
-        }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        // Interactive verification follows if this chapter still cannot load.
-        null
-    }
-
-    @Serializable
-    private class BrowserReaderDocument(val state: String, val html: String? = null, val error: String? = null)
-
-    private suspend fun runReaderWebView(
-        chapterUrl: String,
-        html: String,
-        isWebtoon: Boolean,
-        urlSegment: String,
-    ): List<String> {
-        val interfaceName = randomString()
-        val sessionTag = "$CACHE_FILE_PREFIX${System.currentTimeMillis()}"
-        val savedPaths = mutableListOf<String>()
-        var done = false
-        var driverStarted = false
-        val lastProgress = AtomicLong(System.nanoTime())
-
-        // Reuse the successful verification response instead of requesting the chapter again.
-        val hooks = ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK
-        val head = Regex("""<head\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)
-            ?: throw IOException("Japscan : page du lecteur absente. Ouvrez ce chapitre dans la WebView.")
-        val readerHtml = html.replaceRange(head.range, head.value + "<script>$hooks</script>")
-
-        return try {
-            runWebView<List<String>>(timeout = 3.minutes) {
-                domStorageEnabled = true
-                javaScriptEnabled = true
-                blockImages = false
-                userAgent = headers["User-Agent"]!!
-                if (isWebtoon) {
-                    useWideViewPort = true
-                    loadWithOverviewMode = false
-                }
-
-                jsBridge("${interfaceName}_savePage") { dataUri ->
-                    val path = savePage(dataUri, sessionTag, savedPaths.size)
-                        ?: return@jsBridge reject(IOException("Japscan : impossible d’enregistrer une image rendue"))
-                    savedPaths.add(path)
-                    lastProgress.set(System.nanoTime())
-                }
-
-                jsBridge("${interfaceName}_passDone") { payload ->
-                    val completion = payload.parseAs<ReaderCompletion>()
-                    if (completion.expected <= 0 || completion.pages != completion.expected || savedPaths.size != completion.expected) {
-                        reject(IOException("Japscan : ${savedPaths.size}/${completion.expected} images récupérées ; le chapitre incomplet n’a pas été renvoyé."))
-                    } else {
-                        done = true
-                        resolve(savedPaths.toList())
-                    }
-                }
-
-                // The reader pulls rotating ad hosts whose modals break the detached descrambler,
-                // so only the origins the reader needs are allowed.
-                interceptRequest { request ->
-                    val host = request.url.host ?: return@interceptRequest null
-                    if (host == baseUrl.toHttpUrl().host || ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
-                        null
-                    } else {
-                        // A null body keeps some WebView builds pending, stalling the capture
-                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                    }
-                }
-
-                poll(250.milliseconds) {
-                    if (System.nanoTime() - lastProgress.get() > IDLE_TIMEOUT.inWholeNanoseconds) {
-                        reject(IOException("Japscan : le lecteur n’a produit aucune nouvelle image depuis 45 secondes (${savedPaths.size} récupérées)."))
-                    } else if (!driverStarted) {
-                        evaluateJs(readerPreparation(isWebtoon)) { ready ->
-                            if (ready == "true" && !driverStarted) {
-                                driverStarted = true
-                                lastProgress.set(System.nanoTime())
-                                evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
-                            }
-                        }
-                    }
-                }
-
-                loadData(chapterUrl, readerHtml)
-            }
-        } catch (e: CancellationException) {
-            savedPaths.forEach { File(it).delete() }
-            throw e
-        } catch (e: Exception) {
-            savedPaths.forEach { File(it).delete() }
-            throw IOException("Japscan : échec du lecteur (${e.message})", e)
-        }.takeIf { done } ?: throw IOException("Japscan : le lecteur n'a pas terminé le chargement")
-    }
-
-    @Serializable
-    private class ReaderCompletion(val pages: Int, val expected: Int)
-
-    private fun savePage(
-        dataUri: String,
-        sessionTag: String,
-        size: Int,
-    ): String? {
-        val commaIdx = dataUri.indexOf(',')
-        if (commaIdx <= 0) return null
-        return runCatching {
-            val bytes = Base64.decode(dataUri.substring(commaIdx + 1), Base64.DEFAULT)
-            val file = File(applicationContext.cacheDir, "$sessionTag-$size.bin")
-            file.writeBytes(bytes)
-            file.absolutePath
-        }.getOrNull()
-    }
-
-    // Spooled pages must outlive the chapter being read (the reader may re-request them or
-    // preload the next chapter), so only files older than a day are reaped.
-    private fun sweepPageCache(cacheDir: File) {
-        val cutoff = System.currentTimeMillis() - 24.hours.inWholeMilliseconds
-        cacheDir.listFiles()?.forEach {
-            if (it.name.startsWith(CACHE_FILE_PREFIX) && it.lastModified() < cutoff) it.delete()
-        }
-    }
-
-    private fun randomString(length: Int = 10): String {
-        val charPool = ('a'..'z') + ('A'..'Z')
-        return List(length) { charPool.random() }.joinToString("")
-    }
+    override suspend fun getPageList(chapter: SChapter): List<Page> = readerWindow.pages(baseUrl + chapter.url)
+        ?: throw IOException("Le lecteur Japscan n’a pas été reconnu.")
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         ListPreference(screen.context).apply {
@@ -490,30 +258,10 @@ abstract class Japscan :
         )
         private val CHAPTER_NUM_REGEX = Regex("""(?i)chapitre\s+([\d.]+)""")
         private val NON_NUMBER_REGEX = Regex("[^0-9.]+")
-        private val CAPTCHA_REGEX = """(?:window\.)?__captcha\s*=\s*\{[^}]*["']?needed["']?\s*:\s*true""".toRegex()
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
         private val PARIS = ZoneId.of("Europe/Paris")
 
         private const val SHOW_SPOILER_CHAPTERS_TITLE = "Les chapitres en Anglais ou non traduit sont upload en tant que \" Spoilers \" sur Japscan"
         private const val SHOW_SPOILER_CHAPTERS = "JAPSCAN_SPOILER_CHAPTERS"
-
-        private const val CACHE_HOST = "japscan-cache.local"
-        private const val CACHE_FILE_PREFIX = "japscan-"
-        private val IDLE_TIMEOUT = 45.seconds
-
-        // Under ~1280px wide the long-strip reader lazy-loads tiles on scroll, which a detached
-        // WebView can't trigger; above it every tile host is created upfront.
-        private const val WEBVIEW_VIEWPORT_WIDTH = 1920
-        private const val WEBVIEW_VIEWPORT_HEIGHT = 16384
-
-        private val ALLOWED_HOSTS = listOf(
-            "japscan.foo",
-            "cdnjs.cloudflare.com",
-            "code.jquery.com",
-            "cdn.jsdelivr.net",
-            "fonts.googleapis.com",
-            "fonts.gstatic.com",
-            "challenges.cloudflare.com",
-        )
     }
 }
