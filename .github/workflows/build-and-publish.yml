@@ -95,7 +95,6 @@ jobs:
             :src:fr:animesama
             :src:fr:astralmanga
             :src:fr:dassouscan
-            :src:fr:japscan
             :src:fr:mangascantrad
             :src:fr:mangasoriginesfr
             :src:fr:rimuscans
@@ -103,7 +102,6 @@ jobs:
             :src:fr:scanvf
             :src:fr:blossomscans
             :src:fr:pantheonscan
-            :src:fr:softepsilonscan
             :src:fr:manhuarm
             :src:all:asurascans
             :src:fr:mangaball

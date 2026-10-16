@@ -75,7 +75,7 @@ def main():
     download(INDEX_URL, OUT / "index.json")
     index = json.loads((OUT / "index.json").read_text())
     assert index["signingKey"] == SIGNING_KEY
-    candidates = {"japscan": "src/fr/japscan", "softepsilonscan": "src/fr/softepsilonscan", "manhuarm": "src/all/manhuarm"}
+    candidates = {"manhuarm": "src/fr/manhuarm"}
     extensions = [e for e in index["extensionList"]["extensions"] if e["packageName"].split(".")[-1] in candidates]
     for ext in extensions:
         module = Path(candidates[ext["packageName"].split(".")[-1]])
@@ -131,7 +131,7 @@ def main():
     source_screen()
     ui("initial-sources", screenshot=True)
     results = []
-    priority = {"scanmanga": 0, "japscan": 1, "dassouscan": 2}
+    priority = {"scanmanga": 0, "dassouscan": 1}
     extensions.sort(key=lambda e: priority.get(e["packageName"].split(".")[-1], 10))
     selected = os.environ.get("SOURCE_AUDIT_ONLY", "").split(",")
     if selected != [""]:
@@ -202,7 +202,7 @@ def main():
         search = find(state, description="Search")
         if search is not None:
             tap(search)
-            adb("shell", "input", "text", {"japscan": "Martial", "softepsilonscan": "Polaris", "manhuarm": "Past"}.get(slug, "One"))
+            adb("shell", "input", "text", {"manhuarm": "Past"}.get(slug, "One"))
             adb("shell", "input", "keyevent", "66")
             time.sleep(12)
             state = ui(slug + "-search", screenshot=True)
@@ -224,7 +224,7 @@ def main():
         if not candidates:
             result["status"] = "no_manga_card_available"
             continue
-        wanted = {"japscan": "Martial Peak", "softepsilonscan": "Polaris", "manhuarm": "Past Life Returner"}.get(slug, "")
+        wanted = {"manhuarm": "Past Life Returner"}.get(slug, "")
         preferred = next((c for c in candidates if any(wanted.casefold() in t.casefold() for t in texts(c))), candidates[0])
         result["sample_title"] = texts(preferred)
         tap(preferred)

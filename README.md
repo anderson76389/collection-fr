@@ -8,7 +8,7 @@
 
 [![Mihon](https://img.shields.io/badge/Compatible-Mihon-6366F1?style=for-the-badge)](https://mihon.app/)
 [![Langue](https://img.shields.io/badge/Langue-Fran%C3%A7ais-2563EB?style=for-the-badge)](#-les-extensions)
-[![Extensions](https://img.shields.io/badge/Index-34%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
+[![Extensions](https://img.shields.io/badge/Index-30%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
 [![Android](https://img.shields.io/badge/Plateforme-Android-404040?style=for-the-badge&logo=android&logoColor=white)](https://github.com/anderson76389/collection-fr/releases)
 
 [📲 Installer dans Mihon](#-installer-le-dépôt-dans-mihon) · [📖 Extensions](#-les-extensions) · [⚙️ Compilation](#-compiler-et-publier) · [🔎 Vérifications](#-suivi-des-correctifs-et-limitations)
@@ -58,18 +58,18 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **32 extensions** après les retraits de Sushiscan et Comix demandés le **16 octobre 2026**. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **30 extensions** après les retraits de Sushiscan, Comix, Japscan et Soft Epsilon Scan demandés le **16 octobre 2026**. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
 
 **Mangas et scans**
 
-`AnimeSama` · `Astral-Manga` · `Japscan` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`AnimeSama` · `Astral-Manga` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 
-`Webtoons.com` · `Manhuarm` · `Manga Ball` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan` · `Soft Epsilon Scan`
+`Webtoons.com` · `Manhuarm` · `Manga Ball` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan`
 
 </details>
 
@@ -160,7 +160,7 @@ Le dépôt contient des rapports de tests et de nettoyage, notamment :
 - [🧪 Audit des sources — 29 septembre 2026](docs/source-audit-2026-09-29.md) : tests ciblés et suivi de plusieurs dysfonctionnements.
 - [🧹 Nettoyage des sources et langues — 5 octobre 2026](docs/languages-and-cleanup-2026-10-05.md) : explications sur les changements de sélection et de langue.
 
-**Points de vigilance :** Japscan et Scan-Manga ont connu des erreurs de chargement ou de lecture, et certains sites bloquent les accès automatisés avec des réponses HTTP 403. Une erreur dans un robot de test ne prouve pas à elle seule que la source est définitivement hors service.
+**Points de vigilance :** Scan-Manga a connu des erreurs de chargement ou de lecture, et certains sites bloquent les accès automatisés avec des réponses HTTP 403. Une erreur dans un robot de test ne prouve pas à elle seule que la source est définitivement hors service.
 
 Des sources ont été retirées ou remplacées au cours du projet. **L'index publié sur la branche `repo` fait foi** pour les APK actuellement proposés dans Mihon ; il peut différer des fichiers de référence conservés sur `main`.
 
