@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "Soft Epsilon Scan"
-    versionCode = 4
+    versionCode = 5
     contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
     theme = "pam"
@@ -15,4 +15,8 @@ keiyoushi {
         lang = "fr"
         baseUrl = "https://epsilonsoft.to"
     }
+}
+
+dependencies {
+    implementation(project(":lib:webviewcapture"))
 }
