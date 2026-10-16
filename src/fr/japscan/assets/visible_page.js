@@ -21,12 +21,15 @@
     const single = document.querySelector('[id^="single-reader"]');
     const select = document.getElementById("pages");
     if (!visible(single) || !select?.options.length) return { state: "waiting" };
+    const image = single.querySelector('img[src^="blob:"]');
     if (select.selectedIndex !== index) {
+        select.dataset.makoffPreviousImage = image?.src ?? "";
         select.selectedIndex = index;
         select.dispatchEvent(new Event("change", { bubbles: true }));
         return { state: "waiting" };
     }
-    const image = single.querySelector('img[src^="blob:"]');
     if (!image || !image.complete || image.naturalWidth <= 0) return { state: "waiting" };
+    if (select.dataset.makoffPreviousImage && image.src === select.dataset.makoffPreviousImage) return { state: "waiting" };
+    delete select.dataset.makoffPreviousImage;
     return { state: "ready", element: image, total: select.options.length };
 }

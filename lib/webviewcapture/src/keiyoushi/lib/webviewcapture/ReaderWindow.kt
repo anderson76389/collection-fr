@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -146,6 +147,11 @@ class ReaderWindow(private val sourceId: Long, private val locator: String) {
             while (!start.isCompleted) {
                 if (destroyed) throw IOException("Import annulé : WebView fermée.")
                 delay(200)
+            }
+            val expected = Uri.parse(url)
+            val current = Uri.parse(webView.url ?: "")
+            if (current.host?.removePrefix("www.") != expected.host?.removePrefix("www.") || current.path?.trimEnd('/') != expected.path?.trimEnd('/')) {
+                throw IOException("Rouvrez le chapitre demandé avant de lancer l’import.")
             }
             root.removeView(button)
             button = null

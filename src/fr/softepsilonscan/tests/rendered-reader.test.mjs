@@ -17,3 +17,5 @@ test('waits for a loading page',()=>assert.equal(fixture({spinner:true}).read(0)
 test('does not accept a failed site page',()=>assert.equal(fixture({broken:true}).read(0).state,'error'));
 test('reports device refusal instead of attributing it to Cloudflare',()=>assert.equal(fixture({denied:true}).read(0).state,'error'));
 test('leaves Cloudflare to the user',()=>{const env=fixture();env.context.window._cf_chl_opt={};assert.equal(env.read(0).state,'waiting');});
+
+test('retains the existing legacy reader fallback',()=>{const env=fixture();env.context.document.getElementById=()=>({dataset:{page:JSON.stringify({props:{reader_v2:false}})}});assert.equal(env.read(0).state,'legacy');});

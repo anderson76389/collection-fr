@@ -5,8 +5,8 @@ import vm from 'node:vm';
 const source = `(${await readFile(new URL('../assets/visible_page.js',import.meta.url),'utf8')})`;
 function fixture({total=3,current=2,loaded=true,longstrip=false,drawn=true}={}) {
     let changes=0;
-    const image={complete:loaded,naturalWidth:loaded?1200:0};
-    const select={options:Array(total),selectedIndex:current,dispatchEvent(){changes++;}};
+    const image={complete:loaded,src:"blob:current",naturalWidth:loaded?1200:0};
+    const select={dataset:{},options:Array(total),selectedIndex:current,dispatchEvent(){changes++;}};
     const pages=Array.from({length:total},(_,i)=>({id:`d-img-${i}`,scrollIntoView(){},getBoundingClientRect:()=>({width:400,height:2000}),querySelector:()=>null,querySelectorAll:()=>drawn?[{canvas:{width:1200,height:2000}}]:[]}));
     const full={getBoundingClientRect:()=>({width:longstrip?400:0}),querySelectorAll:()=>pages};
     const single={getBoundingClientRect:()=>({width:longstrip?0:400}),querySelector:()=>image};
@@ -19,3 +19,5 @@ test('a single-page chapter is accepted without navigating',()=>{const env=fixtu
 test('does not import an unloaded paginated image',()=>assert.equal(fixture({current:0,loaded:false}).read(0).state,'waiting'));
 test('does not import an empty long-strip placeholder',()=>assert.equal(fixture({longstrip:true,drawn:false}).read(0).state,'waiting'));
 test('Cloudflare is not auto-solved',()=>{const env=fixture();env.context.window._cf_chl_opt={};assert.equal(env.read(0).state,'waiting');});
+
+test('waits for the newly selected image instead of duplicating the previous page',()=>{const env=fixture();env.read(0);assert.equal(env.read(0).state,'waiting');env.image.src='blob:new';assert.equal(env.read(0).state,'ready');});
