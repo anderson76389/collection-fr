@@ -40,7 +40,6 @@ EXPECTED_MODULES = {
     "src/fr/rimuscans",
     "src/fr/scanreader",
     "src/fr/scanvf",
-    "src/fr/sushiscanfr",
     "src/fr/blossomscans",
     "src/fr/pantheonscan",
     "src/fr/softepsilonscan",
