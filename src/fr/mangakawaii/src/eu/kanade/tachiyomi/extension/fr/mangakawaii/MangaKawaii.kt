@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.extension.fr.mangakawaii
 
+import android.os.SystemClock
 import android.util.LruCache
+import android.webkit.WebResourceResponse
+import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -10,23 +13,96 @@ import eu.kanade.tachiyomi.source.model.SMangaUpdate
 import keiyoushi.annotation.Source
 import keiyoushi.network.get
 import keiyoushi.source.KeiSource
+import keiyoushi.utils.WebViewTimeoutException
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.runWebView
+import kotlinx.serialization.Serializable
+import okhttp3.CacheControl
 import okhttp3.Headers
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.select.Elements
 import java.io.IOException
 import java.util.Calendar
 import java.util.Locale
+import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @Source
 abstract class MangaKawaii : KeiSource() {
 
     private val pageCursors = LruCache<String, MutableMap<Int, Int>>(8)
 
-    override fun Headers.Builder.configureHeaders() = set("Referer", "$baseUrl/")
+    private val readerDocuments = LruCache<String, CachedReader>(3)
+
+    @Volatile
+    private var browserUserAgent: String? = null
+
+    override fun Headers.Builder.configureHeaders() = apply {
+        set("Referer", "$baseUrl/")
+        set("Accept", HTML_ACCEPT)
+        set("Accept-Language", "fr-FR,fr;q=0.9")
+        browserUserAgent?.let { set("User-Agent", it) }
+    }
+
+    private suspend fun document(url: String, requestHeaders: Headers = headers): Document {
+        val response = client.get(url, requestHeaders, cacheControl = CacheControl.FORCE_NETWORK, ensureSuccess = false)
+        val code = response.code
+        if (response.isSuccessful) return response.asJsoup()
+        response.close()
+        if (code != 403) throw IOException("MangaKawaii : erreur HTTP $code.")
+        return browserDocument(url)
+    }
+
+    private suspend fun browserDocument(url: String): Document {
+        val bridge = "mk" + UUID.randomUUID().toString().replace("-", "")
+        val script = """
+            (() => {
+                if (document.querySelector('[x-data*="imgs"], #chapitres, a.mk-card[href*="/manga/"], div.ch-row')) {
+                    window.$bridge.post(document.documentElement.outerHTML);
+                }
+            })();
+        """.trimIndent()
+        val html = try {
+            runWebView<String>(timeout = 30.seconds) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                blockImages = true
+                browserUserAgent = userAgent
+                val empty = WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
+                interceptRequest { request ->
+                    val host = request.url.host.orEmpty()
+                    if (host == "mangakawaii.fr" || host.endsWith(".mangakawaii.fr") || host == "challenges.cloudflare.com") null else empty
+                }
+                jsBridge(bridge) { resolve(it) }
+                onPageFinished { evaluateJs(script) }
+                onReceivedError { request, error ->
+                    if (request.isForMainFrame) reject(IOException("MangaKawaii : ${error.description}"))
+                }
+                poll(500.milliseconds) { evaluateJs(script) }
+                loadUrl(url, mapOf("Referer" to "$baseUrl/", "Accept" to HTML_ACCEPT))
+            }
+        } catch (e: WebViewTimeoutException) {
+            throw IOException("MangaKawaii refuse l’accès. Ouvrez la source dans la WebView, validez la vérification du site puis réessayez.", e)
+        }
+        return Jsoup.parse(html, url)
+    }
+
+    private suspend fun readerDocument(url: String): Document {
+        readerDocuments.get(url)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
+            ?.let { return it.document }
+        return document(url).also {
+            if (it.selectFirst("[x-data*=imgs]") != null) {
+                readerDocuments.put(url, CachedReader(it, SystemClock.elapsedRealtime()))
+            }
+        }
+    }
+
+    private class CachedReader(val document: Document, val fetchedAt: Long)
 
     // ============================== Popular ==============================
     override suspend fun getPopularManga(page: Int): MangasPage {
@@ -66,7 +142,7 @@ abstract class MangaKawaii : KeiSource() {
         }
         var upstreamPage = synchronized(cursors) { cursors[page] ?: page }
         while (true) {
-            val document = client.get(url.newBuilder().setQueryParameter("page", upstreamPage.toString()).build()).asJsoup()
+            val document = document(url.newBuilder().setQueryParameter("page", upstreamPage.toString()).build().toString())
             val mangas = parseMangaCards(document)
             val hasNext = hasNextPage(document, upstreamPage)
             if (mangas.isNotEmpty() || !hasNext) {
@@ -112,7 +188,7 @@ abstract class MangaKawaii : KeiSource() {
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(getMangaUrl(manga)).asJsoup()
+        val document = document(getMangaUrl(manga))
         if (document.select("span[title]").any { it.attr("title").startsWith("Licencié", ignoreCase = true) } ||
             document.select("[data-ch-list]").text().contains("Licencié", ignoreCase = true)
         ) {
@@ -124,7 +200,7 @@ abstract class MangaKawaii : KeiSource() {
                 title = manga.title
             }
         }
-        val chapterList = if (fetchChapters) parseChapters(document) else chapters
+        val chapterList = if (fetchChapters) parseChapters(document, chapters) else chapters
         return SMangaUpdate(updatedManga, chapterList)
     }
 
@@ -166,7 +242,7 @@ abstract class MangaKawaii : KeiSource() {
         }
     }
 
-    private suspend fun parseChapters(document: Document): List<SChapter> {
+    private suspend fun parseChapters(document: Document, knownChapters: List<SChapter>): List<SChapter> {
         val chaptersUrl = document.selectFirst("[data-url*=chapitres]")?.attr("abs:data-url")
             ?.takeIf { it.isNotBlank() }
             ?: document.location().toHttpUrl().newBuilder()
@@ -180,6 +256,20 @@ abstract class MangaKawaii : KeiSource() {
             throw IOException("Les chapitres de cette œuvre sont désactivés par MangaKawaii (œuvre licenciée).")
         }
         var nextPage = document.selectFirst("[data-ch-next]")?.attr("data-ch-next")?.toIntOrNull()
+        if (nextPage != null && chapters.isNotEmpty()) {
+            // The reader's chapter picker contains the complete index without the protected AJAX paging route.
+            val reader = readerDocument(getChapterUrl(chapters.first()))
+            val state = decodeReaderState(reader)
+            val index = CHAPTER_INDEX_REGEX.find(state)?.groupValues?.get(1)
+                ?.parseAs<List<ReaderChapter>>()?.mapNotNull { it.toChapter(document.location()) }.orEmpty()
+            val initial = chapters.associateBy { it.url }
+            if (index.size >= initial.size && index.map { it.url }.toSet().containsAll(initial.keys)) {
+                val known = knownChapters.associateBy { it.url }
+                return index.distinctBy { it.url }.map { initial[it.url] ?: it }.onEach {
+                    if (it.date_upload == 0L) it.date_upload = known[it.url]?.date_upload ?: 0L
+                }
+            }
+        }
         val chaptersBase = chaptersUrl.toHttpUrl()
         val ajaxHeaders = headers.newBuilder()
             .set("X-Requested-With", "fetch")
@@ -190,7 +280,7 @@ abstract class MangaKawaii : KeiSource() {
             val pageUrl = chaptersBase.newBuilder()
                 .setQueryParameter("page", currentPage.toString())
                 .build()
-            val fragment = client.get(pageUrl, ajaxHeaders).asJsoup()
+            val fragment = document(pageUrl.toString(), ajaxHeaders)
             parseChapterRows(fragment.select("div.ch-row"), chapters)
             nextPage = fragment.selectFirst("[data-ch-next]")?.attr("data-ch-next")?.toIntOrNull()
                 ?.takeIf { it > currentPage }
@@ -233,7 +323,36 @@ abstract class MangaKawaii : KeiSource() {
 
     // ============================== Pages ==============================
     override suspend fun getPageList(chapter: SChapter): List<Page> {
-        val document = client.get(getChapterUrl(chapter)).asJsoup()
+        val chapterUrl = getChapterUrl(chapter)
+        val document = readerDocument(chapterUrl)
+        val state = decodeReaderState(document)
+        val imagesJson = IMAGES_REGEX.find(state)?.groupValues?.get(1).orEmpty()
+        val urls = runCatching { "[$imagesJson]".parseAs<List<String>>() }
+            .getOrDefault(emptyList())
+            .filter { "__mk_trap__" !in it }
+            .distinct()
+        if (urls.isNotEmpty()) {
+            return urls.mapIndexed { i, url -> Page(i, chapterUrl, url) }
+        }
+        val fallback = document.select("img[id^=pg-]").mapNotNull { img ->
+            img.absUrl("src").takeIf { it.isNotBlank() && "__mk_trap__" !in it }
+        }.distinct()
+        if (fallback.isEmpty()) throw IOException("MangaKawaii ne renvoie aucune page lisible pour ce chapitre.")
+        return fallback.mapIndexed { index, url -> Page(index, chapterUrl, url) }
+    }
+
+    override fun imageRequest(page: Page) = GET(
+        page.imageUrl!!,
+        headers.newBuilder()
+            .set("Accept", "image/avif,image/webp,image/*,*/*;q=0.8")
+            .set("Sec-Fetch-Dest", "image")
+            .set("Sec-Fetch-Mode", "no-cors")
+            .set("Sec-Fetch-Site", "same-site")
+            .set("Referer", page.url.ifBlank { "$baseUrl/" })
+            .build(),
+    )
+
+    private fun decodeReaderState(document: Document): String {
         var state = document.selectFirst("[x-data*=imgs]")?.attr("x-data").orEmpty()
         var previous: String
         do {
@@ -244,23 +363,28 @@ abstract class MangaKawaii : KeiSource() {
                 .replace("\\u0026", "&")
                 .replace("\\/", "/")
         } while (state != previous)
-        val imagesJson = IMAGES_REGEX.find(state)?.groupValues?.get(1).orEmpty()
-        val urls = runCatching { "[$imagesJson]".parseAs<List<String>>() }
-            .getOrDefault(emptyList())
-            .filter { "__mk_trap__" !in it }
-            .distinct()
-        if (urls.isNotEmpty()) {
-            return urls.mapIndexed { i, url -> Page(i, imageUrl = url) }
-        }
-        return document.select("img[id^=pg-]").mapIndexedNotNull { i, img ->
-            val url = img.absUrl("src").takeIf { it.isNotBlank() } ?: return@mapIndexedNotNull null
-            Page(i, imageUrl = url)
+        return state
+    }
+
+    @Serializable
+    private class ReaderChapter(val n: String, val url: String) {
+        fun toChapter(mangaUrl: String): SChapter? {
+            val base = mangaUrl.toHttpUrl()
+            val target = base.resolve(url) ?: return null
+            if (target.host != base.host || !target.encodedPath.startsWith(base.encodedPath.trimEnd('/') + "/")) return null
+            return SChapter.create().apply {
+                setUrlWithoutDomain(target.toString())
+                name = "Ch. $n"
+                chapter_number = n.toFloatOrNull() ?: -1f
+            }
         }
     }
 
     companion object {
         private val RELATIVE_DATE_REGEX = Regex("""il y a (\d+)\s*([a-zéû.]+)""")
         private val CHAPTER_NUMBER_REGEX = Regex("""Ch\.\s*(\d+(?:\.\d+)?)""")
+        private const val HTML_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        private val CHAPTER_INDEX_REGEX = Regex(""""chapters":\s*(\[.*?])""", RegexOption.DOT_MATCHES_ALL)
         private val IMAGES_REGEX = Regex(""""imgs":\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
     }
 }

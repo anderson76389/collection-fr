@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.extension.en.comix
 
 import android.content.SharedPreferences
+import android.os.SystemClock
+import android.util.LruCache
 import android.webkit.WebResourceResponse
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -28,6 +30,8 @@ import keiyoushi.utils.long
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebView
 import keiyoushi.utils.string
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -57,6 +61,29 @@ abstract class Comix :
 
     private val apiUrl get() = "$baseUrl/api/v1"
     private val preferences: SharedPreferences by getPreferencesLazy()
+
+    private val titleDocuments = LruCache<String, CachedTitle>(6)
+    private val chapterLists = LruCache<String, CachedChapterList>(6)
+    private val titleDocumentLocks = LruCache<String, Mutex>(6)
+
+    private suspend fun titleDocument(manga: SManga): Document {
+        val url = getMangaUrl(manga)
+        val lock = synchronized(titleDocumentLocks) {
+            titleDocumentLocks.get(url) ?: Mutex().also { titleDocumentLocks.put(url, it) }
+        }
+        return lock.withLock {
+            titleDocuments.get(url)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
+                ?.let { return@withLock it.document }
+            client.get(url).asJsoup().also { document ->
+                if (document.selectFirst("script#initial-data") != null) {
+                    titleDocuments.put(url, CachedTitle(document, SystemClock.elapsedRealtime()))
+                }
+            }
+        }
+    }
+
+    private class CachedTitle(val document: Document, val fetchedAt: Long)
+    private class CachedChapterList(val chapters: ChapterList, val fetchedAt: Long)
 
     private val tagIdCache = object : LinkedHashMap<String, List<String>>(
         TAG_ID_CACHE_SIZE,
@@ -444,11 +471,8 @@ abstract class Comix :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        var cachedDocument: Document? = null
-        suspend fun getDocument(): Document {
-            cachedDocument?.let { return it }
-            return client.get(getMangaUrl(manga)).asJsoup().also { cachedDocument = it }
-        }
+        if (!fetchDetails && !fetchChapters) return SMangaUpdate(manga, chapters)
+        suspend fun getDocument() = titleDocument(manga)
 
         val deduplicateChapters = preferences.deduplicateChapters()
         val scanlatorBlacklist = preferences.scanlatorBlacklist()
@@ -522,7 +546,7 @@ abstract class Comix :
     override val supportsRelatedMangas = true
 
     override suspend fun fetchRelatedMangaList(manga: SManga): List<SManga> {
-        val document = client.get(getMangaUrl(manga)).asJsoup()
+        val document = titleDocument(manga)
         val related = document.extractInitialQueries()
             .entries.firstOrNull { (key, _) -> key.contains("\"recommended\"") }
             ?.value
@@ -547,13 +571,22 @@ abstract class Comix :
         document: Document,
         knownIds: List<Int>,
     ): ChapterList {
+        val cacheKey = getMangaUrl(manga)
+        chapterLists.get(cacheKey)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
+            ?.let { return it.chapters }
         val mangaId = manga.url.removePrefix("/").substringBefore('-')
         val payload = runInWebView(document, { it.isChapterListRequest() }) { passPayloadName, rejectName ->
             "(${asset("capture_items.js")})((${asset("chapter_list.js")})(" +
                 "${knownIds.joinToString(",", "[", "]")}, ${JSONObject.quote(mangaId)}, ${JSONObject.quote("/title/$mangaId-")}, " +
                 "$MAX_CHAPTER_PAGES, window.$passPayloadName, window.$rejectName));"
         }
-        return payload.parseAs<ChapterList>()
+        return payload.parseAs<ChapterList>().also {
+            if (it.complete && knownIds.isEmpty()) {
+                chapterLists.put(cacheKey, CachedChapterList(it, SystemClock.elapsedRealtime()))
+            } else if (!it.complete) {
+                titleDocuments.remove(cacheKey)
+            }
+        }
     }
 
     private fun selectChapters(
