@@ -1,7 +1,11 @@
 // The site's Inertia page data, and the site's own API calls made from that page.
-(bridge, request) => {
+(bridge, request, reader = false) => {
     if (window._cf_chl_opt) return "challenge";
     const post = (result) => window[bridge].post(JSON.stringify(result));
+    if (reader && /Lecture impossible sur cet appareil|This device cannot display the reader/.test(document.body?.innerText ?? "")) {
+        post({ error: "Le lecteur Epsilon refuse cet environnement de lecture. Vérifiez ce chapitre dans la WebView avec Android System WebView à jour ; une validation Cloudflare seule ne suffit pas." });
+        return null;
+    }
     // An error page, once it has loaded without turning out to be a challenge.
     const status = performance.getEntriesByType("navigation")[0]?.responseStatus ?? 0;
     if (status >= 400 && document.readyState === "complete") {

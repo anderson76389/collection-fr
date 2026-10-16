@@ -30,12 +30,14 @@ import keiyoushi.utils.long
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebView
 import keiyoushi.utils.string
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.CacheControl
 import okhttp3.Headers
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -74,7 +76,7 @@ abstract class Comix :
         return lock.withLock {
             titleDocuments.get(url)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
                 ?.let { return@withLock it.document }
-            client.get(url).asJsoup().also { document ->
+            siteDocument(url.toHttpUrl()).also { document ->
                 if (document.selectFirst("script#initial-data") != null) {
                     titleDocuments.put(url, CachedTitle(document, SystemClock.elapsedRealtime()))
                 }
@@ -84,6 +86,22 @@ abstract class Comix :
 
     private class CachedTitle(val document: Document, val fetchedAt: Long)
     private class CachedChapterList(val chapters: ChapterList, val fetchedAt: Long)
+
+    private suspend fun siteDocument(url: HttpUrl): Document {
+        val navigationHeaders = headers.newBuilder()
+            .set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .build()
+        for (attempt in 0..2) {
+            val response = client.get(url, navigationHeaders, cacheControl = CacheControl.FORCE_NETWORK, ensureSuccess = false)
+            if (response.isSuccessful) return response.asJsoup()
+            val code = response.code
+            response.close()
+            if (code !in SERVER_ERROR_CODES) throw IOException("Comix : erreur HTTP $code.")
+            if (attempt == 2) throw IOException("Comix renvoie HTTP $code après trois tentatives. Le serveur du site ne fournit pas les données ; réessayez plus tard.")
+            delay((attempt + 1) * 2500L)
+        }
+        error("Unreachable")
+    }
 
     private val tagIdCache = object : LinkedHashMap<String, List<String>>(
         TAG_ID_CACHE_SIZE,
@@ -210,7 +228,7 @@ abstract class Comix :
     }
 
     private suspend fun getMangaListFromBrowse(url: HttpUrl): MangasPage {
-        val document = client.get(url).asJsoup()
+        val document = siteDocument(url)
         val contentRating = url.queryParameter("content_rating")
             ?: preferences.contentRating()
         val effectiveContentRating = contentRating
@@ -663,7 +681,7 @@ abstract class Comix :
     }
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
-        val document = client.get(getChapterUrl(chapter)).asJsoup()
+        val document = siteDocument(getChapterUrl(chapter).toHttpUrl())
         val payload = runInWebView(document, { it.isChapterPagesRequest() }) { passPayloadName, _ ->
             "(${asset("capture_items.js")})((${asset("chapter_pages.js")})(window.$passPayloadName));"
         }
@@ -980,7 +998,7 @@ abstract class Comix :
         private const val OFFICIAL_GROUP_ID = 10702
         private const val TAG_ID_CACHE_SIZE = 50
         private val SCRAMBLE_PATH_FALLBACK_REGEX = Regex("/(?:i5|s?i+)/")
-        private val SERVER_ERROR_CODES = setOf(502, 503, 522, 523)
+        private val SERVER_ERROR_CODES = setOf(502, 503, 504, 522, 523)
         private const val ALT_HOSTS_FRAGMENT = "alt="
 
         // Site requests in the WebView that the extension has no use for: error reports, comments, upload images

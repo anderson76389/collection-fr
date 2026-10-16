@@ -24,7 +24,10 @@ import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParseDateTime
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.JsonObject
+import okhttp3.CacheControl
 import okhttp3.Headers
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
@@ -84,7 +87,7 @@ abstract class Pam :
                 addQueryParameter("q", query)
             }.build()
 
-            val data = client.get(search, apiHeaders).parseAs<SearchResponse>().data
+            val data = loadApi<SearchResponse>(search, "$baseUrl/library").data
 
             return MangasPage(
                 mangas = data.map { it.toSManga(::createThumbnailUrl) },
@@ -124,12 +127,9 @@ abstract class Pam :
         // The catalogue is embedded in HTML; later pages use the site's JSON endpoint.
         val data = if (page > 1) {
             val next = url.newBuilder().addQueryParameter("page", page.toString()).build()
-            client.get(next, apiHeaders).parseAs<LibraryResponse>().series
+            loadApi<LibraryResponse>(next, url.toString()).series
         } else {
-            val document = client.get(url, headers).asJsoup()
-            val pageData = document.selectFirst("#app[data-page]")?.attr("data-page")
-                ?: throw IOException("Catalogue indisponible. Ouvrez la source dans WebView pour vérifier l’accès au site.")
-            pageData.parseAs<LibraryPage>().props.series
+            loadPage(url.toString()).page.parseAs<LibraryPage>().props.series
         }
 
         return MangasPage(
@@ -143,6 +143,44 @@ abstract class Pam :
         .set("X-Requested-With", "XMLHttpRequest")
         .build()
 
+    private suspend fun loadPage(url: String): SitePage {
+        val response = try {
+            client.get(
+                url,
+                headers.newBuilder().set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8").build(),
+                cacheControl = CacheControl.FORCE_NETWORK,
+                ensureSuccess = false,
+            )
+        } catch (_: IOException) {
+            return sitePages.load(url)
+        }
+        if (response.isSuccessful) {
+            val document = response.asJsoup()
+            val data = document.selectFirst("#app[data-page]")?.attr("data-page")
+                ?: document.selectFirst("script[data-page=app][type=application/json]")?.data()
+            if (!data.isNullOrBlank()) return SitePage(data.parseAs<JsonObject>(), document = document)
+        } else {
+            val code = response.code
+            response.close()
+            if (code != 403 && code != 429) throw IOException("Epsilon : erreur HTTP $code.")
+        }
+        return sitePages.load(url)
+    }
+
+    private suspend inline fun <reified T> loadApi(url: HttpUrl, contextUrl: String): T {
+        val path = url.encodedPath + url.encodedQuery?.let { "?$it" }.orEmpty()
+        val response = try {
+            client.get(url, apiHeaders, cacheControl = CacheControl.FORCE_NETWORK, ensureSuccess = false)
+        } catch (_: IOException) {
+            return sitePages.load(contextUrl, SiteRequest(fetch = path)).fetched().parseAs<T>()
+        }
+        if (response.isSuccessful) return response.parseAs<T>()
+        val code = response.code
+        response.close()
+        if (code != 403 && code != 429) throw IOException("Epsilon : erreur HTTP $code lors du chargement des données.")
+        return sitePages.load(contextUrl, SiteRequest(fetch = path)).fetched().parseAs<T>()
+    }
+
     override fun getMangaUrl(manga: SManga): String = "$baseUrl/serie/${manga.url}"
 
     override suspend fun fetchMangaUpdate(
@@ -151,13 +189,13 @@ abstract class Pam :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val sitePage = sitePages.load(getMangaUrl(manga))
+        val sitePage = loadPage(getMangaUrl(manga))
         val data = sitePage.page.parseAs<MangaResponse>().props.serie
 
         val sourceChapters = when {
             !fetchChapters -> null
             !data.chapters.isNullOrEmpty() -> data.chapters
-            else -> fetchApiChapters(data.uid)
+            else -> fetchApiChapters(data.uid, getMangaUrl(manga))
         }
 
         return SMangaUpdate(
@@ -223,7 +261,7 @@ abstract class Pam :
     }
 
     /** Oldest first, like the inline list. */
-    private suspend fun fetchApiChapters(uid: String): List<MangaResponse.Props.Chapter> {
+    private suspend fun fetchApiChapters(uid: String, contextUrl: String): List<MangaResponse.Props.Chapter> {
         val items = mutableListOf<ChapterListItem>()
         var page = 1
         do {
@@ -234,7 +272,7 @@ abstract class Pam :
                 .addQueryParameter("page", page.toString())
                 .addQueryParameter("sort", "asc")
                 .build()
-            val response = client.get(url).parseAs<ChapterListResponse>()
+            val response = loadApi<ChapterListResponse>(url, contextUrl)
             items.addAll(response.items)
             page++
         } while (page <= response.lastPage)
@@ -334,8 +372,9 @@ abstract class Pam :
     }
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
-        val site = sitePages.load("$baseUrl${chapter.url}", reader = true)
-        val props = site.page.parseAs<PageListResponse>().props
+        val url = "$baseUrl${chapter.url}"
+        val initial = loadPage(url)
+        val props = initial.page.parseAs<PageListResponse>().props
         val id = sessionKey(props.data.serie.slug, props.data.slug)
 
         // Reader v1 pages are signed right before they are loaded, see getImageUrl.
@@ -349,6 +388,7 @@ abstract class Pam :
             }
         }
 
+        val site = sitePages.load(url, reader = true, document = initial.document)
         val (session, manifest) = encryptedSession(site)
         sessions[id] = session
 
