@@ -1,14 +1,7 @@
 name: Android source audit
 
 on:
-  push:
-    branches: [audit/reader-runtime-20261007]
   workflow_dispatch:
-    inputs:
-      sources:
-        description: "Module names separated by commas; empty means all published extensions"
-        type: string
-        default: "scanmanga,japscan"
 
 permissions:
   contents: read
@@ -24,7 +17,7 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build the three candidate APKs
+      - name: Build the retained candidate APK
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           ALIAS: ${{ secrets.ALIAS }}
@@ -32,7 +25,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           printf '%s' "$SIGNING_KEY" | base64 --decode > signingkey.jks
-          ./gradlew --no-daemon :src:fr:japscan:assembleRelease :src:fr:softepsilonscan:assembleRelease :src:all:manhuarm:assembleRelease
+          ./gradlew --no-daemon :src:fr:manhuarm:assembleRelease
       - name: Remove signing key
         if: always()
         run: rm -f signingkey.jks
@@ -44,7 +37,7 @@ jobs:
       - name: Run published APKs in Mihon
         env:
           SOURCE_AUDIT_LIMIT: "16"
-          SOURCE_AUDIT_ONLY: "japscan,softepsilonscan,manhuarm"
+          SOURCE_AUDIT_ONLY: "manhuarm"
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 35

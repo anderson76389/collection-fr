@@ -1,7 +1,0 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
-        <activity android:name="keiyoushi.lib.webviewcapture.SurfaceFixtureActivity"
-            android:exported="true" android:hardwareAccelerated="true"
-            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
-    </application>
-</manifest>
