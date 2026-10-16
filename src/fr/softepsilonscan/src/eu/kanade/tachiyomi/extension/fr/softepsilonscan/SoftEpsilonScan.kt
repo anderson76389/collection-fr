@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.softepsilonscan
 
 import eu.kanade.tachiyomi.multisrc.pam.CheckBoxGroup
-import eu.kanade.tachiyomi.multisrc.pam.Pam
 import eu.kanade.tachiyomi.multisrc.pam.SortFilter
 import eu.kanade.tachiyomi.multisrc.pam.TriStateGroupFilter
 import eu.kanade.tachiyomi.source.model.Filter
@@ -9,17 +8,14 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.SChapter
 import keiyoushi.annotation.Source
 import kotlinx.serialization.json.JsonElement
-import okhttp3.OkHttpClient
+import okhttp3.Interceptor
 
 @Source
-abstract class SoftEpsilonScan : Pam() {
+abstract class SoftEpsilonScan : ReaderClient() {
 
     private val renderedReader by lazy { RenderedReader() }
 
-    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder {
-        addInterceptor(renderedReader::intercept)
-        return super.configureClient()
-    }
+    override fun renderedPageInterceptor() = Interceptor(renderedReader::intercept)
 
     override suspend fun getPageList(chapter: SChapter) = renderedReader.pages("$baseUrl${chapter.url}", headers)
         ?: super.getPageList(chapter)

@@ -34,7 +34,10 @@ Les fichiers terminés expirent après 24 heures.
 
 Le catalogue, les chapitres, les couvertures, les filtres et le lecteur v1
 hérité restent en place. Aucun fichier de `lib-multisrc/pam`, `lib` ou `core`
-n’est changé. Les CAPTCHA doivent toujours être validés par l’utilisateur.
+n’est changé. Un adaptateur Java local à la source permet d’ajouter l’intercepteur
+de cache avant de déléguer à la configuration Pam existante ; un appel `super`
+direct à cette extension membre depuis Kotlin ne compile pas. Les CAPTCHA
+doivent toujours être validés par l’utilisateur.
 
 ## Japscan 1.6.7
 
