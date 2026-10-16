@@ -1,13 +1,18 @@
+import com.android.build.api.dsl.LibraryExtension
+
 plugins {
     alias(kei.plugins.library)
 }
 
-android {
+extensions.configure<LibraryExtension> {
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     sourceSets.named("androidTest") {
-        java.setSrcDirs(listOf("tests/android"))
+        java.directories.clear()
+        java.directories.add("tests/android")
+        kotlin.directories.clear()
+        kotlin.directories.add("tests/android")
         manifest.srcFile("tests/AndroidManifest.xml")
     }
 }
