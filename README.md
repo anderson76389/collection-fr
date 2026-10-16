@@ -58,14 +58,14 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **34 extensions** après le retrait des cinq sources demandé le **15 octobre 2026**. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **33 extensions** après le retrait de Sushiscan demandé le **16 octobre 2026**. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
 
 **Mangas et scans**
 
-`AnimeSama` · `Astral-Manga` · `Japscan` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Sushiscan.net` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`AnimeSama` · `Astral-Manga` · `Japscan` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 
