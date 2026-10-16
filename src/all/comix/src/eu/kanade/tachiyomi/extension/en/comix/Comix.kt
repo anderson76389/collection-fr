@@ -28,7 +28,6 @@ import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.int
 import keiyoushi.utils.long
 import keiyoushi.utils.parseAs
-import keiyoushi.utils.runWebView
 import keiyoushi.utils.string
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -241,7 +240,7 @@ abstract class Comix :
         )
         val searchResponse = document.extractBrowseResponse() ?: runInWebView(
             document = document,
-            pageScript = { _, _ ->
+            pageScript = { _, _, _ ->
                 """
                 (function () {
                     const key = 'settings_v2';
@@ -593,10 +592,10 @@ abstract class Comix :
         chapterLists.get(cacheKey)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
             ?.let { return it.chapters }
         val mangaId = manga.url.removePrefix("/").substringBefore('-')
-        val payload = runInWebView(document, { it.isChapterListRequest() }) { passPayloadName, rejectName ->
-            "(${asset("capture_items.js")})((${asset("chapter_list.js")})(" +
+        val payload = runInWebView(document, { it.isChapterListRequest() }) { passPayloadName, _, swipeName ->
+            "(${asset("chapter_list.js")})(${asset("site_api.js")}, " +
                 "${knownIds.joinToString(",", "[", "]")}, ${JSONObject.quote(mangaId)}, ${JSONObject.quote("/title/$mangaId-")}, " +
-                "$MAX_CHAPTER_PAGES, window.$passPayloadName, window.$rejectName));"
+                "$MAX_CHAPTER_PAGES, window.$swipeName, window.$passPayloadName);"
         }
         return payload.parseAs<ChapterList>().also {
             if (it.complete && knownIds.isEmpty()) {
@@ -681,9 +680,10 @@ abstract class Comix :
     }
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
+        val chapterId = chapter.chapterId() ?: throw IOException("Could not find the chapter id")
         val document = siteDocument(getChapterUrl(chapter).toHttpUrl())
-        val payload = runInWebView(document, { it.isChapterPagesRequest() }) { passPayloadName, _ ->
-            "(${asset("capture_items.js")})((${asset("chapter_pages.js")})(window.$passPayloadName));"
+        val payload = runInWebView(document, { it.isChapterPagesRequest() }) { passPayloadName, rejectName, _ ->
+            "(${asset("chapter_pages.js")})(${asset("site_api.js")}, $chapterId, window.$passPayloadName, window.$rejectName);"
         }
 
         return buildPages(payload.parseAs())
@@ -712,17 +712,15 @@ abstract class Comix :
         document: Document,
         isDataRequest: ((HttpUrl) -> Boolean)? = null,
         buildScript: ((passPayloadName: String) -> String)? = null,
-        pageScript: (passPayloadName: String, rejectName: String) -> String,
+        pageScript: (passPayloadName: String, rejectName: String, swipeName: String) -> String,
     ): String {
         val waitSeconds = if (isDataRequest != null) DATA_REQUEST_WAIT_SECONDS else WEBVIEW_TIMEOUT_SECONDS
         val timeoutDeadline = AtomicLong(System.nanoTime() + waitSeconds.seconds.inWholeNanoseconds)
         val dataRequests = AtomicInteger()
-        val (bridgeName, errorBridgeName, passPayloadName, rejectName) = List(4) {
-            (1..(10..20).random())
-                .map { (('a'..'z') + ('A'..'Z')).random() }
-                .joinToString("")
-        }
-        return runWebView(timeout = Duration.INFINITE) {
+        val (bridgeName, errorBridgeName, passPayloadName, rejectName) = List(4) { randomName() }
+        val swipeName = randomName()
+        val swipeBridgeName = randomName()
+        return runInputWebView(timeout = Duration.INFINITE) {
             userAgent = headers["User-Agent"].orEmpty()
             blockImages = true
 
@@ -759,6 +757,10 @@ abstract class Comix :
 
             jsBridge(bridgeName) { resolve(it) }
             jsBridge(errorBridgeName) { reject(Exception(it)) }
+            jsBridge(swipeBridgeName) { message ->
+                val points = message.split(',').mapNotNull { it.toFloatOrNull()?.takeIf(Float::isFinite) }
+                if (points.size == 4) swipe(points[0], points[1], points[2], points[3])
+            }
 
             val captureScript = buildScript?.invoke(passPayloadName)
             if (captureScript != null) {
@@ -781,13 +783,8 @@ abstract class Comix :
             val bootstrapScript = """
                 window.$passPayloadName = payload => window.$bridgeName.post(payload);
                 window.$rejectName = message => window.$errorBridgeName.post(message);
-                // The site's X-Rt flag, raised after a few API calls without user input and blocked on by the server; held at zero
-                const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
-                XMLHttpRequest.prototype.setRequestHeader = function (name, value) {
-                    if (name.toLowerCase() === "x-rt" && value === "1") value = "0";
-                    return originalSetRequestHeader.call(this, name, value);
-                };
-                ${pageScript(passPayloadName, rejectName)}
+                window.$swipeName = points => window.$swipeBridgeName.post(points.join(","));
+                ${pageScript(passPayloadName, rejectName, swipeName)}
             """.trimIndent()
             val html = document.clone().apply {
                 head().prependElement("script").append(bootstrapScript)
@@ -795,6 +792,10 @@ abstract class Comix :
             loadData(document.location(), html)
         }
     }
+
+    private fun randomName() = (1..(10..20).random())
+        .map { (('a'..'z') + ('A'..'Z')).random() }
+        .joinToString("")
 
     private fun asset(name: String) = javaClass.getResource("/assets/$name")!!.readText()
 
