@@ -1,5 +1,8 @@
 package eu.kanade.tachiyomi.extension.all.manhuarm
 
+import android.os.SystemClock
+import android.util.LruCache
+import android.webkit.WebResourceResponse
 import android.widget.Toast
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -31,6 +34,8 @@ import keiyoushi.utils.runWebView
 import keiyoushi.utils.toJsonRequestBody
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParseDate
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.CacheControl
@@ -58,6 +63,11 @@ abstract class Manhuarm :
     private val language = Language("fr", supportNativeTranslation = true)
 
     private val preferences by getPreferencesLazy()
+
+    private val chapterPages = LruCache<String, CachedPages>(3)
+    private val chapterLocks = LruCache<String, Mutex>(3)
+
+    private class CachedPages(val pages: List<Page>, val fetchedAt: Long)
 
     private val fontSize get() = preferences.getString(FONT_SIZE_PREF, DEFAULT_FONT_SIZE)!!.toInt()
     private val dialogBoxScale get() = preferences.getString(DIALOG_BOX_SCALE_PREF, language.dialogBoxScale.toString())!!.toFloat()
@@ -231,6 +241,20 @@ abstract class Manhuarm :
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterUrl = getChapterUrl(chapter)
+        val lock = synchronized(chapterLocks) {
+            chapterLocks.get(chapterUrl) ?: Mutex().also { chapterLocks.put(chapterUrl, it) }
+        }
+        return lock.withLock {
+            val cached = chapterPages.get(chapterUrl)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 60_000 }
+            val pages = cached?.pages ?: loadChapterPages(chapterUrl).also {
+                // Cache the decoded result, never the reader's single-use credentials.
+                chapterPages.put(chapterUrl, CachedPages(it, SystemClock.elapsedRealtime()))
+            }
+            pages.map { Page(it.index, it.url, it.imageUrl) }
+        }
+    }
+
+    private suspend fun loadChapterPages(chapterUrl: String): List<Page> {
         // The OCR credentials embedded in the page are single-use
         val document = client.get(chapterUrl, cacheControl = CacheControl.FORCE_NETWORK).asJsoup()
         val images = document.select("div.page-break img, img.wp-manga-chapter-img")
@@ -267,19 +291,31 @@ abstract class Manhuarm :
      * `[cid, token, timestamp, nonce, endpoint, ref]`.
      */
     private suspend fun fetchDialogues(document: Document, chapterUrl: String): List<PageDto> {
-        val script = document.select("script").firstOrNull { "function runOcrScript" in it.data() }
+        val readerDocument = document.clone()
+        val script = readerDocument.select("script").firstOrNull { "function runOcrScript" in it.data() }
         if (script != null && "_mrmCfg" in script.data()) {
             val bridge = "ocr" + UUID.randomUUID().toString().replace("-", "")
             val callback = Regex("""function runOcrScript\s*\(\s*(\w+)\s*\)\s*\{""")
             val match = callback.find(script.data()) ?: throw IOException("Lecteur de texte Manhuarm non reconnu")
             val argument = match.groupValues[1]
             script.html(script.data().replaceRange(match.range, match.value + "window.$bridge.post($argument);return;"))
+            // This reader script is self-contained; WordPress, comments and analytics are not used to decode its text.
+            readerDocument.select("script").filter { it !== script }.forEach { it.remove() }
+            readerDocument.select("iframe, link[rel=stylesheet], link[rel=preload], link[rel=prefetch]").remove()
             // Let the site's own reader establish its session and decrypt its OCR response.
             return runWebView<List<PageDto>>(timeout = 60.seconds) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 blockImages = true
                 headers["User-Agent"]?.let { userAgent = it }
+                val siteHost = chapterUrl.toHttpUrl().host
+                interceptRequest { request ->
+                    if (request.url.host == siteHost || request.url.host == "challenges.cloudflare.com") {
+                        null
+                    } else {
+                        WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
+                    }
+                }
                 jsBridge(bridge) { result ->
                     val pages = result.parseAs<List<PageDto>>()
                     if (pages.isEmpty()) {
@@ -291,7 +327,7 @@ abstract class Manhuarm :
                 onReceivedError { request, error ->
                     if (request.isForMainFrame) reject(IOException(error.description.toString()))
                 }
-                loadData(chapterUrl, document.outerHtml())
+                loadData(chapterUrl, readerDocument.outerHtml())
             }
         }
         val vault = document.select("script").firstNotNullOfOrNull { VAULT_REGEX.find(it.data()) }

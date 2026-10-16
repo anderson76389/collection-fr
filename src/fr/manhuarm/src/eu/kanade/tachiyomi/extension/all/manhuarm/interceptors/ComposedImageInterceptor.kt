@@ -22,6 +22,7 @@ import okio.Buffer
 import org.jsoup.Jsoup
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.ceil
 
 // Draws the OCR dialogues onto the page image.
 class ComposedImageInterceptor(
@@ -46,10 +47,13 @@ class ComposedImageInterceptor(
         val bitmap = response.body.byteStream().use { BitmapFactory.decodeStream(it, null, options) }!!
         val canvas = Canvas(bitmap)
         val font = selectFontFamily(language)
+        val textPaint = createTextPaint(language, font)
+        val initialTextSize = textPaint.textSize
 
         dialogues.forEach { dialog ->
             dialog.scale = language.dialogBoxScale
-            val textPaint = createTextPaint(language, font)
+            if (dialog.width < 1f || dialog.height < 1f) return@forEach
+            textPaint.textSize = initialTextSize
             val dialogBox = createDialogBox(language, dialog, textPaint)
             val y = getYAxis(textPaint, dialog, dialogBox)
             canvas.draw(textPaint, dialogBox, dialog, dialog.x, y)
@@ -116,12 +120,30 @@ class ComposedImageInterceptor(
     }
 
     private fun createDialogBox(language: Language, dialog: Dialog, textPaint: TextPaint): StaticLayout {
-        var dialogBox = createBoxLayout(language, dialog, textPaint)
+        val text = Jsoup.parse(dialog.getTextBy(language)).text()
+        val initialTextSize = textPaint.textSize
+        var dialogBox = createBoxLayout(language, dialog, textPaint, text)
 
-        // Shrink the text until it fits the dialog box (especially for long dialogues)
-        while (dialogBox.height > dialog.height) {
-            textPaint.textSize -= 0.5f
-            dialogBox = createBoxLayout(language, dialog, textPaint)
+        if (dialogBox.height > dialog.height) {
+            // Find the largest fitting half-pixel step without rebuilding every intermediate layout.
+            var low = 1
+            var high = ceil((initialTextSize - 1f) / 0.5f).toInt().coerceAtLeast(0)
+            var bestSize = 1f
+            textPaint.textSize = bestSize
+            dialogBox = createBoxLayout(language, dialog, textPaint, text)
+            while (low <= high) {
+                val step = low + (high - low) / 2
+                textPaint.textSize = (initialTextSize - step * 0.5f).coerceAtLeast(1f)
+                val candidate = createBoxLayout(language, dialog, textPaint, text)
+                if (candidate.height <= dialog.height) {
+                    bestSize = textPaint.textSize
+                    dialogBox = candidate
+                    high = step - 1
+                } else {
+                    low = step + 1
+                }
+            }
+            textPaint.textSize = bestSize
         }
 
         textPaint.color = Color.BLACK
@@ -130,9 +152,7 @@ class ComposedImageInterceptor(
         return dialogBox
     }
 
-    private fun createBoxLayout(language: Language, dialog: Dialog, textPaint: TextPaint): StaticLayout {
-        val text = Jsoup.parse(dialog.getTextBy(language)).text()
-
+    private fun createBoxLayout(language: Language, dialog: Dialog, textPaint: TextPaint, text: String): StaticLayout {
         return StaticLayout.Builder.obtain(text, 0, text.length, textPaint, dialog.width.toInt()).apply {
             setAlignment(Layout.Alignment.ALIGN_CENTER)
             setIncludePad(language.disableFontSettings)
