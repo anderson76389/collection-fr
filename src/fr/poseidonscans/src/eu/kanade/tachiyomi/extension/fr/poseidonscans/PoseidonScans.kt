@@ -20,7 +20,6 @@ import keiyoushi.utils.parseAs
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
-import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -68,20 +67,15 @@ abstract class PoseidonScans :
 
     // ============================== Popular ===============================
 
-    override fun popularMangaRequest(page: Int): Request = GET(baseUrl, rscHeaders)
-
-    override fun popularMangaParse(response: Response): MangasPage {
-        val mangaDtos = response.extractNextJs<List<PopularMangaData>>() ?: throw Exception("Cant scape data from Next.js")
-
-        val mangas = mangaDtos.map { mangaDto ->
-            SManga.create().apply {
-                title = mangaDto.title
-                url = "/serie/${mangaDto.slug}"
-                thumbnail_url = mangaDto.slug.toApiCoverUrl() + ".webp"
-            }
-        }
-        return MangasPage(mangas, false)
+    override fun popularMangaRequest(page: Int): Request {
+        val url = "$baseUrl/series".toHttpUrl().newBuilder()
+            .addQueryParameter("sortBy", "popular")
+            .addQueryParameter("page", page.toString())
+            .build()
+        return GET(url, headers)
     }
+
+    override fun popularMangaParse(response: Response): MangasPage = searchMangaParse(response)
 
     // =========================== Manga Details ============================
 
@@ -242,26 +236,15 @@ abstract class PoseidonScans :
     }
 
     override fun searchMangaParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-
-        val mangas = document.select("div.grid a.block.group").map { element ->
-            val url = element.attr("href")
-            val title = element.selectFirst("h2")?.text()!!
-
-            val thumbnailUrlPath = element.selectFirst("img[alt]")?.attr("srcset")?.substringBefore(" ")?.let {
-                URLDecoder.decode(it, "UTF-8").substringAfter("url=").substringBefore("&")
-            }
-
+        val catalogue = parseCatalogue(response.asJsoup())
+        val mangas = catalogue.entries.map { entry ->
             SManga.create().apply {
-                this.setUrlWithoutDomain(url)
-                this.title = title
-                this.thumbnail_url = thumbnailUrlPath?.takeIf { it.isNotBlank() }?.toApiCoverUrl()
+                setUrlWithoutDomain(entry.url)
+                title = entry.title
+                thumbnail_url = entry.cover?.toApiCoverUrl()
             }
         }
-
-        val hasNextPage = document.select("nav[aria-label=Pagination] a:contains(Suivant)").isNotEmpty()
-
-        return MangasPage(mangas, hasNextPage)
+        return MangasPage(mangas, catalogue.hasNextPage)
     }
 
     // ========================== Preference =============================
