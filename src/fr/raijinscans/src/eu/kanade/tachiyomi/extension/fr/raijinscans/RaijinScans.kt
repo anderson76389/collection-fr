@@ -10,18 +10,91 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
 import keiyoushi.utils.extractNextJs
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.runWebViewBlocking
+import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.Jsoup
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.time.Duration.Companion.seconds
 
 @Source
 abstract class RaijinScans : HttpSource() {
     override val supportsLatest = true
+
+    override val client: OkHttpClient = super.client.newBuilder()
+        .apply {
+            val configured = interceptors()
+            configured.indices.forEach { index ->
+                val interceptor = configured[index]
+                if (interceptor.javaClass.simpleName == "CloudflareInterceptor") {
+                    configured[index] = Interceptor { chain ->
+                        if (chain.request().url.host == baseUrl.toHttpUrl().host) {
+                            chain.proceed(chain.request())
+                        } else {
+                            interceptor.intercept(chain)
+                        }
+                    }
+                }
+            }
+        }
+        .addInterceptor(
+            AniverseTransport(baseUrl.toHttpUrl().host) { call, request ->
+                val api = request.url.encodedPath.startsWith("/api/")
+                val bridge = "aniverseReader"
+                val payload = runWebViewBlocking<String>(call, timeout = 45.seconds) {
+                    headers["User-Agent"]?.let { userAgent = it }
+                    domStorageEnabled = true
+                    blockImages = true
+                    jsBridge(bridge) { message ->
+                        val result = message.parseAs<BrowserResult>()
+                        if (result.status in 200..299) {
+                            resolve(result.body)
+                        } else {
+                            reject(IOException("Aniverse : HTTP ${result.status}. Validez l’accès dans la WebView puis réessayez."))
+                        }
+                    }
+                    onReceivedError { resource, error ->
+                        if (resource.isForMainFrame) reject(IOException(error.description.toString()))
+                    }
+                    onPageFinished {
+                        val script = if (api) {
+                            """
+                        (async function(){
+                            try {
+                                const response = await fetch(${request.url.toString().toJsonString()}, {
+                                    credentials: "same-origin",
+                                    headers: { Accept: "application/json" }
+                                });
+                                window.$bridge.post(JSON.stringify({status: response.status, body: await response.text()}));
+                            } catch (error) {
+                                window.$bridge.post(JSON.stringify({status: 0, body: ""}));
+                            }
+                        })();
+                            """.trimIndent()
+                        } else {
+                            """
+                        (function(){
+                            const ready = document.querySelector('script[src*="/_next/"], script#__NEXT_DATA__') !== null;
+                            window.$bridge.post(JSON.stringify({status: ready ? 200 : 403, body: ready ? document.documentElement.outerHTML : ""}));
+                        })();
+                            """.trimIndent()
+                        }
+                        evaluateJs(script)
+                    }
+                    loadUrl(if (api) "$baseUrl/manga" else request.url.toString())
+                }
+                browserResponse(request, payload, api)
+            },
+        )
+        .build()
 
     override fun headersBuilder() = super.headersBuilder().set("Referer", "$baseUrl/")
 

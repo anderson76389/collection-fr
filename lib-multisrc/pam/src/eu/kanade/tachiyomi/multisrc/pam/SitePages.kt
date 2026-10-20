@@ -132,7 +132,7 @@ internal class SitePages(
                         when {
                             message.reader != null -> readerResult = message.reader
                             message.error != null -> {
-                                if (message.status == 403 || message.status == 429) failed(challenge = false)
+                                if (message.status == 403 || message.status == 429) failed(challenge = message.status == 403)
                                 return@jsBridge reject(IOException(message.error))
                             }
                             else -> {
