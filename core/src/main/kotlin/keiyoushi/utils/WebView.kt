@@ -44,8 +44,8 @@ import kotlin.time.Duration.Companion.seconds
 class RenderProcessGoneException internal constructor(
     didCrash: Boolean,
 ) : Exception(
-        if (didCrash) "WebView render process crashed" else "WebView render process was killed",
-    )
+    if (didCrash) "WebView render process crashed" else "WebView render process was killed",
+)
 
 /**
  * Thrown by [runWebView] on timeout. Deliberately a plain [Exception] rather than a
@@ -166,10 +166,7 @@ class WebViewScope<T> internal constructor(
      * Must be called before [loadUrl]/[loadData]; interfaces added afterward are not visible
      * to the already-loaded page.
      */
-    fun jsBridge(
-        name: String,
-        handler: (String) -> Unit,
-    ) {
+    fun jsBridge(name: String, handler: (String) -> Unit) {
         bridgeNames += name
         webView.addJavascriptInterface(
             object {
@@ -201,29 +198,19 @@ class WebViewScope<T> internal constructor(
     }
 
     /** Loads [url]. Can only be called once per scope. */
-    fun loadUrl(
-        url: String,
-        headers: Map<String, String> = emptyMap(),
-    ) {
+    fun loadUrl(url: String, headers: Map<String, String> = emptyMap()) {
         markLoaded()
         webView.loadUrl(url, headers)
     }
 
     /** Loads [html] as the page content, with [baseUrl] as its origin. Can only be called once per scope. */
-    fun loadData(
-        baseUrl: String,
-        html: String,
-        mimeType: String = "text/html",
-    ) {
+    fun loadData(baseUrl: String, html: String, mimeType: String = "text/html") {
         markLoaded()
         webView.loadDataWithBaseURL(baseUrl, html, mimeType, "UTF-8", null)
     }
 
     /** Runs [script], optionally passing its JSON-encoded result to [callback]. */
-    fun evaluateJs(
-        script: String,
-        callback: ((String) -> Unit)? = null,
-    ) {
+    fun evaluateJs(script: String, callback: ((String) -> Unit)? = null) {
         runOnMain {
             if (destroyed) return@runOnMain
             if (callback == null) {
@@ -252,25 +239,21 @@ class WebViewScope<T> internal constructor(
      * Repeats [block] on the main thread every [interval] until [resolve]/[reject] is called or
      * the scope is destroyed. The first run happens after one [interval], not immediately.
      */
-    fun poll(
-        interval: Duration = 500.milliseconds,
-        block: () -> Unit,
-    ) {
-        val runnable =
-            object : Runnable {
-                override fun run() {
-                    if (destroyed || deferred.isCompleted) return
-                    try {
-                        block()
-                    } catch (t: Throwable) {
-                        reject(t)
-                        return
-                    }
-                    if (!destroyed && !deferred.isCompleted) {
-                        mainHandler.postDelayed(this, interval.inWholeMilliseconds)
-                    }
+    fun poll(interval: Duration = 500.milliseconds, block: () -> Unit) {
+        val runnable = object : Runnable {
+            override fun run() {
+                if (destroyed || deferred.isCompleted) return
+                try {
+                    block()
+                } catch (t: Throwable) {
+                    reject(t)
+                    return
+                }
+                if (!destroyed && !deferred.isCompleted) {
+                    mainHandler.postDelayed(this, interval.inWholeMilliseconds)
                 }
             }
+        }
         runOnMain { mainHandler.postDelayed(runnable, interval.inWholeMilliseconds) }
     }
 
@@ -290,16 +273,9 @@ class WebViewScope<T> internal constructor(
         get: WebSettings.() -> V,
         set: WebSettings.(V) -> Unit,
     ): ReadWriteProperty<Any?, V> = object : ReadWriteProperty<Any?, V> {
-        override fun getValue(
-            thisRef: Any?,
-            property: KProperty<*>,
-        ): V = webView.settings.get()
+        override fun getValue(thisRef: Any?, property: KProperty<*>): V = webView.settings.get()
 
-        override fun setValue(
-            thisRef: Any?,
-            property: KProperty<*>,
-            value: V,
-        ) {
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: V) {
             webView.settings.set(value)
         }
     }
@@ -308,19 +284,13 @@ class WebViewScope<T> internal constructor(
 private class ScopeWebViewClient(
     private val scope: WebViewScope<*>,
 ) : WebViewClient() {
-    override fun onPageStarted(
-        view: WebView?,
-        url: String?,
-        favicon: Bitmap?,
-    ) {
+
+    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         if (scope.destroyed) return
         scope.pageStartedHooks.forEach { it(url.orEmpty()) }
     }
 
-    override fun onPageFinished(
-        view: WebView?,
-        url: String?,
-    ) {
+    override fun onPageFinished(view: WebView?, url: String?) {
         if (scope.destroyed) return
         scope.pageFinishedHooks.forEach { it(url.orEmpty()) }
     }
@@ -357,13 +327,12 @@ private class ScopeWebViewClient(
 
 private class LoggingWebChromeClient : WebChromeClient() {
     override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
-        val priority =
-            when (consoleMessage.messageLevel()) {
-                ConsoleMessage.MessageLevel.ERROR -> Log.ERROR
-                ConsoleMessage.MessageLevel.WARNING -> Log.WARN
-                ConsoleMessage.MessageLevel.DEBUG -> Log.DEBUG
-                else -> Log.INFO
-            }
+        val priority = when (consoleMessage.messageLevel()) {
+            ConsoleMessage.MessageLevel.ERROR -> Log.ERROR
+            ConsoleMessage.MessageLevel.WARNING -> Log.WARN
+            ConsoleMessage.MessageLevel.DEBUG -> Log.DEBUG
+            else -> Log.INFO
+        }
         Log.println(
             priority,
             "KeiyoushiWebView",
@@ -445,16 +414,15 @@ fun <T> runWebViewBlocking(
     }
     return try {
         runBlocking {
-            val watcher =
-                launch {
-                    while (isActive) {
-                        if (call.isCanceled()) {
-                            this@runBlocking.cancel("OkHttp call was canceled")
-                            break
-                        }
-                        delay(250.milliseconds)
+            val watcher = launch {
+                while (isActive) {
+                    if (call.isCanceled()) {
+                        this@runBlocking.cancel("OkHttp call was canceled")
+                        break
                     }
+                    delay(250.milliseconds)
                 }
+            }
             try {
                 runWebView(timeout, configure)
             } finally {
@@ -470,10 +438,7 @@ fun <T> runWebViewBlocking(
  * Reads [key] from `localStorage` after loading [url], or null if unset. Loads an empty
  * page with [url] as its origin, so [url] itself is never fetched over the network.
  */
-suspend fun getLocalStorage(
-    url: String,
-    key: String,
-): String? = runWebView(timeout = 10.seconds) {
+suspend fun getLocalStorage(url: String, key: String): String? = runWebView(timeout = 10.seconds) {
     onPageFinished {
         evaluateJs("localStorage.getItem(${key.toJsonString()})") { value ->
             resolve(value.parseAs<String?>())

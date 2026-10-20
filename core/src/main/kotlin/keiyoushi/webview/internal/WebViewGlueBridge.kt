@@ -13,42 +13,36 @@ import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 
 internal object WebViewGlueBridge {
+
     private lateinit var factory: WebViewProviderFactoryBoundaryInterface
 
     private fun ensureFactory() {
         if (::factory.isInitialized) return
 
-        val webViewClassLoader =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                WebView.getWebViewClassLoader()
-            } else {
-                @SuppressLint("DiscouragedPrivateApi")
-                WebView::class.java
-                    .getDeclaredMethod("getFactory")
-                    .apply { isAccessible = true }
-                    .invoke(null)
-                    .javaClass
-                    .getClassLoader()!!
-            }
+        val webViewClassLoader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WebView.getWebViewClassLoader()
+        } else {
+            @SuppressLint("DiscouragedPrivateApi")
+            WebView::class.java.getDeclaredMethod("getFactory")
+                .apply { isAccessible = true }
+                .invoke(null).javaClass.getClassLoader()!!
+        }
 
-        val supportLibReflectionUtil =
-            Class.forName(
-                "org.chromium.support_lib_glue.SupportLibReflectionUtil",
-                false,
-                webViewClassLoader,
-            )
+        val supportLibReflectionUtil = Class.forName(
+            "org.chromium.support_lib_glue.SupportLibReflectionUtil",
+            false,
+            webViewClassLoader,
+        )
 
-        val webViewProviderFactory =
-            supportLibReflectionUtil
-                .getDeclaredMethod("createWebViewProviderFactory")
-                .invoke(null) as InvocationHandler
+        val webViewProviderFactory = supportLibReflectionUtil
+            .getDeclaredMethod("createWebViewProviderFactory")
+            .invoke(null) as InvocationHandler
 
-        factory =
-            Proxy.newProxyInstance(
-                WebViewGlueBridge::class.java.getClassLoader(),
-                arrayOf(WebViewProviderFactoryBoundaryInterface::class.java),
-                webViewProviderFactory,
-            ) as WebViewProviderFactoryBoundaryInterface
+        factory = Proxy.newProxyInstance(
+            WebViewGlueBridge::class.java.getClassLoader(),
+            arrayOf(WebViewProviderFactoryBoundaryInterface::class.java),
+            webViewProviderFactory,
+        ) as WebViewProviderFactoryBoundaryInterface
     }
 
     @Synchronized
@@ -102,11 +96,10 @@ internal object WebViewGlueBridge {
 
         val majorVersion = versionMatch.groupValues[1]
         val fullVersion = majorVersion + versionMatch.groupValues[2].ifEmpty { ".0.0.0" }
-        val isMobile =
-            userAgent.contains("Mobile") ||
-                userAgent.contains("Android") ||
-                userAgent.contains("iPhone") ||
-                userAgent.contains("iPad")
+        val isMobile = userAgent.contains("Mobile") ||
+            userAgent.contains("Android") ||
+            userAgent.contains("iPhone") ||
+            userAgent.contains("iPad")
         var platform = "Android"
         var platformVersion = ""
         var architecture = "arm"
@@ -126,12 +119,7 @@ internal object WebViewGlueBridge {
                 architecture = "x86"
             }
             userAgent.contains("Macintosh") || userAgent.contains("Mac OS X") -> {
-                val macVersion =
-                    MAC_OS_X_REGEX
-                        .find(userAgent)
-                        ?.groupValues
-                        ?.get(1)
-                        ?.replace("_", ".")
+                val macVersion = MAC_OS_X_REGEX.find(userAgent)?.groupValues?.get(1)?.replace("_", ".")
                 platform = "macOS"
                 platformVersion = macVersion ?: ""
             }
@@ -144,19 +132,17 @@ internal object WebViewGlueBridge {
 
         try {
             ensureFactory()
-            val webkitToCompatConverter =
-                Proxy.newProxyInstance(
-                    WebViewGlueBridge::class.java.getClassLoader(),
-                    arrayOf(WebkitToCompatConverterBoundaryInterface::class.java),
-                    factory.webkitToCompatConverter,
-                ) as WebkitToCompatConverterBoundaryInterface
+            val webkitToCompatConverter = Proxy.newProxyInstance(
+                WebViewGlueBridge::class.java.getClassLoader(),
+                arrayOf(WebkitToCompatConverterBoundaryInterface::class.java),
+                factory.webkitToCompatConverter,
+            ) as WebkitToCompatConverterBoundaryInterface
 
-            val boundarySettings =
-                Proxy.newProxyInstance(
-                    WebViewGlueBridge::class.java.getClassLoader(),
-                    arrayOf(WebSettingsBoundaryInterface::class.java),
-                    webkitToCompatConverter.convertSettings(settings),
-                ) as WebSettingsBoundaryInterface
+            val boundarySettings = Proxy.newProxyInstance(
+                WebViewGlueBridge::class.java.getClassLoader(),
+                arrayOf(WebSettingsBoundaryInterface::class.java),
+                webkitToCompatConverter.convertSettings(settings),
+            ) as WebSettingsBoundaryInterface
 
             val uaMetadata = boundarySettings.userAgentMetadataMap
             val updated = HashMap(uaMetadata)
@@ -166,22 +152,20 @@ internal object WebViewGlueBridge {
                 @Suppress("UNCHECKED_CAST")
                 val brands = brandList as Array<Array<String>>
 
-                val updatedBrands =
-                    brands
-                        .map { original ->
-                            original.copyOf().also { brand ->
-                                if (brand.size < 3) return@also
+                val updatedBrands = brands.map { original ->
+                    original.copyOf().also { brand ->
+                        if (brand.size < 3) return@also
 
-                                when (brand[0]) {
-                                    "Android WebView" -> brand[0] = "Google Chrome"
-                                    "Chromium" -> Unit
-                                    else -> return@also
-                                }
+                        when (brand[0]) {
+                            "Android WebView" -> brand[0] = "Google Chrome"
+                            "Chromium" -> Unit
+                            else -> return@also
+                        }
 
-                                brand[1] = majorVersion
-                                brand[2] = fullVersion
-                            }
-                        }.toTypedArray()
+                        brand[1] = majorVersion
+                        brand[2] = fullVersion
+                    }
+                }.toTypedArray()
 
                 updated["BRAND_VERSION_LIST"] = updatedBrands
             }
