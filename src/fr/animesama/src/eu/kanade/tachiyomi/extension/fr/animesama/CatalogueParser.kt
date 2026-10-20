@@ -18,7 +18,7 @@ internal fun parseCatalogue(document: Document, containerSelector: String, suffi
         val cover = card.absUrl("data-img").takeIf(String::isNotBlank)
             ?: image?.absUrl("data-src")?.takeIf(String::isNotBlank)
             ?: image?.absUrl("src")?.takeIf(String::isNotBlank)
-        CatalogueEntry(title, url, cover?.coverUrl())
+        CatalogueEntry(title, url, cover)
     }.distinctBy { it.url }
     val hasNext = document.selectFirst("#list_pagination .pagi-actuelle + a, #list_pagination > a.bg-sky-900 + a") != null
     return CatalogueResult(entries, hasNext)
