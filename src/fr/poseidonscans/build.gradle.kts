@@ -31,3 +31,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.jsoup)
 }
+
+// Source metadata is generated for production classes, not for parser-only unit tests.
+tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {
+    enabled = false
+}
