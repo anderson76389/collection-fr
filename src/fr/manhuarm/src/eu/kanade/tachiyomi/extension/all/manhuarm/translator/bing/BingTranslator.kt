@@ -5,6 +5,7 @@ import keiyoushi.network.get
 import keiyoushi.network.post
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.parseAs
+import kotlinx.coroutines.CancellationException
 import okhttp3.FormBody
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -13,23 +14,33 @@ import org.jsoup.nodes.Element
 
 class BingTranslator(private val client: OkHttpClient, private val headers: () -> Headers) : TranslatorEngine {
 
-    private var tokens: TokenGroup = TokenGroup()
+    private val sessions = BingTokenStore {
+        try {
+            loadTokens()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            TokenGroup()
+        }
+    }
 
     override suspend fun translate(from: String, to: String, text: String): String {
-        if (!tokens.isValid() && !refreshTokens()) {
-            return text
-        }
+        var tokens = sessions.get()
+        if (!tokens.isValid()) return text
         repeat(ATTEMPTS) {
             try {
-                return fetchTranslatedText(from, to, text)
+                return fetchTranslatedText(from, to, text, tokens)
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
-                refreshTokens()
+                tokens = sessions.get(failed = tokens)
+                if (!tokens.isValid()) return text
             }
         }
         return text
     }
 
-    private suspend fun fetchTranslatedText(from: String, to: String, text: String): String {
+    private suspend fun fetchTranslatedText(from: String, to: String, text: String, tokens: TokenGroup): String {
         val url = "$BASE_URL/ttranslatev3".toHttpUrl().newBuilder()
             .addQueryParameter("isVertical", "1")
             .addQueryParameter("", "") // Present in Bing URL
@@ -54,15 +65,6 @@ class BingTranslator(private val client: OkHttpClient, private val headers: () -
             .build()
 
         return client.post(url.toString(), apiHeaders, payload).parseAs<List<TranslateDto>>().first().text
-    }
-
-    private suspend fun refreshTokens(): Boolean {
-        tokens = try {
-            loadTokens()
-        } catch (_: Exception) {
-            TokenGroup()
-        }
-        return tokens.isValid()
     }
 
     private suspend fun loadTokens(): TokenGroup {
