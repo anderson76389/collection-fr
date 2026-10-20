@@ -15,9 +15,10 @@ internal fun parseCatalogue(document: Document, containerSelector: String, suffi
             ?: return@mapNotNull null
         val url = if (suffix.isEmpty()) link else link.trimEnd('/').removeSuffix(suffix.trimEnd('/'))
         val image = card.selectFirst(".as-carte-image img, img")
-        val cover = image?.absUrl("data-src")?.takeIf(String::isNotBlank)
+        val cover = card.absUrl("data-img").takeIf(String::isNotBlank)
+            ?: image?.absUrl("data-src")?.takeIf(String::isNotBlank)
             ?: image?.absUrl("src")?.takeIf(String::isNotBlank)
-        CatalogueEntry(title, url, cover)
+        CatalogueEntry(title, url, cover?.coverUrl())
     }.distinctBy { it.url }
     val hasNext = document.selectFirst("#list_pagination .pagi-actuelle + a, #list_pagination > a.bg-sky-900 + a") != null
     return CatalogueResult(entries, hasNext)

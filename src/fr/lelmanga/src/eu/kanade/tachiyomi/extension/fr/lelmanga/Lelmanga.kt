@@ -1,7 +1,5 @@
 package eu.kanade.tachiyomi.extension.fr.lelmanga
 
-import android.os.SystemClock
-import android.util.LruCache
 import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.Page
@@ -23,15 +21,9 @@ abstract class Lelmanga : MangaThemesia() {
     override val seriesArtistSelector = ".imptdt:contains(Artiste) i"
     override val sendViewCount = false
 
-    private val documents = LruCache<String, CachedDocument>(6)
+    private val documents = RecentDocuments()
 
-    private suspend fun document(url: String): Document {
-        documents.get(url)?.takeIf { SystemClock.elapsedRealtime() - it.fetchedAt < 20_000 }
-            ?.let { return it.document }
-        return client.get(url).asJsoup().also {
-            documents.put(url, CachedDocument(it, SystemClock.elapsedRealtime()))
-        }
-    }
+    private suspend fun document(url: String): Document = documents.get(url) { client.get(url).asJsoup() }
 
     override suspend fun fetchMangaUpdate(
         manga: SManga,
@@ -75,8 +67,6 @@ abstract class Lelmanga : MangaThemesia() {
             .encodedPath(url.encodedPath.removePrefix("/${base.host}"))
             .build().toString()
     }
-
-    private class CachedDocument(val document: Document, val fetchedAt: Long)
 }
 
 private val WORDPRESS_IMAGE_HOST = Regex("i[0-3]\\.wp\\.com")

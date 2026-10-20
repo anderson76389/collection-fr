@@ -29,6 +29,9 @@ abstract class DassouScan :
     ConfigurableSource {
 
     private val preferences by getPreferencesLazy()
+    private val documents = RecentDocuments()
+
+    private suspend fun document(url: String): Document = documents.get(url) { client.get(url).asJsoup() }
 
     private val hidePremium: Boolean
         get() = preferences.getBoolean(PREF_HIDE_PREMIUM, true)
@@ -111,7 +114,7 @@ abstract class DassouScan :
         if (url.pathSegments.firstOrNull() != "manga" || url.pathSegments.size != 2) {
             return null
         }
-        return parseMangaDetails(client.get(url).asJsoup())
+        return parseMangaDetails(document(url.toString()))
     }
 
     override suspend fun fetchMangaUpdate(
@@ -120,8 +123,12 @@ abstract class DassouScan :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(getMangaUrl(manga)).asJsoup()
-        return SMangaUpdate(parseMangaDetails(document), parseChapterList(document))
+        if (!fetchDetails && !fetchChapters) return SMangaUpdate(manga, chapters)
+        val document = document(getMangaUrl(manga))
+        return SMangaUpdate(
+            if (fetchDetails) parseMangaDetails(document) else manga,
+            if (fetchChapters) parseChapterList(document) else chapters,
+        )
     }
 
     private fun parseMangaDetails(document: Document): SManga = SManga.create().apply {
@@ -166,7 +173,7 @@ abstract class DassouScan :
     // =============================== Pages ===============================
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
-        val document = client.get(getChapterUrl(chapter)).asJsoup()
+        val document = document(getChapterUrl(chapter))
 
         return document.select("#dsc-chapter-reader-content .dsc-chapter-strip-img").mapIndexed { i, img ->
             val url = img.attr("abs:data-src").ifEmpty { img.attr("abs:src") }
