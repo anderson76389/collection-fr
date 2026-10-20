@@ -21,3 +21,9 @@ internal fun coverLayout(width: Int, height: Int): CoverLayout {
     val imageHeight = height * imageScale
     return CoverLayout(outputWidth, outputHeight, (outputWidth - imageWidth) / 2f, (outputHeight - imageHeight) / 2f, imageWidth, imageHeight)
 }
+
+internal fun coverSampleSize(width: Int, height: Int): Int {
+    var sample = 1
+    while (width / (sample * 2) >= 1000 || height / (sample * 2) >= 1500) sample *= 2
+    return sample
+}

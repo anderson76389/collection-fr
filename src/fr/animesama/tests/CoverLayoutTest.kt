@@ -6,6 +6,13 @@ import org.junit.Test
 
 class CoverLayoutTest {
     @Test
+    fun largeOriginalsAreDecodedNearTheOutputSizeWithoutReducingSmallOnes() {
+        assertEquals(2, coverSampleSize(2438, 1369))
+        assertEquals(4, coverSampleSize(6000, 9000))
+        assertEquals(1, coverSampleSize(600, 900))
+    }
+
+    @Test
     fun landscapeOriginalIsFittedWithoutCroppingOrUpscaling() {
         val layout = coverLayout(2438, 1369)
         assertEquals(1000, layout.width)

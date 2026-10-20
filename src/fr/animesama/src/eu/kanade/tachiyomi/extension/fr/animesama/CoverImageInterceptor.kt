@@ -17,7 +17,11 @@ internal class CoverImageInterceptor : Interceptor {
         val response = chain.proceed(chain.request())
         if (!response.isSuccessful || chain.request().url.fragment != COVER_MARKER) return response
         val bytes = response.body.bytes()
-        val original = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+        options.inSampleSize = coverSampleSize(options.outWidth, options.outHeight)
+        options.inJustDecodeBounds = false
+        val original = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
             ?: return response.newBuilder().body(bytes.toResponseBody(response.body.contentType())).build()
         try {
             val layout = coverLayout(original.width, original.height)
