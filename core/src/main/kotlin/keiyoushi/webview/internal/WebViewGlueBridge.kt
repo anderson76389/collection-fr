@@ -6,6 +6,7 @@ import android.util.Log
 import android.webkit.WebSettings
 import android.webkit.WebView
 import org.chromium.support_lib_boundary.WebSettingsBoundaryInterface
+import org.chromium.support_lib_boundary.WebViewProviderBoundaryInterface
 import org.chromium.support_lib_boundary.WebViewProviderFactoryBoundaryInterface
 import org.chromium.support_lib_boundary.WebkitToCompatConverterBoundaryInterface
 import java.lang.reflect.InvocationHandler
@@ -55,6 +56,24 @@ internal object WebViewGlueBridge {
             Log.e("WebViewGlueBridge", """isFeatureSupported("$featureName")""", e)
         }
         return false
+    }
+
+    @Synchronized
+    fun addDocumentStartJavaScript(
+        webView: WebView,
+        script: String,
+        allowedOriginRules: Set<String>,
+    ): Boolean {
+        if (!isFeatureSupported("DOCUMENT_START_SCRIPT:1")) return false
+        ensureFactory()
+        val provider =
+            Proxy.newProxyInstance(
+                WebViewGlueBridge::class.java.classLoader,
+                arrayOf(WebViewProviderBoundaryInterface::class.java),
+                factory.createWebView(webView),
+            ) as WebViewProviderBoundaryInterface
+        provider.addDocumentStartJavaScript(script, allowedOriginRules.toTypedArray())
+        return true
     }
 
     /** Spoofs the Sec-CH-UA client hints.  */

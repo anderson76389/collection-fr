@@ -13,6 +13,8 @@ on:
       - "src/all/**"
       - "src/fr/webtoons/**"
       - "lib-multisrc/**"
+      - "lib/**"
+      - "core/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
@@ -79,6 +81,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
+            :src:fr:japscan
+            :src:fr:softepsilonscan
             :src:fr:banchanscan
             :src:fr:mangakawaii
 

@@ -184,6 +184,19 @@ class WebViewScope<T> internal constructor(
         )
     }
 
+    /**
+     * Installs a script before page scripts run on supported WebView engines.
+     * Older engines fall back to asynchronous main-frame injection.
+     */
+    fun injectAtDocumentStart(
+        script: String,
+        allowedOriginRules: Set<String>,
+    ) {
+        if (WebViewGlueBridge.addDocumentStartJavaScript(webView, script, allowedOriginRules)) return
+        Log.d("KeiyoushiWebView", "DOCUMENT_START_SCRIPT unavailable; using onPageStarted")
+        onPageStarted { evaluateJs(script) }
+    }
+
     /** Loads [url]. Can only be called once per scope. */
     fun loadUrl(url: String, headers: Map<String, String> = emptyMap()) {
         markLoaded()
