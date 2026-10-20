@@ -8,6 +8,7 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
+import keiyoushi.utils.asJsoup
 import keiyoushi.utils.extractNextJs
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebViewBlocking
@@ -178,7 +179,11 @@ abstract class RaijinScans : HttpSource() {
     }
 
     override fun pageListParse(response: Response): List<Page> {
-        val data = response.extractNextJs<ReaderPayload>()
+        val document = response.asJsoup()
+        if (response.request.url.encodedPath == "/sign-in" || document.title() == "Connexion | Aniverse") {
+            throw IOException("Aniverse réserve ce chapitre aux utilisateurs autorisés. Connectez-vous dans la WebView ou attendez sa disponibilité publique.")
+        }
+        val data = document.extractNextJs<ReaderPayload>()
             ?: error("Les pages Aniverse sont absentes. Vérifiez le chapitre dans la WebView.")
         require(data.pages.isNotEmpty()) { "Ce chapitre ne fournit aucune page accessible." }
         return data.pages.mapIndexed { index, page -> Page(index, imageUrl = page.src) }
