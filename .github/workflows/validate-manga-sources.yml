@@ -30,6 +30,7 @@ on:
       - "src/fr/astralmanga/**"
       - "lib-multisrc/**"
       - "lib/**"
+      - "core/**"
       - "src/fr/scanmanga/**"
       - "src/all/saymanhwa/**"
       - ".github/workflows/validate-manga-sources.yml"
@@ -61,6 +62,7 @@ on:
       - "src/fr/astralmanga/**"
       - "lib-multisrc/**"
       - "lib/**"
+      - "core/**"
       - "src/fr/scanmanga/**"
       - "src/all/saymanhwa/**"
       - ".github/workflows/validate-manga-sources.yml"
@@ -105,4 +107,4 @@ jobs:
           ./gradlew --no-daemon "${tasks[@]}"
 
       - name: Lint the release variants
-        run: ./gradlew --no-daemon :src:fr:banchanscan:lintRelease :src:fr:mangakawaii:lintRelease :src:all:mangadex:lintRelease :src:fr:hentaiorigines:lintRelease :src:fr:scanhentaimenu:lintRelease :src:fr:ortegascans:lintRelease :src:fr:lelmanga:lintRelease :src:fr:bananascan:lintRelease :src:all:olympusscanlation:lintRelease :src:all:cosplaytele:lintRelease :src:all:flamecomics:lintRelease :src:all:hivescans:lintRelease :src:fr:mangaball:lintRelease :src:all:asurascans:lintRelease :src:all:saymanhwa:lintRelease :src:fr:webtoons:lintRelease :src:fr:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:japscan:lintRelease :src:fr:softepsilonscan:lintRelease :lib-multisrc:pam:lintRelease :lib:secretstream:lintRelease :lib:ece:lintRelease
+        run: ./gradlew --no-daemon :src:fr:banchanscan:lintRelease :src:fr:mangakawaii:lintRelease :src:all:mangadex:lintRelease :src:fr:hentaiorigines:lintRelease :src:fr:scanhentaimenu:lintRelease :src:fr:ortegascans:lintRelease :src:fr:lelmanga:lintRelease :src:fr:bananascan:lintRelease :src:all:olympusscanlation:lintRelease :src:all:cosplaytele:lintRelease :src:all:flamecomics:lintRelease :src:all:hivescans:lintRelease :src:fr:mangaball:lintRelease :src:all:asurascans:lintRelease :src:all:saymanhwa:lintRelease :src:fr:webtoons:lintRelease :src:fr:manhuarm:lintRelease :src:fr:animesama:lintRelease :src:fr:astralmanga:lintRelease :src:fr:blossomscans:lintRelease :src:fr:dassouscan:lintRelease :src:fr:mangascantrad:lintRelease :src:fr:mangasoriginesfr:lintRelease :src:fr:pantheonscan:lintRelease :src:fr:poseidonscans:lintRelease :src:fr:raijinscans:lintRelease :src:fr:rimuscans:lintRelease :src:fr:scanmanga:lintRelease :src:fr:scanreader:lintRelease :src:fr:scanvf:lintRelease :src:fr:japscan:lintRelease :src:fr:softepsilonscan:lintRelease :lib-multisrc:pam:lintRelease :lib:secretstream:lintRelease :lib:ece:lintRelease :core:lintRelease

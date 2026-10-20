@@ -5,11 +5,12 @@
 - Code lecteur et dépendances copiés depuis le commit amont Keiyoushi ff521c17bb3e503c01e658e8fac00b60a95829f3. Aucun téléchargement du code amont au lancement ou pendant la compilation.
 - Pam, secretstream et ece sont nécessaires au lecteur Soft Epsilon. Les autres extensions restent inchangées.
 - Le catalogue public Epsilon fournit ses données Inertia dans le HTML : extraction directe pour les pages simples, WebView conservée pour les appels interactifs et le lecteur.
+- Ajout minimal de l’injection WebView au démarrage du document, requise par le lecteur Epsilon actuel ; aucun appel modifié pour les sources existantes. Fonction Chromium DOCUMENT_START_SCRIPT, repli asynchrone sur les anciens moteurs.
 - Japscan ne sert depuis son hôte de cache que ses propres fichiers temporaires.
 
 ## Contrôles réseau
 
-Les deux accueils répondent HTTP 200. La bibliothèque Epsilon répond HTTP 200 et fournit 30 œuvres, avec une pagination annonçant 6 070 œuvres. Un chapitre Japscan testé répond HTTP 403 depuis l’environnement de vérification ; cette réponse seule ne permet pas d’attribuer la cause à Cloudflare.
+Les deux accueils répondent HTTP 200. La bibliothèque Epsilon répond HTTP 200 et fournit 30 œuvres, avec une pagination annonçant 6 070 œuvres. Un chapitre Japscan testé répond HTTP 403 depuis l’environnement de vérification ; la page de réponse Cloudflare indique « Sorry, you have been blocked ».
 
 ## Limites de validation
 

@@ -13,6 +13,8 @@ on:
       - "src/all/**"
       - "src/fr/webtoons/**"
       - "lib-multisrc/**"
+      - "lib/**"
+      - "core/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
 
