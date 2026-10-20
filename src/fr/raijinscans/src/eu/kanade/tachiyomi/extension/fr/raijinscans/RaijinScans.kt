@@ -14,6 +14,7 @@ import keiyoushi.utils.runWebViewBlocking
 import keiyoushi.utils.toJsonString
 import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -29,7 +30,21 @@ abstract class RaijinScans : HttpSource() {
     override val supportsLatest = true
 
     override val client: OkHttpClient = super.client.newBuilder()
-        .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
+        .apply {
+            val configured = interceptors()
+            configured.indices.forEach { index ->
+                val interceptor = configured[index]
+                if (interceptor.javaClass.simpleName == "CloudflareInterceptor") {
+                    configured[index] = Interceptor { chain ->
+                        if (chain.request().url.host == baseUrl.toHttpUrl().host) {
+                            chain.proceed(chain.request())
+                        } else {
+                            interceptor.intercept(chain)
+                        }
+                    }
+                }
+            }
+        }
         .addInterceptor(
             AniverseTransport(baseUrl.toHttpUrl().host) { call, request ->
                 val api = request.url.encodedPath.startsWith("/api/")

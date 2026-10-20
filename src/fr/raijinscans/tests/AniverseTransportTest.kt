@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.extension.fr.raijinscans
 
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
