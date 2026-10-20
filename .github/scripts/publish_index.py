@@ -17,6 +17,8 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
+    "src/fr/japscan",
+    "src/fr/softepsilonscan",
     "src/fr/banchanscan",
     "src/fr/mangakawaii",
 

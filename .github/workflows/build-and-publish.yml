@@ -79,6 +79,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           modules=(
+            :src:fr:japscan
+            :src:fr:softepsilonscan
             :src:fr:banchanscan
             :src:fr:mangakawaii
 
