@@ -23,6 +23,7 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
 import rx.Observable
+import java.io.IOException
 
 @Source
 abstract class AnimeSama : HttpSource() {
@@ -106,15 +107,17 @@ abstract class AnimeSama : HttpSource() {
     private fun SManga.populateMangaDetails(document: Document) {
         description = document.selectFirst("p#synopsisText")?.text()
 
-        genre = document.select("span.genre-pill")
+        genre = document.select(".genre-pill")
             .takeIf { it.isNotEmpty() }
             ?.joinToString { it.text() }
 
-        title = document.selectFirst("div.my-2 h1")!!.text()
-        thumbnail_url = document.selectFirst("meta[property=og:image]")?.absUrl("content")
+        title = document.selectFirst("h1#titreOeuvre, div.my-2 h1")?.text()?.takeIf(String::isNotBlank)
+            ?: throw IOException("AnimeSama : le titre de cette œuvre est absent de la page.")
+        thumbnail_url = document.selectFirst(".oe-affiche img")?.absUrl("src")
+            ?: document.selectFirst("meta[property=og:image]")?.absUrl("content")
             ?: document.selectFirst("img#coverOeuvre")?.absUrl("src")
-        author = document.selectFirst("span.info-lbl:contains(Créateur) + span.info-val")?.text()
-        status = parseStatus(document.selectFirst("span.info-lbl:contains(État) + span.info-val")?.text())
+        author = document.selectFirst("dl.oe-infos dt:contains(Auteur) + dd, span.info-lbl:contains(Créateur) + span.info-val")?.text()
+        status = parseStatus(document.selectFirst("dl.oe-infos dt:contains(Statut) + dd, span.info-lbl:contains(État) + span.info-val")?.text())
     }
 
     private fun parseStatus(status: String?): Int = when (status?.lowercase()) {
@@ -307,17 +310,15 @@ abstract class AnimeSama : HttpSource() {
 
     // ========================= Utilities =========================
     private fun parseMangasPage(response: Response, containerSelector: String, urlSuffixToRemove: String = ""): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select(containerSelector).map {
+        val catalogue = parseCatalogue(response.asJsoup(), containerSelector, urlSuffixToRemove)
+        val mangas = catalogue.entries.map { entry ->
             SManga.create().apply {
-                title = it.selectFirst("h2.card-title")!!.text()
-                val url = it.selectFirst("a")!!.absUrl("href")
-                setUrlWithoutDomain(if (urlSuffixToRemove.isNotEmpty()) url.removeSuffix(urlSuffixToRemove) else url)
-                thumbnail_url = it.selectFirst("img")?.absUrl("src")
+                title = entry.title
+                setUrlWithoutDomain(entry.url)
+                thumbnail_url = entry.cover
             }
         }
-        val hasNextPage = document.selectFirst("#list_pagination > a.bg-sky-900 + a") != null
-        return MangasPage(mangas, hasNextPage)
+        return MangasPage(mangas, catalogue.hasNextPage)
     }
 
     private fun getScanPanelContent(document: Document): List<String> {

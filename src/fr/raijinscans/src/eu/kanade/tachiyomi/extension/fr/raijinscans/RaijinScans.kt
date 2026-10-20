@@ -8,7 +8,6 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
-import keiyoushi.utils.asJsoup
 import keiyoushi.utils.extractNextJs
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
@@ -26,20 +25,10 @@ abstract class RaijinScans : HttpSource() {
 
     override fun headersBuilder() = super.headersBuilder().set("Referer", "$baseUrl/")
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manga", headers)
+    // The site's full catalogue is paginated; the homepage only exposes a small selection.
+    override fun popularMangaRequest(page: Int): Request = latestUpdatesRequest(page)
 
-    override fun popularMangaParse(response: Response): MangasPage {
-        val mangas = response.asJsoup().select("a[href^=/manga/]:has(img)")
-            .distinctBy { it.attr("href") }
-            .map { element ->
-                SManga.create().apply {
-                    setUrlWithoutDomain(element.absUrl("href"))
-                    title = element.selectFirst("img")!!.attr("alt")
-                    thumbnail_url = element.selectFirst("img")!!.absUrl("src")
-                }
-            }
-        return MangasPage(mangas, false)
-    }
+    override fun popularMangaParse(response: Response): MangasPage = latestUpdatesParse(response)
 
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/api/manga?page=$page", headers)
 

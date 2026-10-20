@@ -83,6 +83,9 @@ jobs:
       - name: Check publisher syntax
         run: python -m py_compile .github/scripts/publish_index.py
 
+      - name: Test French catalogue regressions
+        run: ./gradlew --no-daemon :src:fr:animesama:testReleaseUnitTest :src:fr:poseidonscans:testReleaseUnitTest :src:fr:astralmanga:testReleaseUnitTest
+
       - name: Verify preserved extension APIs
         run: |
           (cd vendor/extensions-lib && sha256sum -c SHA256SUMS)

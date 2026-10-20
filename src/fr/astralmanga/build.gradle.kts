@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import io.github.keiyoushi.gradle.api.ContentWarning
 
 plugins {
@@ -6,7 +7,7 @@ plugins {
 
 keiyoushi {
     name = "Astral-Manga"
-    versionCode = 51
+    versionCode = 52
     contentWarning = ContentWarning.SAFE
     libVersion = "1.4"
 
@@ -16,4 +17,18 @@ keiyoushi {
         baseUrl = "https://astral-manga.fr"
         versionId = 2
     }
+}
+
+extensions.configure<ApplicationExtension> {
+    sourceSets.named("test") {
+        java.directories.clear()
+        java.directories.add("tests")
+        kotlin.directories.clear()
+        kotlin.directories.add("tests")
+    }
+}
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.okhttp.core)
 }

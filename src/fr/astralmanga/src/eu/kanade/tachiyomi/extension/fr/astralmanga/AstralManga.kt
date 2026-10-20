@@ -31,7 +31,10 @@ abstract class AstralManga : HttpSource() {
 
     override val supportsLatest = true
 
+    private val coverSigning by lazy { CoverSigningInterceptor({ baseUrl }, ::presignS3Key) }
+
     override val client: OkHttpClient = network.client.newBuilder()
+        .addInterceptor(coverSigning)
         .rateLimit(8, 1.seconds)
         .build()
 
@@ -129,7 +132,7 @@ abstract class AstralManga : HttpSource() {
         val manga = response.extractNextJs<MangaDto> {
             it is JsonObject && it["urlId"]?.jsonPrimitive?.contentOrNull == mangaUuid
         } ?: throw Exception("Title not found")
-        return manga.toSManga { presignS3Key(it) }
+        return manga.toSManga(coverSigning::coverUrl)
     }
 
     // ========================== Chapters ==========================
@@ -199,7 +202,7 @@ abstract class AstralManga : HttpSource() {
         val dto = response.parseAs<MangaResponseDto>()
 
         val mangas = dto.mangas.map { mangaDto ->
-            mangaDto.toSManga { s3Key -> presignS3Key(s3Key) }
+            mangaDto.toSManga(coverSigning::coverUrl)
         }
 
         val hasNextPage = (dto.mangas.size >= 12) && (mangas.size < dto.total)

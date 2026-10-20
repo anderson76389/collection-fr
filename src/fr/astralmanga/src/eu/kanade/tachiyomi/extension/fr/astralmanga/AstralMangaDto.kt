@@ -29,12 +29,12 @@ class MangaDto(
     val artists: List<NameDto>? = null,
     val teams: List<NameDto>? = null,
 ) {
-    fun toSManga(presignS3Key: (String) -> String?): SManga = SManga.create().apply {
+    fun toSManga(resolveCover: (String) -> String?): SManga = SManga.create().apply {
         url = "/manga/$urlId"
         title = this@MangaDto.title
 
         thumbnail_url = cover?.image?.link?.let { link ->
-            if (link.startsWith("s3:")) presignS3Key(link.substringAfter("s3:")) else link
+            if (link.startsWith("s3:")) resolveCover(link.substringAfter("s3:")) else link
         }
 
         description = this@MangaDto.description
