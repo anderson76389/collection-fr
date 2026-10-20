@@ -364,10 +364,10 @@ abstract class Japscan :
                     }
                 }
 
-                onPageStarted {
-                    evaluateJs(ACLIB_STUB)
-                    evaluateJs(if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK)
-                }
+                injectAtDocumentStart(
+                    ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
+                    setOf(baseUrl),
+                )
 
                 onPageFinished {
                     evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
