@@ -6,12 +6,13 @@ plugins {
 }
 
 keiyoushi {
-    name = "Raijin Scans"
-    versionCode = 72
+    name = "Aniverse"
+    versionCode = 73
     contentWarning = ContentWarning.SAFE
     libVersion = "1.4"
 
     source {
+        id = 8373267671495516033L
         lang = "fr"
         baseUrl = "https://aniverse.fr"
     }
