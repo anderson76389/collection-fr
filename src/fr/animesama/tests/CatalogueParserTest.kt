@@ -12,7 +12,7 @@ class CatalogueParserTest {
         val document = Jsoup.parse(
             """
             <div id="list_catalog">
-                <div class="as-carte" data-nom="Ghost"><a class="as-carte-lien" href="/catalogue/ghost/">
+                <div class="as-carte" data-nom="Ghost" data-img="https://img.example/original.jpg"><a class="as-carte-lien" href="/catalogue/ghost/">
                     <div class="as-carte-image"><img src="https://img.example/ghost.webp"></div>
                     <h3 class="as-carte-titre">Ghost</h3></a></div>
                 <div class="loading-placeholder"></div>
@@ -25,7 +25,7 @@ class CatalogueParserTest {
         val result = parseCatalogue(document, "#list_catalog > div")
         assertEquals(listOf("Ghost", "Second"), result.entries.map { it.title })
         assertEquals("https://anime-sama.to/catalogue/ghost/", result.entries.first().url)
-        assertEquals("https://img.example/ghost.webp", result.entries.first().cover)
+        assertEquals("https://img.example/original.jpg#makoff-cover-v2", result.entries.first().cover)
         assertTrue(result.hasNextPage)
     }
 

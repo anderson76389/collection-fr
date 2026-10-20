@@ -64,6 +64,8 @@ abstract class Manhuarm :
 
     private val preferences by getPreferencesLazy()
 
+    private val documents = RecentDocuments()
+
     private val chapterPages = LruCache<String, CachedPages>(3)
     private val chapterLocks = LruCache<String, Mutex>(3)
 
@@ -102,7 +104,8 @@ abstract class Manhuarm :
         .addInterceptor(TranslationInterceptor({ settings }, { translator }))
         .addInterceptor(ComposedImageInterceptor { settings })
         .rateLimit(3, 2.seconds) { it.host == BingTranslator.HOST || it.host == GoogleTranslator.HOST }
-        .rateLimit(2)
+        // CDN images must not queue behind catalogue, reader and OCR requests.
+        .rateLimit(2) { it.host != "cdn.manhuarmtl.com" }
 
     override fun Headers.Builder.configureHeaders(): Headers.Builder = apply {
         customUserAgent.takeIf(String::isNotEmpty)?.let { set("User-Agent", it) }
@@ -162,7 +165,7 @@ abstract class Manhuarm :
         fetchChapters: Boolean,
     ): SMangaUpdate {
         if (!fetchDetails && !fetchChapters) return SMangaUpdate(manga, chapters)
-        val document = client.get(getMangaUrl(manga)).asJsoup()
+        val document = documents.get(getMangaUrl(manga)) { client.get(getMangaUrl(manga)).asJsoup() }
         val details = if (fetchDetails) document.parseDetails().apply { url = manga.url } else manga
 
         val language = settings

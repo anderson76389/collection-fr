@@ -170,7 +170,7 @@ abstract class AstralManga : HttpSource() {
         if (images != null) {
             return images.sortedBy { it.orderId }.mapIndexed { index, img ->
                 val imageUrl = if (img.link.startsWith("s3:")) {
-                    presignS3Key(img.link.substringAfter("s3:")) ?: ""
+                    coverSigning.coverUrl(img.link.substringAfter("s3:"))
                 } else {
                     img.link
                 }

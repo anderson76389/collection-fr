@@ -19,6 +19,7 @@ import okhttp3.Headers
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.nodes.Document
@@ -29,6 +30,10 @@ import java.io.IOException
 abstract class AnimeSama : HttpSource() {
 
     override val supportsLatest = true
+
+    override val client: OkHttpClient = network.client.newBuilder()
+        .addInterceptor(CoverImageInterceptor())
+        .build()
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .add("Accept-Language", "fr-FR")
@@ -116,6 +121,7 @@ abstract class AnimeSama : HttpSource() {
         thumbnail_url = document.selectFirst(".oe-affiche img")?.absUrl("src")
             ?: document.selectFirst("meta[property=og:image]")?.absUrl("content")
             ?: document.selectFirst("img#coverOeuvre")?.absUrl("src")
+        thumbnail_url = thumbnail_url?.coverUrl()
         author = document.selectFirst("dl.oe-infos dt:contains(Auteur) + dd, span.info-lbl:contains(Créateur) + span.info-val")?.text()
         status = parseStatus(document.selectFirst("dl.oe-infos dt:contains(Statut) + dd, span.info-lbl:contains(État) + span.info-val")?.text())
     }

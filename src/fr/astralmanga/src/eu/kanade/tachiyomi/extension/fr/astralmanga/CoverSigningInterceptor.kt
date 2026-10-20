@@ -5,7 +5,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
 
-// Stable cover identifiers let Mihon's image cache work without waiting for signing at catalogue load.
+// Resolve both covers and chapter pages on image fetch, never serially while building a list.
 internal class CoverSigningInterceptor(
     private val baseUrl: () -> String,
     private val sign: (String) -> String?,
@@ -21,9 +21,9 @@ internal class CoverSigningInterceptor(
             return chain.proceed(request)
         }
         val key = request.url.queryParameter("key")?.takeIf(String::isNotBlank)
-            ?: throw IOException("Astral-Manga : clé de couverture absente")
+            ?: throw IOException("Astral-Manga : clé d’image absente")
         val imageUrl = sign(key)?.toHttpUrl()
-            ?: throw IOException("Astral-Manga : le site n’a pas fourni la couverture")
+            ?: throw IOException("Astral-Manga : le site n’a pas fourni l’image")
         return chain.proceed(request.newBuilder().url(imageUrl).build())
     }
 
