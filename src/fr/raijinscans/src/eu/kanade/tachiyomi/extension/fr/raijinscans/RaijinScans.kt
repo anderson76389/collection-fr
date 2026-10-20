@@ -9,9 +9,9 @@ import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
 import keiyoushi.annotation.Source
 import keiyoushi.utils.extractNextJs
+import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebViewBlocking
 import keiyoushi.utils.toJsonString
-import keiyoushi.utils.parseAs
 import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -30,27 +30,28 @@ abstract class RaijinScans : HttpSource() {
 
     override val client: OkHttpClient = super.client.newBuilder()
         .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
-        .addInterceptor(AniverseTransport(baseUrl.toHttpUrl().host) { call, request ->
-            val api = request.url.encodedPath.startsWith("/api/")
-            val bridge = "aniverseReader"
-            val payload = runWebViewBlocking<String>(call, timeout = 45.seconds) {
-                headers["User-Agent"]?.let { userAgent = it }
-                domStorageEnabled = true
-                blockImages = true
-                jsBridge(bridge) { message ->
-                    val result = message.parseAs<BrowserResult>()
-                    if (result.status in 200..299) {
-                        resolve(result.body)
-                    } else {
-                        reject(IOException("Aniverse : HTTP ${result.status}. Validez l’accès dans la WebView puis réessayez."))
+        .addInterceptor(
+            AniverseTransport(baseUrl.toHttpUrl().host) { call, request ->
+                val api = request.url.encodedPath.startsWith("/api/")
+                val bridge = "aniverseReader"
+                val payload = runWebViewBlocking<String>(call, timeout = 45.seconds) {
+                    headers["User-Agent"]?.let { userAgent = it }
+                    domStorageEnabled = true
+                    blockImages = true
+                    jsBridge(bridge) { message ->
+                        val result = message.parseAs<BrowserResult>()
+                        if (result.status in 200..299) {
+                            resolve(result.body)
+                        } else {
+                            reject(IOException("Aniverse : HTTP ${result.status}. Validez l’accès dans la WebView puis réessayez."))
+                        }
                     }
-                }
-                onReceivedError { resource, error ->
-                    if (resource.isForMainFrame) reject(IOException(error.description.toString()))
-                }
-                onPageFinished {
-                    val script = if (api) {
-                        """
+                    onReceivedError { resource, error ->
+                        if (resource.isForMainFrame) reject(IOException(error.description.toString()))
+                    }
+                    onPageFinished {
+                        val script = if (api) {
+                            """
                         (async function(){
                             try {
                                 const response = await fetch(${request.url.toString().toJsonString()}, {
@@ -62,23 +63,23 @@ abstract class RaijinScans : HttpSource() {
                                 window.$bridge.post(JSON.stringify({status: 0, body: ""}));
                             }
                         })();
-                        """.trimIndent()
-                    } else {
-                        """
+                            """.trimIndent()
+                        } else {
+                            """
                         (function(){
                             const ready = document.querySelector('script[src*="/_next/"], script#__NEXT_DATA__') !== null;
                             window.$bridge.post(JSON.stringify({status: ready ? 200 : 403, body: ready ? document.documentElement.outerHTML : ""}));
                         })();
-                        """.trimIndent()
+                            """.trimIndent()
+                        }
+                        evaluateJs(script)
                     }
-                    evaluateJs(script)
+                    loadUrl(if (api) "$baseUrl/manga" else request.url.toString())
                 }
-                loadUrl(if (api) "$baseUrl/manga" else request.url.toString())
-            }
-            browserResponse(request, payload, api)
-        })
+                browserResponse(request, payload, api)
+            },
+        )
         .build()
-
 
     override fun headersBuilder() = super.headersBuilder().set("Referer", "$baseUrl/")
 
