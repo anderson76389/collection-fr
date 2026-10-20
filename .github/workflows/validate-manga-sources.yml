@@ -84,7 +84,7 @@ jobs:
         run: python -m py_compile .github/scripts/publish_index.py
 
       - name: Test French catalogue regressions
-        run: ./gradlew --no-daemon :src:fr:animesama:testDebugUnitTest :src:fr:poseidonscans:testDebugUnitTest :src:fr:astralmanga:testDebugUnitTest :src:fr:manhuarm:testDebugUnitTest :src:fr:lelmanga:testDebugUnitTest :src:fr:dassouscan:testDebugUnitTest
+        run: ./gradlew --no-daemon :src:fr:animesama:testDebugUnitTest :src:fr:poseidonscans:testDebugUnitTest :src:fr:astralmanga:testDebugUnitTest :src:fr:manhuarm:testDebugUnitTest :src:fr:lelmanga:testDebugUnitTest :src:fr:dassouscan:testDebugUnitTest :src:fr:pantheonscan:testDebugUnitTest :src:fr:bananascan:testDebugUnitTest
 
       - name: Verify preserved extension APIs
         run: |

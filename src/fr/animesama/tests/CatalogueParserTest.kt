@@ -25,7 +25,7 @@ class CatalogueParserTest {
         val result = parseCatalogue(document, "#list_catalog > div")
         assertEquals(listOf("Ghost", "Second"), result.entries.map { it.title })
         assertEquals("https://anime-sama.to/catalogue/ghost/", result.entries.first().url)
-        assertEquals("https://img.example/original.jpg#makoff-cover-v2", result.entries.first().cover)
+        assertEquals("https://img.example/original.jpg", result.entries.first().cover)
         assertTrue(result.hasNextPage)
     }
 

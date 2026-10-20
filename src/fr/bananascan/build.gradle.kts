@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import io.github.keiyoushi.gradle.api.ContentWarning
 
 plugins {
@@ -6,7 +7,7 @@ plugins {
 
 keiyoushi {
     name = "Harmony-Scan"
-    versionCode = 3
+    versionCode = 4
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
     theme = "madara"
@@ -16,4 +17,24 @@ keiyoushi {
         baseUrl = "https://harmony-scan.fr"
         id = 3121632933690925888L
     }
+}
+
+extensions.configure<ApplicationExtension> {
+    sourceSets.named("test") {
+        java.directories.clear()
+        java.directories.add("tests")
+        kotlin.directories.clear()
+        kotlin.directories.add("tests")
+    }
+}
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.stdlib)
+    testImplementation(libs.okhttp.core)
+}
+
+// Metadata generation only applies to production source classes.
+tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {
+    enabled = false
 }
