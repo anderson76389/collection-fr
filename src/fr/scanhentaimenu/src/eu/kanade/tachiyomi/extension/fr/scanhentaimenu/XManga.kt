@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.scanhentaimenu
 
+import android.webkit.CookieManager
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -213,10 +214,23 @@ abstract class XManga : KeiSource() {
 
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder().apply {
         page.imageUrl?.let(imageHeaders::get)?.forEach { (key, value) ->
-            if (!key.equals("Host", ignoreCase = true) && !key.equals("Content-Length", ignoreCase = true)) {
+            if (key.lowercase() !in setOf(
+                    "host", "content-length", "accept-encoding", "connection",
+                    "cookie", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site",
+                )
+            ) {
                 header(key, value)
             }
         }
+        // A visible WebView may pass Cloudflare/CDN cookies even though its
+        // shouldInterceptRequest headers omit Cookie. Mihon's separate OkHttp
+        // image request must use the *target host's* browser cookies, without
+        // leaking x-manga.org cookies to a third-party image host.
+        page.imageUrl?.let { imageUrl ->
+            runCatching { CookieManager.getInstance().getCookie(imageUrl) }
+                .getOrNull()?.takeIf(String::isNotBlank)?.let { header("Cookie", it) }
+        }
+        header("User-Agent", headers["User-Agent"]!!)
         header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
     }.build()
 
