@@ -27,4 +27,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.stdlib)
     testImplementation(libs.jsoup)
+    testImplementation(libs.okhttp.core)
 }
