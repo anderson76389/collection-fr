@@ -28,22 +28,30 @@ import kotlin.time.Duration.Companion.seconds
 abstract class XManga : KeiSource() {
     override fun getHomeUrl() = "$baseUrl/"
 
-    override suspend fun getPopularManga(page: Int): MangasPage {
-        if (page != 1) return MangasPage(emptyList(), false)
-        return MangasPage(xMangaCards(client.get("$baseUrl/").asJsoup()), false)
-    }
+    override suspend fun getPopularManga(page: Int): MangasPage = browseCatalogue(page, "")
 
-    override suspend fun getLatestUpdates(page: Int): MangasPage = getPopularManga(page)
+    override suspend fun getLatestUpdates(page: Int): MangasPage = browseCatalogue(page, "")
+
+    private suspend fun browseCatalogue(page: Int, query: String): MangasPage {
+        if (page !in 1..100) return MangasPage(emptyList(), false)
+        val document = try {
+            browserDocument("$baseUrl/catalogue/", "catalogue", page, query)
+        } catch (error: Exception) {
+            // Only the first page can safely fall back to the homepage. An
+            // exhausted or blocked catalogue must not duplicate page 1 forever.
+            if (page != 1 || query.isNotBlank()) throw error
+            client.get("$baseUrl/").asJsoup()
+        }
+        val works = xMangaCards(document)
+        if (works.isEmpty() && page == 1) {
+            throw IOException("X-Manga : catalogue non chargé dans la WebView.")
+        }
+        return MangasPage(works, works.isNotEmpty() && page < 100)
+    }
 
     override suspend fun getSearchMangaList(page: Int, query: String, filters: FilterList): MangasPage {
         if (query.isBlank()) return getPopularManga(page)
-        if (page != 1) return MangasPage(emptyList(), false)
-        val home = xMangaCards(client.get("$baseUrl/").asJsoup())
-            .filter { it.title.contains(query, ignoreCase = true) }
-        if (home.isNotEmpty()) return MangasPage(home, false)
-        val browse = runCatching { xMangaCards(browserDocument("$baseUrl/catalogue/", "manga")) }
-            .getOrDefault(emptyList())
-        return MangasPage(browse.filter { it.title.contains(query, ignoreCase = true) }, false)
+        return browseCatalogue(page, query)
     }
 
     override suspend fun getMangaByUrl(url: HttpUrl): SManga? {
@@ -128,8 +136,8 @@ abstract class XManga : KeiSource() {
         .header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
         .build()
 
-    private suspend fun browserDocument(url: String, type: String): Document {
-        val html = runWebView<String>(timeout = 55.seconds) {
+    private suspend fun browserDocument(url: String, type: String, page: Int = 1, query: String = ""): Document {
+        val html = runWebView<String>(timeout = 85.seconds) {
             javaScriptEnabled = true
             domStorageEnabled = true
             blockImages = true
@@ -144,14 +152,44 @@ abstract class XManga : KeiSource() {
                 evaluateJs(
                     """
                     (function() {
-                        if ('$type' === 'read') {
+                        const type = '$type', target = $page;
+                        const text = document.body?.innerText || '';
+                        if (type === 'read') {
                             const more = Array.from(document.querySelectorAll('button'))
-                                .find(b => /afficher.*chapitre.*plus/i.test(b.textContent || ''));
-                            if (more) { more.click(); window.__xmLastClick = Date.now(); return 'more'; }
+                                .find(b => /afficher.*chapitres.*plus/i.test(b.textContent || ''));
+                            if (more && Date.now() - (window.__xmLastClick || 0) > 400) {
+                                more.click(); window.__xmLastClick = Date.now(); return 'more';
+                            }
                         }
-                        const selector = '$type' === 'read' ? 'a[href*="/read/"]' : 'a[href*="/manga/"]';
-                        const count = document.querySelectorAll(selector).length;
-                        if (count && Date.now() - (window.__xmLastClick || 0) >= 1600) {
+                        if (type === 'catalogue') {
+                            if (/chargement du catalogue/i.test(text)) return 'loading';
+                            const input = document.querySelector('input[placeholder*="Titre"], input[placeholder*="titre"]');
+                            if ('$query' && input && !window.__xmQueryEntered) {
+                                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+                                setter.call(input, '$query');
+                                input.dispatchEvent(new Event('input', {bubbles: true}));
+                                window.__xmQueryEntered = true;
+                                window.__xmLastClick = Date.now(); return 'search';
+                            }
+                            if (target > 1 && !window.__xmPageSelected) {
+                                const btns = Array.from(document.querySelectorAll('button,a'));
+                                const button = btns.find(b => b.textContent.trim() === String(target) &&
+                                    b.getBoundingClientRect().width > 0);
+                                if (!button) return 'no-page-button';
+                                button.click(); window.__xmPageSelected = true;
+                                window.__xmLastClick = Date.now(); return 'page';
+                            }
+                        }
+                        const selector = type === 'read' ? 'a[href*="/read/"]' : 'main a[href*="/manga/"]';
+                        const links = Array.from(document.querySelectorAll(selector));
+                        const unique = new Set(links.map(a => a.pathname).filter(p => p && p.startsWith(type === 'read' ? '/read/' : '/manga/')));
+                        const key = [...unique].join('|');
+                        if (window.__xmLastList !== key) {
+                            window.__xmLastList = key;
+                            window.__xmListStableAt = Date.now();
+                        }
+                        if (unique.size > 0 && Date.now() - (window.__xmListStableAt || 0) > 1700 &&
+                            Date.now() - (window.__xmLastClick || 0) > 1700) {
                             window.xmangadom.post(document.documentElement.outerHTML);
                             return 'sent';
                         }
