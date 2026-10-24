@@ -246,8 +246,10 @@ internal fun readerReadyScript(isWebtoon: Boolean): String = if (isWebtoon) {
     (function(){
         if (window.__japscanHooked !== true) return 'waiting';
         var full = document.getElementById('full-reader');
-        var single = document.querySelector('[id^="single-reader"]');
-        if (!full || (single && !single.classList.contains('d-none'))) return 'waiting';
+        if (!full) return 'waiting';
+        // The site sometimes keeps the old single-reader element visible
+        // while initializing the long-strip layout; requiring d-none prevents
+        // the driver from starting even though full-reader has valid pages.
         return full.querySelector('[id^="d-img-"]') ? 'ready' : 'waiting';
     })();
     """.trimIndent()
@@ -255,8 +257,8 @@ internal fun readerReadyScript(isWebtoon: Boolean): String = if (isWebtoon) {
     """
     (function(){
         if (window.__japscanHooked !== true) return 'waiting';
-        var single = document.querySelector('[id^="single-reader"]');
-        if (single && single.classList.contains('d-none')) return 'waiting';
+        // Do not reject the paginated reader just because an inactive
+        // single-reader wrapper has been hidden by a responsive layout.
         return document.getElementById('pages') || window.__japscanLastBlob ? 'ready' : 'waiting';
     })();
     """.trimIndent()
