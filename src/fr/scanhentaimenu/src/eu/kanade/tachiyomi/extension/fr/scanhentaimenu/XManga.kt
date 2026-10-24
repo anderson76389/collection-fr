@@ -42,8 +42,10 @@ abstract class XManga : KeiSource() {
             if (page != 1 || query.isNotBlank()) throw error
             client.get("$baseUrl/").asJsoup()
         }
-        val works = xMangaCards(document)
-        if (works.isEmpty() && page == 1) {
+        val works = xMangaCards(document).let { entries ->
+            if (query.isBlank()) entries else entries.filter { it.title.contains(query, ignoreCase = true) }
+        }
+        if (works.isEmpty() && page == 1 && query.isBlank()) {
             throw IOException("X-Manga : catalogue non chargé dans la WebView.")
         }
         return MangasPage(works, works.isNotEmpty() && page < 100)
