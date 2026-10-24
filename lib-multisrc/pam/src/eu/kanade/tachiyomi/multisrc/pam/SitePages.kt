@@ -33,6 +33,7 @@ internal class SitePage(
     val fetched: JsonElement? = null,
     val chapters: List<ChapterListItem>? = null,
     val reader: ReaderResult? = null,
+    val pagePath: String? = null,
     val pageHeaders: Map<String, String> = emptyMap(),
 ) {
     fun fetched() = fetched ?: throw IOException("Missing API response")
@@ -44,6 +45,7 @@ internal class SitePages(
     private val client: () -> OkHttpClient,
     private val userAgent: () -> String,
     private val allowMissingReaderPageRequest: Boolean = false,
+    private val useInlineReaderWorker: Boolean = false,
 ) {
     private val baseHttpUrl = baseUrl.toHttpUrl()
 
@@ -88,7 +90,13 @@ internal class SitePages(
 
         val bridge = "k" + ByteArray(8).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
         val readScript = "(${asset("site.js")})(\"$bridge\", ${request.toJsonString()})"
-        val readerScript = if (reader) "(${asset("reader.js")})(\"$bridge\")" else null
+        val readerScript = if (!reader) {
+            null
+        } else if (useInlineReaderWorker) {
+            "(${asset("reader-inline.js")})(\"$bridge\", ${asset("worker-inline.js").toJsonString()})"
+        } else {
+            "(${asset("reader.js")})(\"$bridge\")"
+        }
         var site: SitePage? = null
         val hasPage = AtomicBoolean(false)
         val hasReaderV2 = AtomicBoolean(false)
@@ -103,6 +111,7 @@ internal class SitePages(
                 blockImages = !reader
                 val lock = Any()
                 var readerV2 = false
+                var chapterUid: String? = null
                 var readerResult: ReaderResult? = null
                 val pageRequests = mutableListOf<Pair<String, Map<String, String>>>()
                 var readerMetadataReadyAt: TimeMark? = null
@@ -110,7 +119,17 @@ internal class SitePages(
                     val page = site ?: return
                     if (!readerV2) return resolve(page)
                     val captured = readerResult ?: return
-                    val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest.base) }?.second
+                    if (useInlineReaderWorker) {
+                        val found = pageRequests.firstOrNull { (path, _) ->
+                            PAGE_PATH_REGEX.matches(path) &&
+                                (chapterUid == null || path.startsWith("/p/$chapterUid/"))
+                        }
+                        if (found != null && (captured.count ?: 0) > 0) {
+                            resolve(SitePage(page.page, reader = captured, pagePath = found.first, pageHeaders = found.second))
+                        }
+                        return
+                    }
+                    val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest?.base.orEmpty()) }?.second
                     if (pageHeaders != null) {
                         resolve(SitePage(page.page, reader = captured, pageHeaders = pageHeaders))
                     } else if (allowMissingReaderPageRequest) {
@@ -136,7 +155,7 @@ internal class SitePages(
                     if (UNUSED_PATHS.any(path::startsWith)) return@interceptRequest blockedResponse()
                     // Styles and fonts only for the reader's fingerprint
                     if (!reader && STYLE_EXTENSIONS.any(path::endsWith)) return@interceptRequest emptyResponse()
-                    if (reader && requestUrl.getQueryParameter(bridge) != null) {
+                    if (reader && !useInlineReaderWorker && requestUrl.getQueryParameter(bridge) != null) {
                         return@interceptRequest rewrittenWorker(webRequest, bridge)
                     }
                     if (!reader || !path.startsWith("/p/")) return@interceptRequest null
@@ -161,7 +180,11 @@ internal class SitePages(
                             }
                             else -> {
                                 val page = message.page ?: return@jsBridge reject(IOException("Missing page data"))
-                                readerV2 = reader && page.parseAs<PageListResponse>().props.readerV2
+                                if (reader) {
+                                    val props = page.parseAs<PageListResponse>().props
+                                    readerV2 = props.readerV2
+                                    chapterUid = props.data.uid
+                                }
                                 hasReaderV2.set(readerV2)
                                 site = SitePage(page, message.fetched, message.chapters)
                                 hasPage.set(true)
@@ -245,6 +268,7 @@ internal class SitePages(
     private fun blockedResponse() = WebResourceResponse("text/plain", null, 403, "Blocked", null, ByteArrayInputStream(ByteArray(0)))
 }
 
+private val PAGE_PATH_REGEX = Regex("""(/p/[\\w-]+/\\d+/[\\w-]+/)\\d+(-\\d+)?\\.ece""")
 private const val TURNSTILE_HOST = "challenges.cloudflare.com"
 private val POLL_INTERVAL = 250.milliseconds
 private val LOAD_INTERVAL = 2.seconds
