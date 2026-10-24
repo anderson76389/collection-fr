@@ -1,7 +1,5 @@
 package eu.kanade.tachiyomi.extension.fr.japscan
 
-import android.content.ComponentName
-import android.content.Intent
 import android.util.Base64
 import android.webkit.WebResourceResponse
 import androidx.preference.ListPreference
@@ -23,11 +21,10 @@ import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.runWebView
+import keiyoushi.utils.WebViewTimeoutException
 import keiyoushi.utils.tryParseDate
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.CacheControl
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -40,6 +37,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -242,12 +240,8 @@ abstract class Japscan :
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         pageListMutex.withLock {
-            // Must be read before the first suspension point, while the caller's frames are on the stack.
-            val isReader = Exception().stackTrace.any { it.className.contains("reader") }
             val chapterUrl = baseUrl + chapter.url
             sweepPageCache(applicationContext.cacheDir)
-
-            solveCaptcha(chapterUrl, isReader)
 
             // manhwa/manhua use the long-strip reader, everything else the paginated one. The DOM
             // can't tell them apart before the reader JS mounts, and both need different hooks.
@@ -256,67 +250,9 @@ abstract class Japscan :
 
             val cachedPages = runReaderWebView(chapterUrl, isWebtoon, urlSegment)
             if (cachedPages.isEmpty()) {
-                throw Exception("Erreur lors de la récupération des pages")
+                throw IOException("Japscan : aucune image lisible n’a été récupérée. Ouvrez ce chapitre dans la WebView de Mihon pour vérifier son accès.")
             }
             return cachedPages.mapIndexed { i, path -> Page(i, imageUrl = "https://$CACHE_HOST$path") }
-        }
-    }
-
-    private suspend fun captchaPresent(chapterUrl: String): Boolean = client.get(chapterUrl, CacheControl.FORCE_NETWORK).use {
-        CAPTCHA_REGEX.containsMatchIn(it.body.string())
-    }
-
-    private suspend fun solveCaptcha(chapterUrl: String, isReader: Boolean) {
-        if (!captchaPresent(chapterUrl)) return
-
-        // Cold sessions usually get past the captcha after loading the homepage once in a WebView
-        warmupWebViewSession()
-        if (!captchaPresent(chapterUrl)) return
-
-        val context = applicationContext
-        try {
-            val intent = Intent().apply {
-                component = ComponentName(context, "eu.kanade.tachiyomi.ui.webview.WebViewActivity")
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("url_key", chapterUrl)
-                putExtra("source_key", id)
-                putExtra("title_key", "Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
-            }
-            context.startActivity(intent)
-        } catch (_: Exception) {
-            // Suwayomi etc.
-            throw Exception("Résolvez le captcha de ce chapitre depuis la WebView et réouvrez le chapitre.")
-        }
-        repeat(CAPTCHA_MAX_POLLS) {
-            delay(CAPTCHA_POLL_INTERVAL)
-            if (!captchaPresent(chapterUrl)) {
-                val closeIntent = Intent().apply {
-                    val targetClass = if (isReader) {
-                        "eu.kanade.tachiyomi.ui.reader.ReaderActivity"
-                    } else {
-                        "eu.kanade.tachiyomi.ui.main.MainActivity"
-                    }
-                    component = ComponentName(context, targetClass)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                }
-                context.startActivity(closeIntent)
-                return
-            }
-        }
-        throw Exception("Résolvez le captcha, fermez la Webview et réouvrez le chapitre.")
-    }
-
-    private suspend fun warmupWebViewSession() {
-        runCatching {
-            val response = client.get(baseUrl)
-
-            runWebView<Unit>(timeout = 8.seconds) {
-                var finished = false
-                onPageFinished { finished = true }
-                // Settle window that lets Cloudflare's beacon commit cf_clearance before teardown
-                poll(200.milliseconds) { if (finished) resolve(Unit) }
-                loadData(baseUrl, response.body.string())
-            }
         }
     }
 
@@ -330,9 +266,9 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
 
-        val response = client.get(chapterUrl)
-
-        return runCatching {
+        // Navigate normally: the old OkHttp prefetch often received a Cloudflare 403
+        // even when the chapter could be opened in Mihon's WebView session.
+        val pages = try {
             runWebView<List<String>>(timeout = 3.minutes) {
                 domStorageEnabled = true
                 javaScriptEnabled = true
@@ -352,31 +288,56 @@ abstract class Japscan :
                     resolve(savedPaths)
                 }
 
-                // The reader pulls rotating ad hosts whose modals break the detached descrambler,
-                // so only the origins the reader needs are allowed.
+                // The reader pulls rotating ad hosts whose modals break the detached descrambler.
                 interceptRequest { request ->
                     val host = request.url.host ?: return@interceptRequest null
                     if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
                         null
                     } else {
-                        // A null body keeps some WebView builds pending, stalling the capture
                         WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
                     }
                 }
 
                 injectAtDocumentStart(
                     ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
-                    setOf(baseUrl),
+                    setOf(baseUrl, "https://japscan.foo"),
                 )
 
-                onPageFinished {
-                    evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+                onReceivedError { resource, error ->
+                    if (resource.isForMainFrame) {
+                        reject(IOException("Japscan : échec de chargement du chapitre dans la WebView : ${error.description}"))
+                    }
                 }
 
-                loadData(chapterUrl, response.body.string())
+                onPageFinished {
+                    evaluateJs("document.title") { title ->
+                        val issue = japscanReaderPageIssue(title)
+                        if (issue != null) {
+                            reject(IOException(issue))
+                        } else {
+                            evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+                        }
+                    }
+                }
+
+                loadUrl(chapterUrl)
             }
-        }.getOrElse { emptyList() }
-            .takeIf { done } ?: emptyList()
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            savedPaths.forEach { File(it).delete() }
+            throw error
+        } catch (error: WebViewTimeoutException) {
+            savedPaths.forEach { File(it).delete() }
+            throw IOException("Japscan : le lecteur n’a pas répondu. Ouvrez le chapitre dans la WebView de Mihon pour vérifier qu’il est accessible.", error)
+        } catch (error: Exception) {
+            savedPaths.forEach { File(it).delete() }
+            throw error
+        }
+
+        if (!done || pages.isEmpty()) {
+            savedPaths.forEach { File(it).delete() }
+            throw IOException("Japscan : le lecteur n’a renvoyé aucune page.")
+        }
+        return pages
     }
 
     private fun savePage(
@@ -452,7 +413,6 @@ abstract class Japscan :
         )
         private val CHAPTER_NUM_REGEX = Regex("""(?i)chapitre\s+([\d.]+)""")
         private val NON_NUMBER_REGEX = Regex("[^0-9.]+")
-        private val CAPTCHA_REGEX = """window\.__captcha\s*=\s*\{\s*needed\s*:\s*true\s*,?""".toRegex()
         private val DATE_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.US)
         private val PARIS = ZoneId.of("Europe/Paris")
 
@@ -462,8 +422,6 @@ abstract class Japscan :
         private const val CACHE_HOST = "japscan-cache.local"
         private const val CACHE_FILE_PREFIX = "japscan-"
         private val IDLE_TIMEOUT = 45.seconds
-        private val CAPTCHA_POLL_INTERVAL = 5.seconds
-        private const val CAPTCHA_MAX_POLLS = 15
 
         // Under ~1280px wide the long-strip reader lazy-loads tiles on scroll, which a detached
         // WebView can't trigger; above it every tile host is created upfront.
