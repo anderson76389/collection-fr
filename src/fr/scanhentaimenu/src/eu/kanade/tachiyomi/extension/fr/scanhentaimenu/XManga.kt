@@ -114,8 +114,10 @@ abstract class XManga : KeiSource() {
                 }
                 interceptRequest { request ->
                     val url = request.url.toString()
-                    if (url.startsWith("https://") && (url.contains(".webp") || url.contains(".jpg") ||
-                            url.contains(".jpeg") || url.contains(".png") || url.contains(".avif"))
+                    if (url.startsWith("https://") && (
+                            url.contains(".webp") || url.contains(".jpg") ||
+                                url.contains(".jpeg") || url.contains(".png") || url.contains(".avif")
+                        )
                     ) {
                         imageHeaders[url] = request.requestHeaders
                     }
