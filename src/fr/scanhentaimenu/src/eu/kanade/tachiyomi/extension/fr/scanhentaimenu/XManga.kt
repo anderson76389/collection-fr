@@ -201,9 +201,8 @@ internal fun xMangaDetails(document: Document, path: String): SManga = SManga.cr
     }
 }
 
-internal fun xMangaChapterCount(document: Document): Int =
-    Regex("""(\d+)\s+chapitres""", RegexOption.IGNORE_CASE)
-        .find(document.body().text())?.groupValues?.get(1)?.toIntOrNull() ?: 0
+internal fun xMangaChapterCount(document: Document): Int = Regex("""(\d+)\s+chapitres""", RegexOption.IGNORE_CASE)
+    .find(document.body().text())?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
 internal fun xMangaChapters(document: Document): List<SChapter> = document.select("a[href*=/read/]").mapNotNull { link ->
     val uri = runCatching { link.absUrl("href").toHttpUrl() }.getOrNull() ?: return@mapNotNull null
