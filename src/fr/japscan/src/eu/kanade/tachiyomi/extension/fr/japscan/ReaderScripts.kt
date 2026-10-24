@@ -279,7 +279,7 @@ internal fun paginatedDriver(interfaceName: String) = $"""
                                                 fr.readAsDataURL(b);
                                             });
                                             if (typeof d === 'string' && d.indexOf('data:image/') === 0) {
-                                                window.$${interfaceName}_savePage.post(d);
+                                                window.__JAPSCAN_BRIDGE___savePage.post(d);
                                                 return true;
                                             }
                                         } catch(e) {
@@ -366,12 +366,12 @@ internal fun paginatedDriver(interfaceName: String) = $"""
 
                                     console.log('[japscan] done, ' + saved + ' / ' + total + ' pages saved');
                                     try {
-                                        window.$${interfaceName}_passDone.post(String(total));
+                                        window.__JAPSCAN_BRIDGE___passDone.post(String(total));
                                     } catch(e) {
                                         console.log('[japscan] passDone failed: ' + e);
                                     }
                                 })();
-""".trimIndent()
+""".trimIndent().replace("__JAPSCAN_BRIDGE__", interfaceName)
 
 internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                             (async function(){
@@ -611,7 +611,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                             var uri = tileToDataUri(tile);
                                             if (!uri) continue;
                                             try {
-                                                window.$${interfaceName}_savePage.post(uri);
+                                                window.__JAPSCAN_BRIDGE___savePage.post(uri);
                                                 savedHosts.add(tile.host);
                                                 saved++;
                                                 tilesEmitted++;
@@ -654,7 +654,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                         dImgContainers[i] = null;
                                     }
                                     window.__jlog('[japscan] webtoon done, ' + tilesEmitted + '/' + tilesExpected + ' tile(s) saved across ' + total + ' d-img containers');
-                                    try { window.$${interfaceName}_passDone.post(String(Math.max(tilesExpected, tilesEmitted))); } catch(e) {}
+                                    try { window.__JAPSCAN_BRIDGE___passDone.post(String(Math.max(tilesExpected, tilesEmitted))); } catch(e) {}
                                     return;
                                 }
 
@@ -665,6 +665,6 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                 // work; if this ever fires, the fix is to reload the WebView with
                                 // the paginated hooks, not a third capture technique.
                                 window.__jlog('[japscan] MISMATCH: url hinted webtoon but the DOM mounted the paginated reader — giving up');
-                                try { window.$${interfaceName}_passDone.post('0'); } catch(e) {}
+                                try { window.__JAPSCAN_BRIDGE___passDone.post('0'); } catch(e) {}
                             })();
-""".trimIndent()
+""".trimIndent().replace("__JAPSCAN_BRIDGE__", interfaceName)

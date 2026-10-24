@@ -23,6 +23,23 @@ class ReaderReadyTest {
     }
 
     @Test
+    fun paginatedJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
+        val script = paginatedDriver("testBridge")
+        assertTrue(script.contains("window.testBridge_savePage.post(d)"))
+        assertTrue(script.contains("window.testBridge_passDone.post(String(total))"))
+        assertFalse(script.contains("window.\$testBridge_savePage"))
+        assertFalse(script.contains("window.\$testBridge_passDone"))
+    }
+
+    @Test
+    fun webtoonJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
+        val script = webtoonDriver("testBridge", "manhwa")
+        assertTrue(script.contains("window.testBridge_savePage.post(uri)"))
+        assertTrue(script.contains("window.testBridge_passDone.post("))
+        assertFalse(script.contains("__JAPSCAN_BRIDGE__"))
+    }
+
+    @Test
     fun captureBridgesReportExpectedPageCounts() {
         assertTrue(paginatedDriver("testBridge").contains("passDone.post(String(total))"))
         assertTrue(webtoonDriver("testBridge", "manhwa").contains("passDone.post(String(Math.max(tilesExpected, tilesEmitted)))"))
