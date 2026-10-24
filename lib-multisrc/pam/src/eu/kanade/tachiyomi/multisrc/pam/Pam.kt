@@ -224,7 +224,12 @@ abstract class Pam :
         }.also(screen::addPreference)
     }
 
-    private val sitePages = SitePages(baseUrl, { client }) { headers["User-Agent"]!! }
+    // Reader fallback stays disabled for every Pam source unless explicitly enabled.
+    protected open val allowReaderWithoutImageRequest: Boolean = false
+
+    private val sitePages by lazy {
+        SitePages(baseUrl, { client }, { headers["User-Agent"]!! }, allowReaderWithoutImageRequest)
+    }
 
     private val secureRandom = SecureRandom()
 

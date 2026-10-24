@@ -57,6 +57,17 @@ class ReaderReadyTest {
     }
 
     @Test
+    fun paginatedReaderCapturesOnlyNewRevisionsAndWaitsBeforeNavigatingAgain() {
+        val hook = PAGINATED_HOOK
+        val script = paginatedDriver("testBridge")
+        assertTrue(hook.contains("window.__japscanBlobRevision++"))
+        assertTrue(script.contains("async function waitForBlobAfter(revision, timeoutMs)"))
+        assertTrue(script.contains("current > revision && blob"))
+        assertTrue(script.contains("nav(nextBtn, 'ArrowRight');"))
+        assertFalse(script.contains("async function waitForBlob(timeoutMs)"))
+    }
+
+    @Test
     fun webtoonJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
         val script = webtoonDriver("testBridge", "manhwa")
         assertTrue(script.contains("window.testBridge_savePage.post(uri)"))

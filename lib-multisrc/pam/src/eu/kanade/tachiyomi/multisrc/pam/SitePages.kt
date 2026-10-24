@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -42,6 +43,7 @@ internal class SitePages(
     baseUrl: String,
     private val client: () -> OkHttpClient,
     private val userAgent: () -> String,
+    private val allowMissingReaderPageRequest: Boolean = false,
 ) {
     private val baseHttpUrl = baseUrl.toHttpUrl()
 
@@ -103,12 +105,26 @@ internal class SitePages(
                 var readerV2 = false
                 var readerResult: ReaderResult? = null
                 val pageRequests = mutableListOf<Pair<String, Map<String, String>>>()
+                var readerMetadataReadyAt: TimeMark? = null
                 fun resolveWhenReady() {
                     val page = site ?: return
                     if (!readerV2) return resolve(page)
                     val captured = readerResult ?: return
-                    val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest.base) }?.second ?: return
-                    resolve(SitePage(page.page, reader = captured, pageHeaders = pageHeaders))
+                    val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest.base) }?.second
+                    if (pageHeaders != null) {
+                        resolve(SitePage(page.page, reader = captured, pageHeaders = pageHeaders))
+                    } else if (allowMissingReaderPageRequest) {
+                        // On Soft Epsilon the off-screen reader may provide its manifest
+                        // and key without issuing an image request. Do not wait 60 seconds
+                        // for headers that may never arrive: the native image request can
+                        // use its chapter Referer and surface an actual HTTP error.
+                        val since = readerMetadataReadyAt
+                        if (since == null) {
+                            readerMetadataReadyAt = TimeSource.Monotonic.markNow()
+                        } else if (pamReaderFallbackAllowed(allowMissingReaderPageRequest, since.elapsedNow())) {
+                            resolve(SitePage(page.page, reader = captured))
+                        }
+                    }
                 }
                 // Keep reader image requests unblocked to avoid deadlocking the page scripts.
                 // Catalogue filtering remains unchanged.
@@ -162,6 +178,9 @@ internal class SitePages(
                 }
                 // Challenges that pass by themselves take a few seconds; the rest need the user
                 poll(POLL_INTERVAL) {
+                    if (reader && allowMissingReaderPageRequest) {
+                        synchronized(lock) { resolveWhenReady() }
+                    }
                     evaluateJs(readScript) {
                         if (it != "\"challenge\"") {
                             challengePolls = 0
@@ -234,3 +253,6 @@ private val WEBVIEW_TIMEOUT = 60.seconds
 private val UNUSED_PATHS = listOf("/api/v1/stickers", "/cdn-cgi/speculation", "/favicon.ico", "/gmetrics/")
 private val STYLE_EXTENSIONS = listOf(".css", ".woff2", ".woff", ".ttf")
 private const val SOLVE_IN_WEBVIEW = "Open in WebView to pass the site's verification"
+
+/** Only an opted-in source may use manifest/key data without an intercepted image. */
+internal fun pamReaderFallbackAllowed(enabled: Boolean, wait: Duration): Boolean = enabled && wait >= 2.seconds
