@@ -122,7 +122,7 @@ abstract class XManga : KeiSource() {
                     if (request.url.scheme == "https" &&
                         (
                             request.url.host == "reader.hentai.gifts" ||
-                                request.url.host.endsWith(".reader.hentai.gifts")
+                                request.url.host?.endsWith(".reader.hentai.gifts") == true
                             )
                     ) {
                         imageHeaders[url] = request.requestHeaders
