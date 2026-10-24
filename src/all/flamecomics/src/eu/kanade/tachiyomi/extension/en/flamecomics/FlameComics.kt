@@ -36,9 +36,16 @@ abstract class FlameComics : KeiSource() {
     }
 
     override suspend fun getLatestUpdates(page: Int): MangasPage {
-        val series = client.get(dataUrl { addPathSegment("index.json") })
-            .parseAs<NextDataDto<LatestDto>>().pageProps.series
-        return MangasPage(series.mapNotNull { it.toSManga() }, false)
+        val latest = runCatching {
+            client.get(dataUrl { addPathSegment("index.json") })
+                .parseAs<NextDataDto<LatestDto>>().pageProps.series
+        }.getOrNull().orEmpty()
+
+        // The homepage has several "latest" blocks; if that feed is empty or changes,
+        // use the working browse catalogue ordered by its last-edit timestamp.
+        val mangas = latest.mapNotNull { it.toSManga() }
+            .ifEmpty { fetchBrowseSeries().sortedByDescending { it.lastEdit }.mapNotNull { it.toSManga() } }
+        return MangasPage(mangas, false)
     }
 
     override suspend fun getSearchMangaList(page: Int, query: String, filters: FilterList): MangasPage {
