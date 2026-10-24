@@ -95,7 +95,9 @@ internal class SitePages(
         val result = try {
             runWebView<SitePage>(timeout = WEBVIEW_TIMEOUT) {
                 userAgent = this@SitePages.userAgent()
-                blockImages = true
+                // Catalogue screenshots are not needed; the reader v2 needs its /p/ image
+                // requests to fire so the page headers and manifest can be collected.
+                blockImages = !reader
                 val lock = Any()
                 var readerV2 = false
                 var readerResult: ReaderResult? = null
