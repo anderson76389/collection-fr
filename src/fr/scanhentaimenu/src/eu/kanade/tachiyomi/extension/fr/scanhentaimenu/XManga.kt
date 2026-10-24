@@ -26,6 +26,10 @@ import kotlin.time.Duration.Companion.seconds
 // Preserve /manga/<slug>/ for existing libraries, use /read/<uuid>/ for chapters.
 @Source
 abstract class XManga : KeiSource() {
+    // Preserve the image request headers seen by the successful WebView
+    // session so Mihon can fetch the same CDN images with matching headers.
+    private val imageHeaders = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
+
     override fun getHomeUrl() = "$baseUrl/"
 
     override suspend fun getPopularManga(page: Int): MangasPage = browseCatalogue(page, "")
@@ -108,6 +112,15 @@ abstract class XManga : KeiSource() {
                         reject(IOException("X-Manga : chapitre inaccessible dans la WebView : " + error.description))
                     }
                 }
+                interceptRequest { request ->
+                    val url = request.url.toString()
+                    if (url.startsWith("https://") && (url.contains(".webp") || url.contains(".jpg") ||
+                            url.contains(".jpeg") || url.contains(".png") || url.contains(".avif"))
+                    ) {
+                        imageHeaders[url] = request.requestHeaders
+                    }
+                    null
+                }
                 poll(650.milliseconds) {
                     evaluateJs(
                         """
@@ -183,9 +196,14 @@ abstract class XManga : KeiSource() {
         return images.distinct().mapIndexed { idx, image -> Page(idx, url = chapterUrl, imageUrl = image) }
     }
 
-    override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
-        .header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
-        .build()
+    override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder().apply {
+        page.imageUrl?.let(imageHeaders::get)?.forEach { (key, value) ->
+            if (!key.equals("Host", ignoreCase = true) && !key.equals("Content-Length", ignoreCase = true)) {
+                header(key, value)
+            }
+        }
+        header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
+    }.build()
 
     private suspend fun browserDocument(url: String, type: String, page: Int = 1, query: String = ""): Document {
         val safeQuery = org.json.JSONObject.quote(query)
