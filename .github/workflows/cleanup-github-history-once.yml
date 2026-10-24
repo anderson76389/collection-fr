@@ -1,0 +1,67 @@
+name: Nettoyage ponctuel archives et branches integrees
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-github-history-once.yml"
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Conserver la release Mihon et supprimer uniquement les archives non referencees
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          [[ "$repo" == "anderson76389/collection-fr" ]] || exit 1
+          index="$(gh api "repos/$repo/contents/index.json?ref=repo" --jq '.content' | base64 -d)"
+          count="$(printf "%s" "$index" | jq -r '.extensionList.extensions | length')"
+          [[ "$count" == "30" ]] || { echo "Index inattendu : $count extensions"; exit 1; }
+          mapfile -t tags < <(printf "%s" "$index" | jq -r '.extensionList.extensions[] | .resources.apkUrl, .resources.jarUrl | split("/releases/download/")[1] | split("/")[0]' | sort -u)
+          [[ "${#tags[@]}" -eq 1 ]] || { echo "Plusieurs tags dans le catalogue"; exit 1; }
+          keep_tag="${tags[0]}"
+          [[ "$keep_tag" =~ ^[a-f0-9]{7,40}$ ]] || exit 1
+          echo "Release a conserver : $keep_tag"
+          active="$(gh api "repos/$repo/releases/tags/$keep_tag")"
+          mapfile -t indexed_names < <(printf "%s" "$index" | jq -r '.extensionList.extensions[] | .resources.apkUrl, .resources.jarUrl | split("/")[-1]' | sort)
+          mapfile -t active_names < <(printf "%s" "$active" | jq -r '.assets[].name' | sort)
+          [[ "${#indexed_names[@]}" -eq 60 && "${#active_names[@]}" -eq 60 ]] || { echo "Nombre de fichiers inattendu"; exit 1; }
+          diff -u <(printf "%s\n" "${indexed_names[@]}") <(printf "%s\n" "${active_names[@]}")
+          echo "Tous les 60 fichiers indexes sont proteges"
+          gh api --paginate "repos/$repo/releases?per_page=100" --jq '.[] | [.id, .tag_name] | @tsv' | while IFS=$'\t' read -r release_id release_tag; do
+            [[ "$release_tag" =~ ^[a-f0-9]{7,40}$ ]] || { echo "Tag inattendu : $release_tag"; exit 1; }
+            if [[ "$release_tag" == "$keep_tag" ]]; then echo "Conserve release $keep_tag"; continue; fi
+            echo "Suppression release archivee : $release_tag"
+            gh api -X DELETE "repos/$repo/releases/$release_id" >/dev/null
+            if gh api "repos/$repo/git/ref/tags/$release_tag" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/$repo/git/refs/tags/$release_tag" >/dev/null
+              echo "Tag historique supprime : $release_tag"
+            fi
+          done
+          gh api "repos/$repo/releases/tags/$keep_tag" --jq '.assets | length' | grep -Fx 60
+          echo "Release Mihon preservee"
+      - name: Supprimer les branches deja integrees sans affecter les PR ouvertes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          main_sha="$(gh api "repos/$repo/branches/main" --jq '.commit.sha')"
+          open_heads="$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" --jq '.[].head.ref')"
+          gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[] | [.name, .commit.sha] | @tsv' | while IFS=$'\t' read -r branch sha; do
+            [[ "$branch" != main && "$branch" != repo ]] || continue
+            if printf "%s\n" "$open_heads" | grep -Fxq -- "$branch"; then echo "PR ouverte, conserver: $branch"; continue; fi
+            ahead="$(gh api "repos/$repo/compare/$main_sha...$sha" --jq '.ahead_by')"
+            if [[ "$ahead" != "0" ]]; then echo "Divergente, conserver: $branch ($ahead commits)"; continue; fi
+            current="$(gh api "repos/$repo/git/ref/heads/$branch" --jq '.object.sha')"
+            [[ "$sha" == "$current" ]] || { echo "Branche modifiee, conserver: $branch"; continue; }
+            gh api -X DELETE "repos/$repo/git/refs/heads/$branch" >/dev/null
+            echo "Branche integree supprimee: $branch"
+          done
+          echo "Nettoyage de branches termine"
