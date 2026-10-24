@@ -28,7 +28,7 @@ class BrowseDto(
 class LatestDto(
     private val latestEntries: LatestEntries,
 ) {
-    val series get() = latestEntries.blocks.first().series
+    val series get() = latestEntries.blocks.flatMap { it.series }.distinctBy { it.title }
 
     @Serializable
     class LatestEntries(
@@ -64,7 +64,7 @@ class SeriesDto(
     private val artist: List<String>?,
     private val status: String,
     @SerialName("series_id") private val seriesId: Int?,
-    @SerialName("last_edit") private val lastEdit: Long,
+    @SerialName("last_edit") val lastEdit: Long,
     val views: Int?,
 ) {
     fun toSManga(): SManga? = seriesId?.let(::toSManga)
