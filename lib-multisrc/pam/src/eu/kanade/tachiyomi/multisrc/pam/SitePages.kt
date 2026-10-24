@@ -212,12 +212,14 @@ internal class SitePages(
                             }
                         }
                     }
-                    if (!navigated) evaluateJs(readScript) {
-                        if (it != "\"challenge\"") {
-                            challengePolls = 0
-                        } else if (POLL_INTERVAL * ++challengePolls > CHALLENGE_WAIT) {
-                            failed(challenge = true)
-                            reject(IOException(SOLVE_IN_WEBVIEW))
+                    if (!navigated) {
+                        evaluateJs(readScript) {
+                            if (it != "\"challenge\"") {
+                                challengePolls = 0
+                            } else if (POLL_INTERVAL * ++challengePolls > CHALLENGE_WAIT) {
+                                failed(challenge = true)
+                                reject(IOException(SOLVE_IN_WEBVIEW))
+                            }
                         }
                     }
                 }
