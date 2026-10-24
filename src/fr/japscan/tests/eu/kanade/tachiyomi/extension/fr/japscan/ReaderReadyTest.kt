@@ -25,7 +25,7 @@ class ReaderReadyTest {
     @Test
     fun paginatedJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
         val script = paginatedDriver("testBridge")
-        assertTrue(script.contains("window.testBridge_savePage.post(d)"))
+        assertTrue("JS bridge: " + script.substring(script.indexOf("savePage.post") - 44, script.indexOf("savePage.post") + 24), script.contains("window.testBridge_savePage.post(d)"))
         assertTrue(script.contains("window.testBridge_passDone.post(String(total))"))
         assertFalse(script.contains("window.\$testBridge_savePage"))
         assertFalse(script.contains("window.\$testBridge_passDone"))
