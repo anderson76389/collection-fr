@@ -6,11 +6,20 @@ import eu.kanade.tachiyomi.multisrc.pam.SortFilter
 import eu.kanade.tachiyomi.multisrc.pam.TriStateGroupFilter
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SChapter
 import keiyoushi.annotation.Source
 import kotlinx.serialization.json.JsonElement
+import java.io.IOException
 
 @Source
 abstract class SoftEpsilonScan : Pam() {
+
+    override suspend fun getPageList(chapter: SChapter): List<Page> = try {
+        super.getPageList(chapter)
+    } catch (error: IOException) {
+        throw IOException(softEpsilonReaderFailure(error.message), error)
+    }
 
     override val popularFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(3, false)))
     override val latestFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(2, false)))
