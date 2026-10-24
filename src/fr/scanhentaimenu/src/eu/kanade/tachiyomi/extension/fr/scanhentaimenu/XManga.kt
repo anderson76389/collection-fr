@@ -85,68 +85,87 @@ abstract class XManga : KeiSource() {
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterUrl = getChapterUrl(chapter)
-        val direct = runCatching { xMangaReaderImages(client.get(chapterUrl).asJsoup()) }
-            .getOrDefault(emptyList())
-        val images = direct.ifEmpty {
-            val raw = try {
-                runWebView<String>(timeout = 65.seconds) {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    blockImages = false
-                    userAgent = headers["User-Agent"]!!
-                    jsBridge("xmangapages") { payload ->
-                        if (payload.startsWith("[")) resolve(payload)
+        // HTML delivered before hydration contains placeholders and decorative
+        // <img> tags. Never treat those as pages: capture the actual loaded
+        // reader images in the browser that owns the chapter session.
+        val lastState = java.util.concurrent.atomic.AtomicReference("attente du lecteur")
+        val raw = try {
+            runWebView<String>(timeout = 95.seconds) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                blockImages = false
+                userAgent = headers["User-Agent"]!!
+                jsBridge("xmangapages") { payload ->
+                    if (payload.startsWith("[")) {
+                        resolve(payload)
+                    } else if (payload.startsWith("{")) {
+                        runCatching { org.json.JSONObject(payload).optString("stage") }
+                            .getOrNull()?.takeIf(String::isNotBlank)?.let(lastState::set)
                     }
-                    onReceivedError { request, error ->
-                        if (request.isForMainFrame) {
-                            reject(IOException("X-Manga : page du lecteur inaccessible : " + error.description))
-                        }
-                    }
-                    poll(700.milliseconds) {
-                        evaluateJs(
-                            """
-                            (function() {
-                                // The current site populates page images after JavaScript
-                                // hydration. Do not resolve on the site's logo or a single
-                                // prematurely loaded image while the page is still scrolling.
-                                const main = document.querySelector('main') || document.body;
-                                if (!/chapitre|chapter/i.test(main.innerText || '')) return 'reader-not-ready';
-                                const images = Array.from(main.querySelectorAll('img'));
-                                window.__xmPages = window.__xmPages || [];
-                                for (const img of images) {
-                                    img.loading = 'eager';
-                                    const url = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
-                                    if (!/^https?:\/\//i.test(url)) continue;
-                                    if (/avatar|logo|cover|thumb|banner|poster|placeholder/i.test(url + ' ' + img.alt)) continue;
-                                    if (!img.complete || img.naturalWidth < 250 || img.naturalHeight < 250) continue;
-                                    if (!window.__xmPages.includes(url)) window.__xmPages.push(url);
-                                }
-                                const next = Math.min(document.documentElement.scrollHeight, window.scrollY + innerHeight * 1.6);
-                                window.scrollTo(0, next);
-                                const bottom = window.scrollY + innerHeight >= document.documentElement.scrollHeight - 16;
-                                const now = Date.now();
-                                if (!bottom) {
-                                    window.__xmAtBottom = 0;
-                                    return 'scrolling';
-                                }
-                                if (!window.__xmAtBottom) window.__xmAtBottom = now;
-                                if (window.__xmPages.length > 0 && now - window.__xmAtBottom > 3000) {
-                                    window.xmangapages.post(JSON.stringify(window.__xmPages));
-                                    return 'done';
-                                }
-                                return 'waiting-images';
-
-                            })()
-                            """.trimIndent(),
-                        )
-                    }
-                    loadUrl(chapterUrl)
                 }
-            } catch (error: WebViewTimeoutException) {
-                throw IOException("X-Manga : aucune image chargée par le lecteur JavaScript. Vérifiez dans la WebView.", error)
+                onReceivedError { request, error ->
+                    if (request.isForMainFrame) {
+                        reject(IOException("X-Manga : chapitre inaccessible dans la WebView : " + error.description))
+                    }
+                }
+                poll(650.milliseconds) {
+                    evaluateJs(
+                        """
+                        (function() {
+                            const container = document.querySelector('main') || document.body;
+                            if (!container) return 'waiting';
+                            const heading = container.querySelector('h1');
+                            const readerReady = /chapitre|chapter/i.test(container.innerText || '') || !!heading;
+                            if (!readerReady) return 'waiting';
+                            window.__xmPages = window.__xmPages || [];
+                            const images = Array.from(container.querySelectorAll('img'));
+                            let pending = 0, candidates = 0;
+                            for (const img of images) {
+                                img.loading = 'eager';
+                                const raw = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
+                                if (!raw || raw.startsWith('data:')) continue;
+                                let url;
+                                try { url = new URL(raw, location.href).href; } catch (e) { continue; }
+                                if (!/^https?:\/\//i.test(url)) continue;
+                                if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop/i.test(url + ' ' + img.alt)) continue;
+                                // Avoid site chrome, which is short and near the header.
+                                if (img.naturalWidth < 250 || img.naturalHeight < 250 || !img.complete) {
+                                    pending++;
+                                    try { img.scrollIntoView({block:'nearest'}); } catch(e) {}
+                                    continue;
+                                }
+                                candidates++;
+                                if (!window.__xmPages.includes(url)) window.__xmPages.push(url);
+                            }
+                            const step = Math.max(320, innerHeight * .75);
+                            window.__xmScanY = Math.min(document.documentElement.scrollHeight, (window.__xmScanY || 0) + step);
+                            window.scrollTo(0, window.__xmScanY);
+                            const atEnd = window.__xmScanY + innerHeight >= document.documentElement.scrollHeight - 10;
+                            if (!atEnd) window.__xmFinishedAt = 0;
+                            else if (!window.__xmFinishedAt) window.__xmFinishedAt = Date.now();
+                            const now = Date.now();
+                            if (!window.__xmStatusAt || now-window.__xmStatusAt > 1500) {
+                                window.__xmStatusAt = now;
+                                window.xmangapages.post(JSON.stringify({stage:'images ' + window.__xmPages.length +
+                                    ', en attente ' + pending + ', ' + (atEnd ? 'bas' : 'défilement')}));
+                            }
+                            if (atEnd && window.__xmPages.length && pending === 0 &&
+                                now-(window.__xmFinishedAt || now)>4000) {
+                                window.xmangapages.post(JSON.stringify(window.__xmPages));
+                                return 'done';
+                            }
+                            return 'waiting';
+                        })()
+                        """.trimIndent(),
+                    )
+                }
+                loadUrl(chapterUrl)
             }
-            JSONArray(raw).let { array -> (0 until array.length()).map(array::getString) }
+        } catch (error: WebViewTimeoutException) {
+            throw IOException("X-Manga : lecteur non initialisé (" + lastState.get() + ").", error)
         }
+        val array = JSONArray(raw)
+        val images = (0 until array.length()).map(array::getString)
         if (images.isEmpty()) throw IOException("X-Manga : aucune image disponible dans ce chapitre.")
         return images.distinct().mapIndexed { idx, image -> Page(idx, url = chapterUrl, imageUrl = image) }
     }
