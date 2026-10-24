@@ -480,15 +480,14 @@ private const val PREFIX_LENGTH = 192
 private const val STREAM_HEADER_LENGTH = 24
 
 /** WebView does not always expose implicit Referer headers in requestHeaders. */
-internal fun pamReaderImageHeaders(pageHeaders: Map<String, String>, chapterUrl: String): Headers =
-    Headers.Builder().apply {
-        pageHeaders
-            .filter { (name, value) ->
-                SITE_HEADER_REGEX.matches(name) &&
-                    !name.equals("X-Requested-With", ignoreCase = true) &&
-                    HEADER_VALUE_REGEX.matches(value)
-            }
-            .forEach { (name, value) -> add(name, value) }
-        // The chapter is the actual reader origin, not the title/library URL.
-        set("Referer", chapterUrl)
-    }.build()
+internal fun pamReaderImageHeaders(pageHeaders: Map<String, String>, chapterUrl: String): Headers = Headers.Builder().apply {
+    pageHeaders
+        .filter { (name, value) ->
+            SITE_HEADER_REGEX.matches(name) &&
+                !name.equals("X-Requested-With", ignoreCase = true) &&
+                HEADER_VALUE_REGEX.matches(value)
+        }
+        .forEach { (name, value) -> add(name, value) }
+    // The chapter is the actual reader origin, not the title/library URL.
+    set("Referer", chapterUrl)
+}.build()
