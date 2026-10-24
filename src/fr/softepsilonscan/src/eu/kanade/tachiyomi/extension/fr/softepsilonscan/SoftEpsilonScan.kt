@@ -15,6 +15,9 @@ import java.io.IOException
 @Source
 abstract class SoftEpsilonScan : Pam() {
 
+    // Only this source allows the manifest/key-only reader fallback.
+    override val allowReaderWithoutImageRequest = true
+
     override suspend fun getPageList(chapter: SChapter): List<Page> = try {
         super.getPageList(chapter)
     } catch (error: IOException) {
