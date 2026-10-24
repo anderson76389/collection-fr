@@ -25,7 +25,6 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
 
         "eu.kanade.tachiyomi.extension.all.mangadex": {"all"},
         "eu.kanade.tachiyomi.extension.fr.hentaiorigines": {"fr"},
-        "eu.kanade.tachiyomi.extension.fr.scanhentaimenu": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.ortegascans": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.lelmanga": {"fr"},
 

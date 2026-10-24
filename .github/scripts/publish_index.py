@@ -24,7 +24,6 @@ EXPECTED_MODULES = {
     "src/all/mangadex",
 
     "src/fr/hentaiorigines",
-    "src/fr/scanhentaimenu",
     "src/fr/ortegascans",
     "src/fr/lelmanga",
 
@@ -93,7 +92,6 @@ def main() -> None:
             "src/all/mangadex": "mangadex",
 
             "src/fr/hentaiorigines": "hentai-origines",
-            "src/fr/scanhentaimenu": "x-manga",
             "src/fr/softepsilonscan": "Epsilon-Scan",
             "src/fr/ortegascans": "ortegascans",
             "src/fr/lelmanga": "lelmanga",

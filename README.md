@@ -58,7 +58,7 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **31 extensions**. Soft Epsilon Scan et les autres extensions sont conservées. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie **30 extensions**. Soft Epsilon Scan et les autres extensions sont conservées. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
