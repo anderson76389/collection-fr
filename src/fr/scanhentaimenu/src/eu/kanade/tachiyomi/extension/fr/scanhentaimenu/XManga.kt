@@ -166,26 +166,25 @@ abstract class XManga : KeiSource() {
     }
 }
 
-internal fun xMangaCards(document: Document): List<SManga> =
-    document.select("a[href*=/manga/]").mapNotNull { link ->
-        val href = link.absUrl("href")
-        val uri = runCatching { href.toHttpUrl() }.getOrNull() ?: return@mapNotNull null
-        if (!uri.encodedPath.startsWith("/manga/") || uri.pathSegments.count { it.isNotBlank() } != 2) {
-            return@mapNotNull null
+internal fun xMangaCards(document: Document): List<SManga> = document.select("a[href*=/manga/]").mapNotNull { link ->
+    val href = link.absUrl("href")
+    val uri = runCatching { href.toHttpUrl() }.getOrNull() ?: return@mapNotNull null
+    if (!uri.encodedPath.startsWith("/manga/") || uri.pathSegments.count { it.isNotBlank() } != 2) {
+        return@mapNotNull null
+    }
+    val title = link.selectFirst("h2,h3,h4")?.text()?.trim()
+        ?: link.selectFirst("img[alt]")?.attr("alt")?.removePrefix("Couverture de ")?.trim()
+        ?: link.text().trim()
+    if (title.isBlank()) return@mapNotNull null
+    SManga.create().apply {
+        url = uri.encodedPath
+        this.title = title.removePrefix("MANHWA ").removePrefix("PORNHWA ")
+            .removePrefix("MANGA ").removePrefix("DOUJINSHI ")
+        thumbnail_url = link.selectFirst("img")?.let { img ->
+            sequenceOf("data-src", "src").map(img::absUrl).firstOrNull { it.startsWith("http") }
         }
-        val title = link.selectFirst("h2,h3,h4")?.text()?.trim()
-            ?: link.selectFirst("img[alt]")?.attr("alt")?.removePrefix("Couverture de ")?.trim()
-            ?: link.text().trim()
-        if (title.isBlank()) return@mapNotNull null
-        SManga.create().apply {
-            url = uri.encodedPath
-            this.title = title.removePrefix("MANHWA ").removePrefix("PORNHWA ")
-                .removePrefix("MANGA ").removePrefix("DOUJINSHI ")
-            thumbnail_url = link.selectFirst("img")?.let { img ->
-                sequenceOf("data-src", "src").map(img::absUrl).firstOrNull { it.startsWith("http") }
-            }
-        }
-    }.distinctBy { it.url }
+    }
+}.distinctBy { it.url }
 
 internal fun xMangaDetails(document: Document, path: String): SManga = SManga.create().apply {
     url = path
@@ -206,19 +205,17 @@ internal fun xMangaChapterCount(document: Document): Int =
     Regex("""(\d+)\s+chapitres""", RegexOption.IGNORE_CASE)
         .find(document.body().text())?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
-internal fun xMangaChapters(document: Document): List<SChapter> =
-    document.select("a[href*=/read/]").mapNotNull { link ->
-        val uri = runCatching { link.absUrl("href").toHttpUrl() }.getOrNull() ?: return@mapNotNull null
-        if (!uri.encodedPath.startsWith("/read/")) return@mapNotNull null
-        val name = Regex("""(?i)chapitre\s*([\d.]+)""").find(link.text())
-        SChapter.create().apply {
-            url = uri.encodedPath
-            this.name = name?.value ?: link.text().ifBlank { "Oneshot" }
-            chapter_number = name?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
-        }
-    }.distinctBy { it.url }
+internal fun xMangaChapters(document: Document): List<SChapter> = document.select("a[href*=/read/]").mapNotNull { link ->
+    val uri = runCatching { link.absUrl("href").toHttpUrl() }.getOrNull() ?: return@mapNotNull null
+    if (!uri.encodedPath.startsWith("/read/")) return@mapNotNull null
+    val name = Regex("""(?i)chapitre\s*([\d.]+)""").find(link.text())
+    SChapter.create().apply {
+        url = uri.encodedPath
+        this.name = name?.value ?: link.text().ifBlank { "Oneshot" }
+        chapter_number = name?.groupValues?.get(1)?.toFloatOrNull() ?: -1f
+    }
+}.distinctBy { it.url }
 
-internal fun xMangaReaderImages(document: Document): List<String> =
-    document.select("main img[src], article img[src], [class*=reader] img[src]")
-        .mapNotNull { it.absUrl("src").takeIf { url -> url.startsWith("http") && !url.contains("placeholder") } }
-        .distinct()
+internal fun xMangaReaderImages(document: Document): List<String> = document.select("main img[src], article img[src], [class*=reader] img[src]")
+    .mapNotNull { it.absUrl("src").takeIf { url -> url.startsWith("http") && !url.contains("placeholder") } }
+    .distinct()
