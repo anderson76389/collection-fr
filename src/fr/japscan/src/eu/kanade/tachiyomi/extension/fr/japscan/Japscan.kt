@@ -302,13 +302,36 @@ abstract class Japscan :
             // without navigating the protected reader and decoding every page again.
             val cachedPages = completedChapterCaptures[chapterUrl]
                 ?.takeIf { paths -> paths.isNotEmpty() && paths.all { File(it).isFile } }
-                ?: runReaderWebView(chapterUrl, isWebtoon, urlSegment).also {
+                ?: runReaderWebViewWithFallback(chapterUrl, isWebtoon, urlSegment).also {
                     completedChapterCaptures[chapterUrl] = it
                 }
             if (cachedPages.isEmpty()) {
                 throw IOException("Japscan : aucune image lisible n’a été récupérée. Ouvrez ce chapitre dans la WebView de Mihon pour vérifier son accès.")
             }
             return cachedPages.mapIndexed { i, path -> Page(i, imageUrl = "https://$CACHE_HOST$path") }
+        }
+    }
+
+    // The URL category does not always match the actual reader displayed
+    // by Japscan. Try the alternate driver only when the first WebView has
+    // loaded the chapter but could not detect its image reader. This retry
+    // uses a NEW runWebView session, not a second loadUrl in the same one.
+    private suspend fun runReaderWebViewWithFallback(
+        chapterUrl: String,
+        initialWebtoon: Boolean,
+        urlSegment: String,
+    ): List<String> = try {
+        runReaderWebView(chapterUrl, initialWebtoon, urlSegment)
+    } catch (error: IOException) {
+        if (!error.message.orEmpty().contains("lecteur d’images ne s’est pas initialisé")) throw error
+        try {
+            runReaderWebView(chapterUrl, !initialWebtoon, urlSegment)
+        } catch (other: IOException) {
+            throw IOException(
+                "Japscan : les lecteurs paginé et défilant ont échoué. " +
+                    "Premier essai : " + error.message + " Deuxième essai : " + other.message,
+                other,
+            )
         }
     }
 
