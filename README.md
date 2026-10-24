@@ -4,7 +4,7 @@ Ce dépôt est maintenant destiné à contenir une copie indépendante du code s
 
 ## Copie locale du projet source
 
-Le workflow `.github/workflows/bootstrap-upstream.yml` copie le dépôt source public de Keiyoushi dans ce dépôt une seule fois. Une fois copié, le code reste ici même si une source est retirée en amont. Les sources françaises incluses couvrent les modules présents dans le dépôt amont, dont Scan-Manga et Japscan.
+Le workflow `.github/workflows/bootstrap-upstream.yml` copie le dépôt source public de Keiyoushi dans ce dépôt une seule fois. Une fois copié, le code reste ici même si une source est retirée en amont. Les sources françaises incluses couvrent les modules présents dans le dépôt amont, dont Scan-Manga.
 
 Le dépôt amont est sous licence GPL-3.0 ; ses avis de licence sont conservés dans la copie.
 
@@ -15,6 +15,5 @@ Une copie du code ne suffit pas pour publier des extensions installables. Il fau
 ## Sources à corriger
 
 - **Scan-Manga** : l'extension actuelle construit l'URL de recherche avec un sous-domaine `bqj.` invalide et utilise l'ancien hôte mobile. Le correctif doit aussi vérifier les URL et sélecteurs du site en ligne.
-- **Japscan** : le code actuel est attaché à `japscan.foo`. Il faut confronter l'hôte exact et les URL des chapitres à ceux que Mihon reçoit, car une 404 peut venir d'une URL/site déplacé ou d'une route obsolète.
 
 Les APK ne seront marquées comme fonctionnelles qu'après compilation et vérification de leurs requêtes réelles.

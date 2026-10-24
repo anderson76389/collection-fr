@@ -366,27 +366,6 @@
         ]
       },
       {
-        "name": "Japscan",
-        "packageName": "eu.kanade.tachiyomi.extension.fr.japscan",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/14203f5/tachiyomi-fr.japscan-v1.6.20.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/japscan/res/mipmap-xxxhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/14203f5/tachiyomi-fr.japscan-v1.6.20.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106020",
-        "versionName": "1.6.20",
-        "contentWarning": "CONTENT_WARNING_SAFE",
-        "sources": [
-          {
-            "id": "11",
-            "name": "Japscan",
-            "language": "fr",
-            "homeUrl": "https://japscan.st"
-          }
-        ]
-      },
-      {
         "name": "Lelmanga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.lelmanga",
         "resources": {
