@@ -50,6 +50,16 @@ class ReaderReadyTest {
     }
 
     @Test
+    fun detectsTheOtherLayoutWithoutMistakingHiddenReaderForActiveOne() {
+        val webtoon = alternateReaderScript(expectedWebtoon = true)
+        val paginated = alternateReaderScript(expectedWebtoon = false)
+        assertTrue(webtoon.contains("getElementById('pages')"))
+        assertTrue(webtoon.contains("getClientRects().length > 0"))
+        assertTrue(paginated.contains("getElementById('full-reader')"))
+        assertTrue(paginated.contains("querySelector('[id^=\"d-img-\"]')"))
+    }
+
+    @Test
     fun paginatedJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
         val script = paginatedDriver("testBridge")
         assertTrue(script.contains("window.testBridge_savePage.post(d)"))
