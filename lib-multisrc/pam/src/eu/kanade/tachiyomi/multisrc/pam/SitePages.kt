@@ -23,6 +23,7 @@ import java.io.InputStream
 import java.security.SecureRandom
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -90,6 +91,10 @@ internal class SitePages(
         val readScript = "(${asset("site.js")})(\"$bridge\", ${request.toJsonString()})"
         val readerScript = if (reader) "(${asset("reader.js")})(\"$bridge\")" else null
         var site: SitePage? = null
+        val hasPage = AtomicBoolean(false)
+        val hasReaderV2 = AtomicBoolean(false)
+        val hasReaderResult = AtomicBoolean(false)
+        val hasPageRequest = AtomicBoolean(false)
         var challengePolls = 0
         val released = CountDownLatch(1)
         val result = try {
@@ -109,11 +114,12 @@ internal class SitePages(
                     val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest.base) }?.second ?: return
                     resolve(SitePage(page.page, reader = captured, pageHeaders = pageHeaders))
                 }
-                // Site host and Turnstile only; reader page requests stay open until the WebView closes
+                // Let third-party reader scripts and image CDNs load during chapter reading.
+                // The catalogue retains its current blocked-host behavior.
                 interceptRequest { webRequest ->
                     val requestUrl = webRequest.url
                     val requestHost = requestUrl.host
-                    if (requestHost != null && requestHost != baseHttpUrl.host && requestHost != TURNSTILE_HOST) return@interceptRequest blockedResponse()
+                    if (!reader && requestHost != null && requestHost != baseHttpUrl.host && requestHost != TURNSTILE_HOST) return@interceptRequest blockedResponse()
                     val path = requestUrl.path.orEmpty()
                     if (UNUSED_PATHS.any(path::startsWith)) return@interceptRequest blockedResponse()
                     // Styles and fonts only for the reader's fingerprint
@@ -124,6 +130,7 @@ internal class SitePages(
                     if (!reader || !path.startsWith("/p/")) return@interceptRequest null
                     synchronized(lock) {
                         pageRequests += path to webRequest.requestHeaders
+                        hasPageRequest.set(true)
                         resolveWhenReady()
                     }
                     heldResponse(released)
@@ -132,7 +139,10 @@ internal class SitePages(
                     val message = posted.parseAs<SiteMessage>()
                     synchronized(lock) {
                         when {
-                            message.reader != null -> readerResult = message.reader
+                            message.reader != null -> {
+                                readerResult = message.reader
+                                hasReaderResult.set(true)
+                            }
                             message.error != null -> {
                                 if (message.status == 403 || message.status == 429) failed(challenge = message.status == 403)
                                 return@jsBridge reject(IOException(message.error))
@@ -140,7 +150,9 @@ internal class SitePages(
                             else -> {
                                 val page = message.page ?: return@jsBridge reject(IOException("Missing page data"))
                                 readerV2 = reader && page.parseAs<PageListResponse>().props.readerV2
+                                hasReaderV2.set(readerV2)
                                 site = SitePage(page, message.fetched, message.chapters)
+                                hasPage.set(true)
                             }
                         }
                         resolveWhenReady()
@@ -174,7 +186,12 @@ internal class SitePages(
                 failed(challenge = true)
                 throw IOException(SOLVE_IN_WEBVIEW, e)
             }
-            val message = if (site != null) "The site's reader did not load, try opening the chapter in WebView" else "The site's page did not load, try opening it in WebView"
+            val message = pamReaderTimeoutReason(
+                hasPage = hasPage.get(),
+                readerV2 = hasReaderV2.get(),
+                hasReaderResult = hasReaderResult.get(),
+                hasPageRequest = hasPageRequest.get(),
+            )
             throw IOException(message, e)
         } catch (e: Throwable) {
             throw IOException(e.message, e)
