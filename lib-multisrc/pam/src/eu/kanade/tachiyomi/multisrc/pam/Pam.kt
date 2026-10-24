@@ -486,7 +486,7 @@ abstract class Pam :
 }
 
 private const val THUMBNAIL_FRAGMENT = "thumbnail"
-private val PAGE_PATH_REGEX = Regex("""(/p/[\\w-]+/\\d+/[\\w-]+/)\\d+(-\\d+)?\\.ece""")
+private val PAGE_PATH_REGEX = Regex("""(/p/[\w-]+/\d+/[\w-]+/)\d+(-\d+)?\.ece""")
 private val MANIFEST_BASE_REGEX = Regex("""/p/[\w-]+/\d+/[\w-]+/""")
 private val HEADER_VALUE_REGEX = Regex("""[!-~]+""")
 private val SITE_HEADER_REGEX = Regex("""X-[\w-]+""", RegexOption.IGNORE_CASE)
