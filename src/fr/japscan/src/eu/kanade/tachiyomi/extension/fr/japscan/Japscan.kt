@@ -324,7 +324,10 @@ abstract class Japscan :
         runReaderWebView(chapterUrl, initialWebtoon, urlSegment)
     } catch (error: IOException) {
         if (!error.message.orEmpty().contains("lecteur d’images ne s’est pas initialisé") &&
-            !error.message.orEmpty().contains("autre mode de lecteur détecté")) throw error
+            !error.message.orEmpty().contains("autre mode de lecteur détecté")
+        ) {
+            throw error
+        }
         try {
             runReaderWebView(chapterUrl, !initialWebtoon, urlSegment)
         } catch (other: IOException) {
