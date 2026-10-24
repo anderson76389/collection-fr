@@ -137,6 +137,7 @@ abstract class XManga : KeiSource() {
         .build()
 
     private suspend fun browserDocument(url: String, type: String, page: Int = 1, query: String = ""): Document {
+        val safeQuery = org.json.JSONObject.quote(query)
         val html = runWebView<String>(timeout = 85.seconds) {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -152,7 +153,7 @@ abstract class XManga : KeiSource() {
                 evaluateJs(
                     """
                     (function() {
-                        const type = '$type', target = $page;
+                        const type = '$type', target = $page, search = $safeQuery;
                         const text = document.body?.innerText || '';
                         if (type === 'read') {
                             const more = Array.from(document.querySelectorAll('button'))
@@ -164,9 +165,9 @@ abstract class XManga : KeiSource() {
                         if (type === 'catalogue') {
                             if (/chargement du catalogue/i.test(text)) return 'loading';
                             const input = document.querySelector('input[placeholder*="Titre"], input[placeholder*="titre"]');
-                            if ('$query' && input && !window.__xmQueryEntered) {
+                            if (search && input && !window.__xmQueryEntered) {
                                 const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-                                setter.call(input, '$query');
+                                setter.call(input, search);
                                 input.dispatchEvent(new Event('input', {bubbles: true}));
                                 window.__xmQueryEntered = true;
                                 window.__xmLastClick = Date.now(); return 'search';
