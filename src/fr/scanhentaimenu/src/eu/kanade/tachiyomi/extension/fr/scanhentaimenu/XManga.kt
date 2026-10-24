@@ -104,8 +104,12 @@ abstract class XManga : KeiSource() {
                     if (payload.startsWith("[")) {
                         resolve(payload)
                     } else if (payload.startsWith("{")) {
-                        runCatching { org.json.JSONObject(payload).optString("stage") }
-                            .getOrNull()?.takeIf(String::isNotBlank)?.let(lastState::set)
+                        runCatching { org.json.JSONObject(payload) }.getOrNull()?.let { data ->
+                            data.optString("stage").takeIf(String::isNotBlank)?.let(lastState::set)
+                            data.optString("error").takeIf(String::isNotBlank)?.let { message ->
+                                reject(IOException("X-Manga : $message"))
+                            }
+                        }
                     }
                 }
                 onReceivedError { request, error ->
@@ -116,8 +120,10 @@ abstract class XManga : KeiSource() {
                 interceptRequest { request ->
                     val url = request.url.toString()
                     if (request.url.scheme == "https" &&
-                        (request.url.host == "reader.hentai.gifts" ||
-                            request.url.host.endsWith(".reader.hentai.gifts"))
+                        (
+                            request.url.host == "reader.hentai.gifts" ||
+                                request.url.host.endsWith(".reader.hentai.gifts")
+                            )
                     ) {
                         imageHeaders[url] = request.requestHeaders
                     }
@@ -205,10 +211,14 @@ abstract class XManga : KeiSource() {
                                     ', blob=' + blobImages + ', zones à défiler=' + scrollables.length;
                                 window.xmangapages.post(JSON.stringify({stage: status}));
                             }
-                            if (window.__xmSeen.size > 0 && window.__xmSeen.size >= window.__xmExpected &&
-                                pending === 0 && placeholders === 0 && !scrolling &&
+                            // The list of page URLs is what Mihon needs. Waiting for
+                            // complete image bytes (or vanished loading placeholders)
+                            // traps the reader when an image is slow or blocked.
+                            const settled = !scrolling &&
                                 now - (window.__xmBottomAt || now) > 3000 &&
-                                now - (window.__xmChangedAt || now) > 3000) {
+                                now - (window.__xmChangedAt || now) > 3000;
+                            if (window.__xmSeen.size > 0 && window.__xmSeen.size >= window.__xmExpected &&
+                                settled) {
                                 // Prefer DOM order to discovery order: lazy loads sometimes
                                 // complete out of order. Keep previously seen URLs if DOM
                                 // virtualization has removed them.
@@ -216,6 +226,18 @@ abstract class XManga : KeiSource() {
                                 for (const url of window.__xmSeen) if (!ordered.includes(url)) ordered.push(url);
                                 window.xmangapages.post(JSON.stringify(ordered));
                                 return 'done';
+                            }
+                            // Fail with an actionable page count instead of 95 seconds
+                            // of apparently infinite loading. Do not return partial
+                            // chapters when the page count is known.
+                            window.__xmStartedAt = window.__xmStartedAt || now;
+                            if (now - window.__xmStartedAt > 45000) {
+                                window.xmangapages.post(JSON.stringify({error:
+                                    'lecteur bloqué : ' + window.__xmSeen.size + '/' +
+                                    window.__xmExpected + ' pages détectées (' +
+                                    pending + ' images en attente, ' + placeholders +
+                                    ' emplacements non chargés).'}));
+                                return 'timeout';
                             }
                             return 'waiting';
                         })()
