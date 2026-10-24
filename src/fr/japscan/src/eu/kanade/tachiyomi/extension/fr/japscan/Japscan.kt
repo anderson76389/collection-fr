@@ -451,6 +451,5 @@ abstract class Japscan :
         // WebView can't trigger; above it every tile host is created upfront.
         private const val WEBVIEW_VIEWPORT_WIDTH = 1920
         private const val WEBVIEW_VIEWPORT_HEIGHT = 16384
-
     }
 }
