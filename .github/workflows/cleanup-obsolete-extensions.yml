@@ -1,0 +1,74 @@
+name: Nettoyer les branches obsoletes et les APK retires
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-obsolete-extensions.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retirer uniquement les APK/JAR des anciennes extensions supprimees
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          gh api --paginate "repos/$repo/releases?per_page=100" --jq '.[] | .assets[]? | select(.name | test("(?:^|[._-])(japscan|x-?manga|comix|mangadot|sushiscan)(?:[._-]|$)"; "i")) | "\(.id) \(.name)"' | while read -r asset_id asset_name; do
+            echo "Supprimer asset obsolete: $asset_name ($asset_id)"
+            gh api -X DELETE "repos/$repo/releases/assets/$asset_id" >/dev/null
+          done
+      - name: Retirer les anciennes branches des sources abandonnees
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          open_heads="$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" --jq '.[].head.ref')"
+          branches=(
+            "add/japscan-epsilon-20261020"
+            "add/multiple-comix-mangadex-20261015"
+            "cleanup/remove-coomer-unused-engines"
+            "cleanup/remove-japscan-epsilon-20261016"
+            "diagnostic/japscan-xmanga-readers-20261024"
+            "fix/chapters-only-japscan-xmanga-20261024"
+            "fix/comix-client-20261016"
+            "fix/comix-epsilon-20261016"
+            "fix/comix-kawaii-loading-20261015"
+            "fix/dex-popular-remove-sushi-20261016"
+            "fix/japscan-epsilon-reader-stability-20261024"
+            "fix/japscan-migrate-japscan-st-20261024"
+            "fix/japscan-reader-capture-empty-20261024"
+            "fix/japscan-reader-runtime-stage-20261024"
+            "fix/japscan-reuse-reader-response"
+            "fix/japscan-verification-session"
+            "fix/japscan-webview-first-and-errors-20261024"
+            "fix/mangadot-deferred-mangadex-catalogue"
+            "fix/mangadot-fr-and-all"
+            "fix/mangadot-french-chapter-formats"
+            "fix/mangadot-french-only"
+            "fix/mihon-japscan-epsilon-20261024"
+            "fix/readers-xmanga-japscan-epsilon-20261024b"
+            "fix/remove-comix-reader-focus-20261016"
+            "fix/xmanga-epsilon-apk-and-reader-20261024"
+            "fix/xmanga-new-site-20261024"
+            "fix/xmanga-reader-scroll-session-20261024"
+            "remove/japscan-only-20261024"
+          )
+          for branch in "${branches[@]}"; do
+            if printf "%s\n" "$open_heads" | grep -Fxq -- "$branch"; then
+              echo "Conserver branche avec PR ouverte: $branch"
+              continue
+            fi
+            if gh api "repos/$repo/git/ref/heads/$branch" >/dev/null 2>&1; then
+              gh api -X DELETE "repos/$repo/git/refs/heads/$branch" >/dev/null
+              echo "Branche supprimee: $branch"
+            else
+              echo "Deja absente: $branch"
+            fi
+          done
