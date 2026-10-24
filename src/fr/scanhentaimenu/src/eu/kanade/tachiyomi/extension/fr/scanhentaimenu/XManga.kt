@@ -215,8 +215,14 @@ abstract class XManga : KeiSource() {
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder().apply {
         page.imageUrl?.let(imageHeaders::get)?.forEach { (key, value) ->
             if (key.lowercase() !in setOf(
-                    "host", "content-length", "accept-encoding", "connection",
-                    "cookie", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site",
+                    "host",
+                    "content-length",
+                    "accept-encoding",
+                    "connection",
+                    "cookie",
+                    "sec-fetch-dest",
+                    "sec-fetch-mode",
+                    "sec-fetch-site",
                 )
             ) {
                 header(key, value)
