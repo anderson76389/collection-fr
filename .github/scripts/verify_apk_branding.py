@@ -19,7 +19,6 @@ for metadata_file in sorted(root.glob("src/*/*/build/keiyoushi-source-info.json"
         continue
     info = json.loads(metadata_file.read_text())
     expected_languages = {
-        "eu.kanade.tachiyomi.extension.fr.japscan": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.softepsilonscan": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.banchanscan": {"fr"},
         "eu.kanade.tachiyomi.extension.fr.mangakawaii": {"fr"},
