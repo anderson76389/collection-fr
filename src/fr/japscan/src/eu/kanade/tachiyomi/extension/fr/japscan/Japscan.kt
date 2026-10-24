@@ -139,10 +139,9 @@ abstract class Japscan :
         return SMangaUpdate(details, filterOutlierChapters(chapterList))
     }
 
-    private fun extractChapterList(document: Document, slug: String?): List<SChapter> =
-        document.select(chapterListSelector()).mapNotNull { row ->
-            runCatching { parseChapter(row, slug) }.getOrNull()
-        }
+    private fun extractChapterList(document: Document, slug: String?): List<SChapter> = document.select(chapterListSelector()).mapNotNull { row ->
+        runCatching { parseChapter(row, slug) }.getOrNull()
+    }
 
     // The regular HTTP client may receive a Cloudflare challenge even after the user has
     // completed verification in Mihon's WebView. Load the manga directly in a browser session
@@ -502,10 +501,9 @@ abstract class Japscan :
     }
 }
 
-internal fun japscanChapterListSelector(hideSpoilers: Boolean): String =
-    "#list_chapters .list_chapters" +
-        if (hideSpoilers) {
-            ":not(:has(.badge:contains(SPOILER),.badge:contains(RAW),.badge:contains(VUS)))"
-        } else {
-            ""
-        }
+internal fun japscanChapterListSelector(hideSpoilers: Boolean): String = "#list_chapters .list_chapters" +
+    if (hideSpoilers) {
+        ":not(:has(.badge:contains(SPOILER),.badge:contains(RAW),.badge:contains(VUS)))"
+    } else {
+        ""
+    }
