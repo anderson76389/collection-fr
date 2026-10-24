@@ -36,6 +36,7 @@ class ReaderReadyTest {
         assertTrue(readiness.contains("window.__japscanHooked !== true"))
         assertTrue(readiness.contains("getElementById('full-reader')"))
         assertTrue(readiness.contains("querySelector('[id^=\"d-img-\"]')"))
+        assertFalse(readiness.contains("single && !single.classList.contains"))
         assertFalse(readiness.contains("document.readyState === 'complete'"))
     }
 
@@ -45,6 +46,7 @@ class ReaderReadyTest {
         assertTrue(readiness.contains("window.__japscanHooked !== true"))
         assertTrue(readiness.contains("getElementById('pages')"))
         assertTrue(readiness.contains("window.__japscanLastBlob"))
+        assertFalse(readiness.contains("single && single.classList.contains"))
     }
 
     @Test
