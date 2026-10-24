@@ -40,6 +40,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -330,10 +331,14 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
 
-        val response = client.get(chapterUrl)
+        val readerHtml = client.get(chapterUrl).use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Japscan : le site refuse le chapitre (HTTP ${response.code}). Ouvrez ce chapitre dans la WebView pour vérifier l’accès.")
+            }
+            response.body.string()
+        }
 
-        return runCatching {
-            runWebView<List<String>>(timeout = 3.minutes) {
+        val pages = runWebView<List<String>>(timeout = 3.minutes) {
                 domStorageEnabled = true
                 javaScriptEnabled = true
                 blockImages = false
@@ -373,10 +378,9 @@ abstract class Japscan :
                     evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
                 }
 
-                loadData(chapterUrl, response.body.string())
+                loadData(chapterUrl, readerHtml)
             }
-        }.getOrElse { emptyList() }
-            .takeIf { done } ?: emptyList()
+        return pages.takeIf { done } ?: emptyList()
     }
 
     private fun savePage(
