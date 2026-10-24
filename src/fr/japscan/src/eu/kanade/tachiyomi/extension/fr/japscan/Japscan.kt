@@ -366,6 +366,13 @@ abstract class Japscan :
                     evaluateJs("document.title") { title ->
                         japscanReaderPageIssue(title)?.let { reject(IOException(it)) }
                     }
+                    // Redirects may bypass document-start hooks. Install the
+                    // capture hook in the chapter document when it is missing.
+                    evaluateJs("window.__japscanHooked === true") { ready ->
+                        if (ready != "true") {
+                            evaluateJs(ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK)
+                        }
+                    }
                 }
 
                 // onPageFinished can precede the asynchronous JavaScript reader mount.
