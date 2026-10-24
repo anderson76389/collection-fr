@@ -10,7 +10,6 @@ Android labels and published APK filenames use the existing MAKOFF branding.
 | Module | Site | Language |
 | --- | --- | --- |
 | hentaiorigines | https://hentai-origines.com | fr |
-| scanhentaimenu | https://x-manga.org | fr |
 | histoiredhentai | https://hhentai.fr | fr |
 | ortegascans | https://ortegascans.fr | fr |
 | lelmanga | https://www.lelmanga.com | fr |
