@@ -27,6 +27,16 @@ class XMangaRoutesTest {
     }
 
     @Test
+    fun readerUsesTheActualChapterImageHostAndHasBoundedLoading() {
+        val script = XMANGA_CHAPTER_CAPTURE_SCRIPT
+        assertTrue(script.contains("reader.hentai.gifts"))
+        assertTrue(script.contains("window.__xmReaderSeen"))
+        assertTrue(script.contains("performance.getEntriesByType('resource')"))
+        assertTrue(script.contains("window.__xmStartedAt > 24000"))
+        assertTrue(script.contains("window.xmangapages.post(JSON.stringify(pages))"))
+    }
+
+    @Test
     fun currentChapterUuidLinksArePreservedForWebview() {
         val document = Jsoup.parse(
             """
