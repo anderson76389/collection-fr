@@ -236,7 +236,29 @@ internal fun webtoonHooks(interfaceName: String) = $$"""
                             })();
 """.trimIndent()
 
-internal fun paginatedDriver(interfaceName: String) = $$"""
+// Wait for the actual image reader DOM rather than the HTML navigation event.
+internal fun readerReadyScript(isWebtoon: Boolean): String = if (isWebtoon) {
+    """
+    (function(){
+        if (window.__japscanHooked !== true) return 'waiting';
+        var full = document.getElementById('full-reader');
+        var single = document.querySelector('[id^="single-reader"]');
+        if (!full || (single && !single.classList.contains('d-none'))) return 'waiting';
+        return full.querySelector('[id^="d-img-"]') ? 'ready' : 'waiting';
+    })();
+    """.trimIndent()
+} else {
+    """
+    (function(){
+        if (window.__japscanHooked !== true) return 'waiting';
+        var single = document.querySelector('[id^="single-reader"]');
+        if (single && single.classList.contains('d-none')) return 'waiting';
+        return document.getElementById('pages') || window.__japscanLastBlob ? 'ready' : 'waiting';
+    })();
+    """.trimIndent()
+}
+
+internal fun paginatedDriver(interfaceName: String) = $"""
                                 (async function(){
                                     // onPageFinished fires more than once per load (redirects,
                                     // iframes, in-page navigations). Without this guard a second
@@ -344,7 +366,7 @@ internal fun paginatedDriver(interfaceName: String) = $$"""
 
                                     console.log('[japscan] done, ' + saved + ' / ' + total + ' pages saved');
                                     try {
-                                        window.$${interfaceName}_passDone.post("");
+                                        window.$${interfaceName}_passDone.post(String(total));
                                     } catch(e) {
                                         console.log('[japscan] passDone failed: ' + e);
                                     }
@@ -566,6 +588,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                     // already drawn, we're done in <1s. Only fall back to the
                                     // slow scroll-and-discover loop if a tile is still missing.
                                     var tilesEmitted = 0;
+                                    var tilesExpected = 0;
                                     function expectedTileCount(container){
                                         var wrap = findTileWrapper(container);
                                         if (!wrap) return 1;
@@ -603,6 +626,7 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                         var container = dImgContainers[i];
                                         var pageLabel = 'd-img-' + i;
                                         var expected = expectedTileCount(container);
+                                        tilesExpected += expected;
                                         // Bring the container into view so any layout-dependent
                                         // measurements settle, then attempt a one-pass capture.
                                         try { container.scrollIntoView({ block: 'start' }); } catch(e) {}
@@ -629,8 +653,8 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                         } catch(e) {}
                                         dImgContainers[i] = null;
                                     }
-                                    window.__jlog('[japscan] webtoon done, ' + tilesEmitted + ' tile(s) saved across ' + total + ' d-img containers');
-                                    try { window.$${interfaceName}_passDone.post(""); } catch(e) {}
+                                    window.__jlog('[japscan] webtoon done, ' + tilesEmitted + '/' + tilesExpected + ' tile(s) saved across ' + total + ' d-img containers');
+                                    try { window.$${interfaceName}_passDone.post(String(Math.max(tilesExpected, tilesEmitted))); } catch(e) {}
                                     return;
                                 }
 
@@ -641,6 +665,6 @@ internal fun webtoonDriver(interfaceName: String, urlSegment: String) = $$"""
                                 // work; if this ever fires, the fix is to reload the WebView with
                                 // the paginated hooks, not a third capture technique.
                                 window.__jlog('[japscan] MISMATCH: url hinted webtoon but the DOM mounted the paginated reader — giving up');
-                                try { window.$${interfaceName}_passDone.post(""); } catch(e) {}
+                                try { window.$${interfaceName}_passDone.post('0'); } catch(e) {}
                             })();
 """.trimIndent()

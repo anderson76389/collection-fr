@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.extension.fr.japscan
 
+import android.os.SystemClock
 import android.util.Base64
-import android.webkit.WebResourceResponse
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.source.ConfigurableSource
@@ -35,13 +35,15 @@ import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -263,7 +265,9 @@ abstract class Japscan :
         val interfaceName = randomString()
         val sessionTag = "$CACHE_FILE_PREFIX${System.currentTimeMillis()}"
         val savedPaths = mutableListOf<String>()
-        var done = false
+        val saveLock = Any()
+        val expectedPages = AtomicInteger(0)
+        val finishedAt = AtomicLong(0)
 
         // Navigate normally: the old OkHttp prefetch often received a Cloudflare 403
         // even when the chapter could be opened in Mihon's WebView session.
@@ -279,23 +283,18 @@ abstract class Japscan :
                 }
 
                 jsBridge("${interfaceName}_savePage") { dataUri ->
-                    savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
-                }
-
-                jsBridge("${interfaceName}_passDone") {
-                    done = true
-                    resolve(savedPaths)
-                }
-
-                // The reader pulls rotating ad hosts whose modals break the detached descrambler.
-                interceptRequest { request ->
-                    val host = request.url.host ?: return@interceptRequest null
-                    if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
-                        null
-                    } else {
-                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                    synchronized(saveLock) {
+                        savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
                     }
                 }
+
+                jsBridge("${interfaceName}_passDone") { total ->
+                    expectedPages.set(total.toIntOrNull()?.coerceAtLeast(0) ?: 0)
+                    finishedAt.set(SystemClock.elapsedRealtime())
+                }
+
+                // Do not block unknown CDN hosts: the reader loads its image tiles and
+                // JavaScript from rotating domains, which the old allowlist excluded.
 
                 injectAtDocumentStart(
                     ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
@@ -310,11 +309,37 @@ abstract class Japscan :
 
                 onPageFinished {
                     evaluateJs("document.title") { title ->
-                        val issue = japscanReaderPageIssue(title)
-                        if (issue != null) {
-                            reject(IOException(issue))
+                        japscanReaderPageIssue(title)?.let { reject(IOException(it)) }
+                    }
+                }
+
+                // onPageFinished can precede the asynchronous JavaScript reader mount.
+                // Starting the driver then used to report zero pages even when the
+                // catalogue and chapter HTML were available.
+                val readyScript = readerReadyScript(isWebtoon)
+                val driverScript = if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName)
+                val beganAt = SystemClock.elapsedRealtime()
+                var driverStarted = false
+                poll(400.milliseconds) {
+                    val completedAt = finishedAt.get()
+                    if (completedAt != 0L) {
+                        val currentPages = synchronized(saveLock) { savedPaths.toList() }
+                        val expected = expectedPages.get()
+                        if (expected > 0 && currentPages.size >= expected) {
+                            resolve(currentPages)
+                        } else if (SystemClock.elapsedRealtime() - completedAt > 12_000) {
+                            reject(IOException("Japscan : capture incomplète (${currentPages.size}/$expected images)."))
+                        }
+                    } else if (!driverStarted) {
+                        if (SystemClock.elapsedRealtime() - beganAt > 45_000) {
+                            reject(IOException("Japscan : le chapitre a chargé, mais son lecteur d’images ne s’est pas initialisé en 45 s. Essayez la WebView Mihon."))
                         } else {
-                            evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+                            evaluateJs(readyScript) { state ->
+                                if (state == "\"ready\"" && !driverStarted) {
+                                    driverStarted = true
+                                    evaluateJs(driverScript)
+                                }
+                            }
                         }
                     }
                 }
@@ -322,18 +347,18 @@ abstract class Japscan :
                 loadUrl(chapterUrl)
             }
         } catch (error: kotlinx.coroutines.CancellationException) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw error
         } catch (error: WebViewTimeoutException) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw IOException("Japscan : le lecteur n’a pas répondu. Ouvrez le chapitre dans la WebView de Mihon pour vérifier qu’il est accessible.", error)
         } catch (error: Exception) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw error
         }
 
-        if (!done || pages.isEmpty()) {
-            savedPaths.forEach { File(it).delete() }
+        if (pages.isEmpty()) {
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw IOException("Japscan : le lecteur n’a renvoyé aucune page.")
         }
         return pages
@@ -426,15 +451,5 @@ abstract class Japscan :
         // WebView can't trigger; above it every tile host is created upfront.
         private const val WEBVIEW_VIEWPORT_WIDTH = 1920
         private const val WEBVIEW_VIEWPORT_HEIGHT = 16384
-
-        private val ALLOWED_HOSTS = listOf(
-            "japscan.foo",
-            "cdnjs.cloudflare.com",
-            "code.jquery.com",
-            "cdn.jsdelivr.net",
-            "fonts.googleapis.com",
-            "fonts.gstatic.com",
-            "challenges.cloudflare.com",
-        )
     }
 }
