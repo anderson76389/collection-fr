@@ -6,8 +6,8 @@ plugins {
 }
 
 keiyoushi {
-    name = "Soft Epsilon Scan"
-    versionCode = 11
+    name = "Epsilon Scan"
+    versionCode = 12
     contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
     theme = "pam"
@@ -15,6 +15,7 @@ keiyoushi {
     source {
         lang = "fr"
         baseUrl = "https://epsilonsoft.to"
+        id = 4969929389259348100L
     }
 }
 
