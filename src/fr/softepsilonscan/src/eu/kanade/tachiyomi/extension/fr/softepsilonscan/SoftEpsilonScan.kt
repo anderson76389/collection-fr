@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.extension.fr.softepsilonscan
 
+import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.multisrc.pam.CheckBoxGroup
 import eu.kanade.tachiyomi.multisrc.pam.Pam
 import eu.kanade.tachiyomi.multisrc.pam.SortFilter
@@ -8,9 +10,22 @@ import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import keiyoushi.annotation.Source
 import kotlinx.serialization.json.JsonElement
+import java.io.IOException
 
 @Source
 abstract class SoftEpsilonScan : Pam() {
+
+    override suspend fun getPageList(chapter: SChapter): List<Page> = try {
+        super.getPageList(chapter)
+    } catch (error: IOException) {
+        val message = error.message.orEmpty()
+        if (message.contains("reader did not load", ignoreCase = true) ||
+            message.contains("Unexpected reader result", ignoreCase = true)
+        ) {
+            throw IOException("Soft Epsilon : le lecteur du site n’a pas fourni de pages compatibles. Ouvrez le chapitre dans la WebView de Mihon, puis réessayez. Détail : $message", error)
+        }
+        throw error
+    }
 
     override val popularFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(3, false)))
     override val latestFilters = FilterList(SortFilter("Sort", sortValues, Filter.Sort.Selection(2, false)))

@@ -40,6 +40,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -330,53 +331,56 @@ abstract class Japscan :
         val savedPaths = mutableListOf<String>()
         var done = false
 
-        val response = client.get(chapterUrl)
-
-        return runCatching {
-            runWebView<List<String>>(timeout = 3.minutes) {
-                domStorageEnabled = true
-                javaScriptEnabled = true
-                blockImages = false
-                userAgent = headers["User-Agent"]!!
-                if (isWebtoon) {
-                    useWideViewPort = true
-                    loadWithOverviewMode = false
-                }
-
-                jsBridge("${interfaceName}_savePage") { dataUri ->
-                    savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
-                }
-
-                jsBridge("${interfaceName}_passDone") {
-                    done = true
-                    resolve(savedPaths)
-                }
-
-                // The reader pulls rotating ad hosts whose modals break the detached descrambler,
-                // so only the origins the reader needs are allowed.
-                interceptRequest { request ->
-                    val host = request.url.host ?: return@interceptRequest null
-                    if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
-                        null
-                    } else {
-                        // A null body keeps some WebView builds pending, stalling the capture
-                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                    }
-                }
-
-                injectAtDocumentStart(
-                    ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
-                    setOf(baseUrl),
-                )
-
-                onPageFinished {
-                    evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
-                }
-
-                loadData(chapterUrl, response.body.string())
+        val readerHtml = client.get(chapterUrl).use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Japscan : le site refuse le chapitre (HTTP ${response.code}). Ouvrez ce chapitre dans la WebView pour vérifier l’accès.")
             }
-        }.getOrElse { emptyList() }
-            .takeIf { done } ?: emptyList()
+            response.body.string()
+        }
+
+        val pages = runWebView<List<String>>(timeout = 3.minutes) {
+            domStorageEnabled = true
+            javaScriptEnabled = true
+            blockImages = false
+            userAgent = headers["User-Agent"]!!
+            if (isWebtoon) {
+                useWideViewPort = true
+                loadWithOverviewMode = false
+            }
+
+            jsBridge("${interfaceName}_savePage") { dataUri ->
+                savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
+            }
+
+            jsBridge("${interfaceName}_passDone") {
+                done = true
+                resolve(savedPaths)
+            }
+
+            // The reader pulls rotating ad hosts whose modals break the detached descrambler,
+            // so only the origins the reader needs are allowed.
+            interceptRequest { request ->
+                val host = request.url.host ?: return@interceptRequest null
+                if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
+                    null
+                } else {
+                    // A null body keeps some WebView builds pending, stalling the capture
+                    WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                }
+            }
+
+            injectAtDocumentStart(
+                ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
+                setOf(baseUrl),
+            )
+
+            onPageFinished {
+                evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+            }
+
+            loadData(chapterUrl, readerHtml)
+        }
+        return pages.takeIf { done } ?: emptyList()
     }
 
     private fun savePage(

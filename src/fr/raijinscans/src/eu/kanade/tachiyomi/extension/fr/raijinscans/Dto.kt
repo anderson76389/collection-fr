@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.extension.fr.raijinscans
 
 import kotlinx.serialization.Serializable
+import java.util.Locale
 
 @Serializable
 class CatalogResponse(val items: List<CatalogManga>, val hasNextPage: Boolean)
@@ -30,7 +31,19 @@ class MangaTitle(val userPreferred: String)
 class CoverImage(val large: String)
 
 @Serializable
-class ChapterData(val id: String, val number: String, val title: String?, val updatedAt: String)
+class ChapterData(
+    val id: String,
+    val number: String,
+    val title: String?,
+    val updatedAt: String,
+    val isPremium: Boolean? = null,
+    val isLocked: Boolean? = null,
+    val isFree: Boolean? = null,
+    val access: String? = null,
+) {
+    fun isExplicitlyLocked(): Boolean = isPremium == true || isLocked == true || isFree == false ||
+        access?.lowercase(Locale.ROOT) in setOf("premium", "paid", "locked", "subscription")
+}
 
 @Serializable
 class ReaderPayload(val mangaId: String, val publicId: String, val pages: List<ReaderPage>)

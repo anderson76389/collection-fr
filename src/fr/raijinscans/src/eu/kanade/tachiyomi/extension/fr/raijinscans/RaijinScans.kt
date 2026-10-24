@@ -168,7 +168,7 @@ abstract class RaijinScans : HttpSource() {
     override fun chapterListParse(response: Response): List<SChapter> {
         val data = response.extractNextJs<MangaDetailsPayload>()
             ?: error("La liste des chapitres Aniverse est absente.")
-        return data.chapters.map { chapter ->
+        return data.chapters.filterNot(ChapterData::isExplicitlyLocked).map { chapter ->
             SChapter.create().apply {
                 url = "/read/${data.manga.slug}/${chapter.id}"
                 name = "Chapitre ${chapter.number}" + chapter.title.orEmpty().takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
