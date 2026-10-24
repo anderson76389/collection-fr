@@ -226,9 +226,10 @@ abstract class Pam :
 
     // Reader fallback stays disabled for every Pam source unless explicitly enabled.
     protected open val allowReaderWithoutImageRequest: Boolean = false
+    protected open val useInlineReaderWorker: Boolean = false
 
     private val sitePages by lazy {
-        SitePages(baseUrl, { client }, { headers["User-Agent"]!! }, allowReaderWithoutImageRequest)
+        SitePages(baseUrl, { client }, { headers["User-Agent"]!! }, allowReaderWithoutImageRequest, useInlineReaderWorker)
     }
 
     private val secureRandom = SecureRandom()
@@ -273,14 +274,24 @@ abstract class Pam :
         val result = site.reader!!
 
         // Used in page URLs and headers
-        val manifest = result.manifest.takeIf { MANIFEST_BASE_REGEX.matches(it.base) && it.count > 0 }
+        val manifest = result.manifest ?: run {
+            val path = site.pagePath?.let(PAGE_PATH_REGEX::matchEntire)
+                ?: throw IOException("Epsilon : chemin de page chiffrée introuvable dans la WebView.")
+            val (base, variant) = path.destructured
+            ReaderResult.Manifest(
+                base = base,
+                count = result.count ?: 0,
+                variants = variant.removePrefix("-").toIntOrNull()?.let(::listOf).orEmpty(),
+            )
+        }
+        val validManifest = manifest.takeIf { MANIFEST_BASE_REGEX.matches(it.base) && it.count > 0 }
         val contentKey = runCatching { Base64.decode(result.contentKey, Base64.DEFAULT) }.getOrNull()?.takeIf { it.size == 32 }
-        if (manifest == null || contentKey == null) throw IOException("Unexpected reader result")
+        if (validManifest == null || contentKey == null) throw IOException("Unexpected reader result")
         // Forward the reader's authorization headers and referer to OkHttp.
         // Without the chapter referer, WebView images may work while Mihon retries 403s.
         val siteHeaders = pamReaderImageHeaders(site.pageHeaders, chapterUrl)
 
-        return EncryptedSession(contentKey, siteHeaders) to manifest
+        return EncryptedSession(contentKey, siteHeaders) to validManifest
     }
 
     private suspend fun ensureSession(serieSlug: String, chapterSlug: String): SignedSession {
@@ -475,6 +486,7 @@ abstract class Pam :
 }
 
 private const val THUMBNAIL_FRAGMENT = "thumbnail"
+private val PAGE_PATH_REGEX = Regex("""(/p/[\w-]+/\d+/[\w-]+/)\d+(-\d+)?\.ece""")
 private val MANIFEST_BASE_REGEX = Regex("""/p/[\w-]+/\d+/[\w-]+/""")
 private val HEADER_VALUE_REGEX = Regex("""[!-~]+""")
 private val SITE_HEADER_REGEX = Regex("""X-[\w-]+""", RegexOption.IGNORE_CASE)

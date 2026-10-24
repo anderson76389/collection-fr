@@ -18,6 +18,10 @@ abstract class SoftEpsilonScan : Pam() {
     // Only this source allows the manifest/key-only reader fallback.
     override val allowReaderWithoutImageRequest = true
 
+    // Modern chapters load an inline module Worker. Use the new reader only
+    // for Epsilon Scan; all other PAM sources retain their existing parser.
+    override val useInlineReaderWorker = true
+
     override suspend fun getPageList(chapter: SChapter): List<Page> = try {
         super.getPageList(chapter)
     } catch (error: IOException) {

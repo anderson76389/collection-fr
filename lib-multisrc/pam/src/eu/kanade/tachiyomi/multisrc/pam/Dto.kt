@@ -129,6 +129,7 @@ class PageListResponse(
         class Data(
             val slug: String,
             val serie: Serie,
+            val uid: String? = null,
         )
 
         @Serializable
@@ -159,8 +160,9 @@ class SiteMessage(
 /** What reader.js hands back. */
 @Serializable
 class ReaderResult(
-    val manifest: Manifest,
+    val manifest: Manifest? = null,
     val contentKey: String,
+    val count: Int? = null,
 ) {
     @Serializable
     class Manifest(
