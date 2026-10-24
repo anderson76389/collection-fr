@@ -28,6 +28,7 @@ internal val PAGINATED_HOOK = """
                                     if (window.__japscanHooked) return;
                                     window.__japscanHooked = true;
                                     window.__japscanLastBlob = null;
+                                    window.__japscanLastBlobObject = null;
                                     window.__japscanBlobRevision = 0;
                                     var _orig = URL.createObjectURL.bind(URL);
                                     URL.createObjectURL = function(obj){
@@ -35,6 +36,7 @@ internal val PAGINATED_HOOK = """
                                         try {
                                             if (obj && obj.type && /^image\//.test(obj.type)) {
                                                 window.__japscanLastBlob = u;
+                                                window.__japscanLastBlobObject = obj;
                                                 window.__japscanBlobRevision++;
                                             }
                                         } catch(e) {}
@@ -272,8 +274,12 @@ internal fun paginatedDriver(interfaceName: String) = $"""
                                     async function saveBlobUrl(u){
                                         if (!u) return false;
                                         try {
-                                            var r = await fetch(u);
-                                            var b = await r.blob();
+                                            // Use the original Blob while the site's reader owns it.
+                                            // Its object URL may already have been revoked by the time
+                                            // our delayed capture starts, making fetch(blob:) fail.
+                                            var b = u === window.__japscanLastBlob && window.__japscanLastBlobObject
+                                                ? window.__japscanLastBlobObject
+                                                : await (await fetch(u)).blob();
                                             var d = await new Promise(function(res, rej){
                                                 var fr = new FileReader();
                                                 fr.onload = function(){ res(fr.result); };
@@ -286,9 +292,9 @@ internal fun paginatedDriver(interfaceName: String) = $"""
                                             }
                                         } catch(e) {
                                             console.log('[japscan] saveBlobUrl failed: ' + e);
-                                        } finally {
-                                            try { URL.revokeObjectURL(u); } catch(e) {}
                                         }
+                                        // The site's reader, not this capture script, owns the
+                                        // object URL lifetime. Revoking it here breaks navigation.
                                         return false;
                                     }
 

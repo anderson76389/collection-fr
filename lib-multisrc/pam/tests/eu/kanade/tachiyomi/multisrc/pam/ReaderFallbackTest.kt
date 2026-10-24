@@ -18,4 +18,14 @@ class ReaderFallbackTest {
         assertFalse(pamReaderFallbackAllowed(enabled = true, wait = 1999.milliseconds))
         assertTrue(pamReaderFallbackAllowed(enabled = true, wait = 2.seconds))
     }
+    @Test
+    fun navigationRetryIsLimitedToSoftEpsilonAndOccursOnce() {
+        assertFalse(pamReaderNavigationRetryAllowed(false, true, true, false, false, 20.seconds))
+        assertFalse(pamReaderNavigationRetryAllowed(true, false, true, false, false, 20.seconds))
+        assertFalse(pamReaderNavigationRetryAllowed(true, true, true, true, false, 20.seconds))
+        assertFalse(pamReaderNavigationRetryAllowed(true, true, true, false, true, 20.seconds))
+        assertFalse(pamReaderNavigationRetryAllowed(true, true, true, false, false, 17.seconds))
+        assertTrue(pamReaderNavigationRetryAllowed(true, true, true, false, false, 18.seconds))
+    }
+
 }
