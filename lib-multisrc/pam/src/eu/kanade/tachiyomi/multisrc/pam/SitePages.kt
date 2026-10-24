@@ -268,7 +268,7 @@ internal class SitePages(
     private fun blockedResponse() = WebResourceResponse("text/plain", null, 403, "Blocked", null, ByteArrayInputStream(ByteArray(0)))
 }
 
-private val PAGE_PATH_REGEX = Regex("""(/p/[\\w-]+/\\d+/[\\w-]+/)\\d+(-\\d+)?\\.ece""")
+private val PAGE_PATH_REGEX = Regex("""(/p/[\w-]+/\d+/[\w-]+/)\d+(-\d+)?\.ece""")
 private const val TURNSTILE_HOST = "challenges.cloudflare.com"
 private val POLL_INTERVAL = 250.milliseconds
 private val LOAD_INTERVAL = 2.seconds
