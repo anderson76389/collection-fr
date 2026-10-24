@@ -122,16 +122,19 @@ abstract class XManga : KeiSource() {
                             let pending = 0, candidates = 0;
                             for (const img of images) {
                                 img.loading = 'eager';
-                                const raw = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
+                                // Some chapters keep a loading placeholder in src
+                                // and the real page address in data-src or data-original.
+                                const raw = img.getAttribute('data-src') || img.getAttribute('data-original') ||
+                                    img.currentSrc || img.getAttribute('src') || '';
                                 if (!raw || raw.startsWith('data:')) continue;
                                 let url;
                                 try { url = new URL(raw, location.href).href; } catch (e) { continue; }
                                 if (!/^https?:\/\//i.test(url)) continue;
                                 if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop/i.test(url + ' ' + img.alt)) continue;
-                                // Avoid site chrome, which is short and near the header.
-                                if (img.naturalWidth < 250 || img.naturalHeight < 250 || !img.complete) {
+                                if (img.naturalWidth < 220 || img.naturalHeight < 220 || !img.complete) {
                                     pending++;
-                                    try { img.scrollIntoView({block:'nearest'}); } catch(e) {}
+                                    // Calling scrollIntoView on every unloaded image jumps to
+                                    // the last page and starves the lazy-loaded middle pages.
                                     continue;
                                 }
                                 candidates++;
@@ -144,13 +147,23 @@ abstract class XManga : KeiSource() {
                             if (!atEnd) window.__xmFinishedAt = 0;
                             else if (!window.__xmFinishedAt) window.__xmFinishedAt = Date.now();
                             const now = Date.now();
+                            if (window.__xmKnownCount !== window.__xmPages.length) {
+                                window.__xmKnownCount = window.__xmPages.length;
+                                window.__xmLastImageAt = now;
+                            }
                             if (!window.__xmStatusAt || now-window.__xmStatusAt > 1500) {
                                 window.__xmStatusAt = now;
                                 window.xmangapages.post(JSON.stringify({stage:'images ' + window.__xmPages.length +
                                     ', en attente ' + pending + ', ' + (atEnd ? 'bas' : 'défilement')}));
                             }
-                            if (atEnd && window.__xmPages.length && pending === 0 &&
-                                now-(window.__xmFinishedAt || now)>4000) {
+                            // A single image from the site's header or a broken lazy
+                            // placeholder must not keep the reader blocked indefinitely.
+                            // Require the bottom and a stable image count, and give
+                            // remaining pages time to finish without endless waiting.
+                            if (atEnd && window.__xmPages.length &&
+                                now-(window.__xmFinishedAt || now)>4500 &&
+                                now-(window.__xmLastImageAt || now)>3500 &&
+                                (pending === 0 || now-(window.__xmFinishedAt || now)>14000)) {
                                 window.xmangapages.post(JSON.stringify(window.__xmPages));
                                 return 'done';
                             }
