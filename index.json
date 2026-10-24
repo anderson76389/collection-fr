@@ -555,27 +555,6 @@
         ]
       },
       {
-        "name": "X-Manga",
-        "packageName": "eu.kanade.tachiyomi.extension.fr.scanhentaimenu",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/3dcf94b/MAKOFF-x-manga-v1.6.65.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/scanhentaimenu/res/mipmap-xxxhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/3dcf94b/tachiyomi-fr.scanhentaimenu-v1.6.65.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106065",
-        "versionName": "1.6.65",
-        "contentWarning": "CONTENT_WARNING_NSFW",
-        "sources": [
-          {
-            "id": "4153742697148883998",
-            "name": "X-Manga",
-            "language": "fr",
-            "homeUrl": "https://x-manga.org"
-          }
-        ]
-      },
-      {
         "name": "Scan-Manga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanmanga",
         "resources": {
