@@ -180,6 +180,7 @@ internal class SitePages(
                 }
                 // Challenges that pass by themselves take a few seconds; the rest need the user
                 poll(POLL_INTERVAL) {
+                    var navigated = false
                     if (reader && allowMissingReaderPageRequest) {
                         synchronized(lock) {
                             resolveWhenReady()
@@ -206,11 +207,12 @@ internal class SitePages(
                                 hasReaderResult.set(false)
                                 hasPageRequest.set(false)
                                 readerNavigationAt = TimeSource.Monotonic.markNow()
+                                navigated = true
                                 loadUrl(url)
                             }
                         }
                     }
-                    evaluateJs(readScript) {
+                    if (!navigated) evaluateJs(readScript) {
                         if (it != "\"challenge\"") {
                             challengePolls = 0
                         } else if (POLL_INTERVAL * ++challengePolls > CHALLENGE_WAIT) {
