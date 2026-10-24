@@ -490,5 +490,5 @@ internal fun pamReaderImageHeaders(pageHeaders: Map<String, String>, chapterUrl:
             }
             .forEach { (name, value) -> add(name, value) }
         // The chapter is the actual reader origin, not the title/library URL.
-        header("Referer", chapterUrl)
+        set("Referer", chapterUrl)
     }.build()
