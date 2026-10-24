@@ -68,6 +68,15 @@ class ReaderReadyTest {
     }
 
     @Test
+    fun paginatedReaderPreservesBlobDataAfterSiteRevokesItsObjectUrl() {
+        assertTrue(PAGINATED_HOOK.contains("window.__japscanLastBlobObject = obj"))
+        val script = paginatedDriver("testBridge")
+        assertTrue(script.contains("window.__japscanLastBlobObject"))
+        assertTrue(script.contains("await (await fetch(u)).blob()"))
+        assertFalse(script.contains("URL.revokeObjectURL(u)"))
+    }
+
+    @Test
     fun webtoonJavascriptUsesExactlyTheRegisteredAndroidBridgeNames() {
         val script = webtoonDriver("testBridge", "manhwa")
         assertTrue(script.contains("window.testBridge_savePage.post(uri)"))
