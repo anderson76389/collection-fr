@@ -259,4 +259,3 @@ private const val SOLVE_IN_WEBVIEW = "Open in WebView to pass the site's verific
 
 /** Only an opted-in source may use manifest/key data without an intercepted image. */
 internal fun pamReaderFallbackAllowed(enabled: Boolean, wait: Duration): Boolean = enabled && wait >= 2.seconds
-
