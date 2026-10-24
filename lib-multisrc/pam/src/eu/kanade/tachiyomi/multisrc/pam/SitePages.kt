@@ -19,10 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.io.InputStream
 import java.security.SecureRandom
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -96,7 +93,6 @@ internal class SitePages(
         val hasReaderResult = AtomicBoolean(false)
         val hasPageRequest = AtomicBoolean(false)
         var challengePolls = 0
-        val released = CountDownLatch(1)
         val result = try {
             runWebView<SitePage>(timeout = WEBVIEW_TIMEOUT) {
                 userAgent = this@SitePages.userAgent()
@@ -114,8 +110,8 @@ internal class SitePages(
                     val pageHeaders = pageRequests.firstOrNull { (path, _) -> path.startsWith(captured.manifest.base) }?.second ?: return
                     resolve(SitePage(page.page, reader = captured, pageHeaders = pageHeaders))
                 }
-                // Let third-party reader scripts and image CDNs load during chapter reading.
-                // The catalogue retains its current blocked-host behavior.
+                // Keep reader image requests unblocked to avoid deadlocking the page scripts.
+                // Catalogue filtering remains unchanged.
                 interceptRequest { webRequest ->
                     val requestUrl = webRequest.url
                     val requestHost = requestUrl.host
@@ -133,7 +129,7 @@ internal class SitePages(
                         hasPageRequest.set(true)
                         resolveWhenReady()
                     }
-                    heldResponse(released)
+                    null
                 }
                 jsBridge(bridge) { posted ->
                     val message = posted.parseAs<SiteMessage>()
@@ -195,8 +191,6 @@ internal class SitePages(
             throw IOException(message, e)
         } catch (e: Throwable) {
             throw IOException(e.message, e)
-        } finally {
-            released.countDown()
         }
         failure = null
         result
@@ -222,24 +216,6 @@ internal class SitePages(
             )
         }
     }
-
-    /** A response that never sends its body before [released]. */
-    private fun heldResponse(released: CountDownLatch) = WebResourceResponse(
-        "application/octet-stream",
-        null,
-        200,
-        "OK",
-        emptyMap(),
-        object : InputStream() {
-            override fun read(): Int {
-                try {
-                    released.await(WEBVIEW_TIMEOUT.inWholeSeconds, TimeUnit.SECONDS)
-                } catch (_: InterruptedException) {
-                }
-                return -1
-            }
-        },
-    )
 
     // Empty stylesheet, not an error
     private fun emptyResponse() = WebResourceResponse("text/css", null, 200, "OK", null, ByteArrayInputStream(ByteArray(0)))
