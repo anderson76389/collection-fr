@@ -8,7 +8,7 @@
 
 [![Mihon](https://img.shields.io/badge/Compatible-Mihon-6366F1?style=for-the-badge)](https://mihon.app/)
 [![Langue](https://img.shields.io/badge/Langue-Fran%C3%A7ais-2563EB?style=for-the-badge)](#-les-extensions)
-[![Extensions](https://img.shields.io/badge/Index-32%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
+[![Extensions](https://img.shields.io/badge/Index-30%20extensions-16A34A?style=for-the-badge)](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json)
 [![Android](https://img.shields.io/badge/Plateforme-Android-404040?style=for-the-badge&logo=android&logoColor=white)](https://github.com/anderson76389/collection-fr/releases)
 
 [📲 Installer dans Mihon](#-installer-le-dépôt-dans-mihon) · [📖 Extensions](#-les-extensions) · [⚙️ Compilation](#-compiler-et-publier) · [🔎 Vérifications](#-suivi-des-correctifs-et-limitations)
@@ -100,7 +100,7 @@ Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.
 | [`repo`](https://github.com/anderson76389/collection-fr/tree/repo) | Branche utilisée pour l'index Mihon |
 | [**Releases**](https://github.com/anderson76389/collection-fr/releases) | APK distribués et autres fichiers générés |
 
-La copie du code de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) a été réalisée pour conserver une base de travail indépendante. L'historique d'import est indiqué dans [`.collection-fr-upstream-snapshot`](.collection-fr-upstream-snapshot).
+Le code source de Collection FR est issu d'une copie de [Keiyoushi / extensions-source](https://github.com/keiyoushi/extensions-source) au commit `60bc15ec9c13b3a4302bc54ca7b9fa892fdae726` (29 septembre 2026). Ce dépôt est maintenu séparément ; son origine et les licences applicables restent attribuées.
 
 Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensions-lib`. Les autres outils et bibliothèques externes restent nécessaires.
 
