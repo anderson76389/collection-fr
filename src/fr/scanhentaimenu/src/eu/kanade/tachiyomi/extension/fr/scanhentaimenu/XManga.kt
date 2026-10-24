@@ -115,10 +115,9 @@ abstract class XManga : KeiSource() {
                 }
                 interceptRequest { request ->
                     val url = request.url.toString()
-                    if (url.startsWith("https://") && (
-                            url.contains(".webp") || url.contains(".jpg") ||
-                                url.contains(".jpeg") || url.contains(".png") || url.contains(".avif")
-                            )
+                    if (request.url.scheme == "https" &&
+                        (request.url.host == "reader.hentai.gifts" ||
+                            request.url.host.endsWith(".reader.hentai.gifts"))
                     ) {
                         imageHeaders[url] = request.requestHeaders
                     }
@@ -134,36 +133,54 @@ abstract class XManga : KeiSource() {
                                 window.xmangapages.post(JSON.stringify({stage: 'vérification du site : ' + document.title}));
                                 return 'challenge';
                             }
-                            window.__xmSeen = window.__xmSeen || new Set();
+                            // Only the chapter's image CDN is trusted. X-Manga also
+                            // renders decorative cover/avatar images in this same DOM.
                             const images = Array.from(body.querySelectorAll('img'));
-                            let loaded = 0, blobImages = 0;
+                            const readerUrls = [];
+                            let loaded = 0, pending = 0, blobImages = 0;
                             for (const img of images) {
                                 img.loading = 'eager';
-                                const sources = [img.getAttribute('data-original'), img.getAttribute('data-src'),
+                                const sources = [img.getAttribute('data-src'), img.getAttribute('data-original'),
                                     img.getAttribute('data-lazy-src'), img.currentSrc, img.getAttribute('src')];
                                 const srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
                                 if (srcset) sources.push(srcset.split(',').pop().trim().split(/\s+/)[0]);
+                                let imageUrl = null;
                                 for (const raw of sources) {
                                     if (!raw || raw.startsWith('data:')) continue;
                                     if (raw.startsWith('blob:')) { blobImages++; continue; }
                                     let url;
-                                    try { url = new URL(raw, location.href).href; } catch (_) { continue; }
-                                    if (!/^https?:\/\//.test(url)) continue;
-                                    if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop|favicon/i.test(
-                                        url + ' ' + (img.alt || '') + ' ' + (img.className || ''))) continue;
-                                    window.__xmSeen.add(url);
-                                    break;
+                                    try { url = new URL(raw, location.href); } catch (_) { continue; }
+                                    if (!/^https?:$/.test(url.protocol)) continue;
+                                    if (url.hostname === 'reader.hentai.gifts' ||
+                                        url.hostname.endsWith('.reader.hentai.gifts')) {
+                                        imageUrl = url.href;
+                                        break;
+                                    }
                                 }
+                                if (!imageUrl) continue;
+                                readerUrls.push(imageUrl);
                                 if (img.complete && img.naturalWidth > 80 && img.naturalHeight > 80) loaded++;
+                                else pending++;
                             }
-                            // The reader may live inside overflow-y:auto; scrolling only
-                            // document.body never triggers its lazy-loaded page images.
-                            const scrollables = [root, ...Array.from(body.querySelectorAll('*')).filter(el => {
+                            // The site initially shows "Chargement de la page..." for
+                            // each slot. Keep that count until all slots are discovered,
+                            // including when the reader virtualizes previous images.
+                            const placeholders = Array.from(body.querySelectorAll('div,span,p'))
+                                .filter(el => el.children.length === 0 &&
+                                    /^chargement de la page/i.test((el.textContent || '').trim())).length;
+                            window.__xmExpected = Math.max(window.__xmExpected || 0,
+                                placeholders, readerUrls.length);
+                            window.__xmSeen = window.__xmSeen || new Set();
+                            for (const url of readerUrls) window.__xmSeen.add(url);
+                            // Scroll the chapter itself. Scrolling every unrelated
+                            // carousel can make the completion check run forever.
+                            const scrollables = [root, ...Array.from(
+                                body.querySelectorAll('main,article,[class*="reader"],[class*="chapter"]')
+                            ).filter(el => {
                                 if (el.scrollHeight <= el.clientHeight + 80) return false;
-                                const overflow = getComputedStyle(el).overflowY;
-                                return /auto|scroll/.test(overflow);
-                            })].slice(0, 12);
-                            const step = Math.max(260, Math.floor(innerHeight * .7));
+                                return /auto|scroll/.test(getComputedStyle(el).overflowY);
+                            })].slice(0, 5);
+                            const step = Math.max(480, Math.floor(innerHeight * 1.2));
                             let scrolling = false;
                             for (const el of scrollables) {
                                 const max = Math.max(0, el.scrollHeight - el.clientHeight);
@@ -182,17 +199,22 @@ abstract class XManga : KeiSource() {
                             else if (!window.__xmBottomAt) window.__xmBottomAt = now;
                             if (!window.__xmStatusAt || now - window.__xmStatusAt > 1800) {
                                 window.__xmStatusAt = now;
-                                const status = 'img=' + images.length + ', chargées=' + loaded +
-                                    ', URLs=' + window.__xmSeen.size + ', blob=' + blobImages +
-                                    ', canvas=' + body.querySelectorAll('canvas').length +
-                                    ', cadres=' + body.querySelectorAll('iframe').length +
-                                    ', zones à défiler=' + scrollables.length;
+                                const status = 'pages CDN=' + window.__xmSeen.size +
+                                    '/' + window.__xmExpected + ', chargées=' + loaded +
+                                    ', en attente=' + pending + ', placeholders=' + placeholders +
+                                    ', blob=' + blobImages + ', zones à défiler=' + scrollables.length;
                                 window.xmangapages.post(JSON.stringify({stage: status}));
                             }
-                            if (window.__xmSeen.size > 0 && !scrolling &&
-                                now - (window.__xmBottomAt || now) > 3500 &&
-                                now - (window.__xmChangedAt || now) > 3200) {
-                                window.xmangapages.post(JSON.stringify([...window.__xmSeen]));
+                            if (window.__xmSeen.size > 0 && window.__xmSeen.size >= window.__xmExpected &&
+                                pending === 0 && placeholders === 0 && !scrolling &&
+                                now - (window.__xmBottomAt || now) > 3000 &&
+                                now - (window.__xmChangedAt || now) > 3000) {
+                                // Prefer DOM order to discovery order: lazy loads sometimes
+                                // complete out of order. Keep previously seen URLs if DOM
+                                // virtualization has removed them.
+                                const ordered = [...new Set(readerUrls)];
+                                for (const url of window.__xmSeen) if (!ordered.includes(url)) ordered.push(url);
+                                window.xmangapages.post(JSON.stringify(ordered));
                                 return 'done';
                             }
                             return 'waiting';
