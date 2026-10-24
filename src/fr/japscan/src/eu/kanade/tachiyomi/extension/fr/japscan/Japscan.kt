@@ -41,6 +41,7 @@ import java.io.IOException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.hours
@@ -285,6 +286,7 @@ abstract class Japscan :
     }
 
     private val pageListMutex = Mutex()
+    private val completedChapterCaptures = ConcurrentHashMap<String, List<String>>()
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         pageListMutex.withLock {
@@ -296,7 +298,13 @@ abstract class Japscan :
             val urlSegment = chapter.url.trimStart('/').substringBefore('/').lowercase()
             val isWebtoon = urlSegment == "manhwa" || urlSegment == "manhua"
 
-            val cachedPages = runReaderWebView(chapterUrl, isWebtoon, urlSegment)
+            // A chapter previously captured in this process can be opened immediately
+            // without navigating the protected reader and decoding every page again.
+            val cachedPages = completedChapterCaptures[chapterUrl]
+                ?.takeIf { paths -> paths.isNotEmpty() && paths.all { File(it).isFile } }
+                ?: runReaderWebView(chapterUrl, isWebtoon, urlSegment).also {
+                    completedChapterCaptures[chapterUrl] = it
+                }
             if (cachedPages.isEmpty()) {
                 throw IOException("Japscan : aucune image lisible n’a été récupérée. Ouvrez ce chapitre dans la WebView de Mihon pour vérifier son accès.")
             }
