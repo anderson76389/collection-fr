@@ -1,0 +1,26 @@
+name: Supprimer la branche X Manga abandonnee
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-retired-xmanga-branch.yml"
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supprimer uniquement la branche obsolete X Manga
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="fix/xmanga-reader-real-image-host-20261024"
+          repo="$GITHUB_REPOSITORY"
+          open_heads="$(gh api --paginate "repos/$repo/pulls?state=open&per_page=100" --jq '.[].head.ref')"
+          if printf "%s\n" "$open_heads" | grep -Fxq -- "$branch"; then
+            echo "Branch protected by open pull request"; exit 1
+          fi
+          gh api -X DELETE "repos/$repo/git/refs/heads/$branch" >/dev/null
+          echo "Deleted $branch"
