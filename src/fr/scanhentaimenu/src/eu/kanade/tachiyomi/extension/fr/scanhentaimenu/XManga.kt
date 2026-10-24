@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.scanhentaimenu
 
+import android.webkit.CookieManager
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -127,59 +128,71 @@ abstract class XManga : KeiSource() {
                     evaluateJs(
                         """
                         (function() {
-                            const container = document.querySelector('main') || document.body;
-                            if (!container) return 'waiting';
-                            const heading = container.querySelector('h1');
-                            const readerReady = /chapitre|chapter/i.test(container.innerText || '') || !!heading;
-                            if (!readerReady) return 'waiting';
-                            window.__xmPages = window.__xmPages || [];
-                            const images = Array.from(container.querySelectorAll('img'));
-                            let pending = 0, candidates = 0;
+                            const body = document.body, root = document.scrollingElement;
+                            if (!body || !root) return 'waiting';
+                            if (/just a moment|access denied|attention required/i.test(document.title)) {
+                                window.xmangapages.post(JSON.stringify({stage: 'vérification du site : ' + document.title}));
+                                return 'challenge';
+                            }
+                            window.__xmSeen = window.__xmSeen || new Set();
+                            const images = Array.from(body.querySelectorAll('img'));
+                            let loaded = 0, blobImages = 0;
                             for (const img of images) {
                                 img.loading = 'eager';
-                                // Some chapters keep a loading placeholder in src
-                                // and the real page address in data-src or data-original.
-                                const raw = img.getAttribute('data-src') || img.getAttribute('data-original') ||
-                                    img.currentSrc || img.getAttribute('src') || '';
-                                if (!raw || raw.startsWith('data:')) continue;
-                                let url;
-                                try { url = new URL(raw, location.href).href; } catch (e) { continue; }
-                                if (!/^https?:\/\//i.test(url)) continue;
-                                if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop/i.test(url + ' ' + img.alt)) continue;
-                                if (img.naturalWidth < 220 || img.naturalHeight < 220 || !img.complete) {
-                                    pending++;
-                                    // Calling scrollIntoView on every unloaded image jumps to
-                                    // the last page and starves the lazy-loaded middle pages.
-                                    continue;
+                                const sources = [img.getAttribute('data-original'), img.getAttribute('data-src'),
+                                    img.getAttribute('data-lazy-src'), img.currentSrc, img.getAttribute('src')];
+                                const srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
+                                if (srcset) sources.push(srcset.split(',').pop().trim().split(/\s+/)[0]);
+                                for (const raw of sources) {
+                                    if (!raw || raw.startsWith('data:')) continue;
+                                    if (raw.startsWith('blob:')) { blobImages++; continue; }
+                                    let url;
+                                    try { url = new URL(raw, location.href).href; } catch (_) { continue; }
+                                    if (!/^https?:\/\//.test(url)) continue;
+                                    if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop|favicon/i.test(
+                                        url + ' ' + (img.alt || '') + ' ' + (img.className || ''))) continue;
+                                    window.__xmSeen.add(url);
+                                    break;
                                 }
-                                candidates++;
-                                if (!window.__xmPages.includes(url)) window.__xmPages.push(url);
+                                if (img.complete && img.naturalWidth > 80 && img.naturalHeight > 80) loaded++;
                             }
-                            const step = Math.max(320, innerHeight * .75);
-                            window.__xmScanY = Math.min(document.documentElement.scrollHeight, (window.__xmScanY || 0) + step);
-                            window.scrollTo(0, window.__xmScanY);
-                            const atEnd = window.__xmScanY + innerHeight >= document.documentElement.scrollHeight - 10;
-                            if (!atEnd) window.__xmFinishedAt = 0;
-                            else if (!window.__xmFinishedAt) window.__xmFinishedAt = Date.now();
+                            // The reader may live inside overflow-y:auto; scrolling only
+                            // document.body never triggers its lazy-loaded page images.
+                            const scrollables = [root, ...Array.from(body.querySelectorAll('*')).filter(el => {
+                                if (el.scrollHeight <= el.clientHeight + 80) return false;
+                                const overflow = getComputedStyle(el).overflowY;
+                                return /auto|scroll/.test(overflow);
+                            })].slice(0, 12);
+                            const step = Math.max(260, Math.floor(innerHeight * .7));
+                            let scrolling = false;
+                            for (const el of scrollables) {
+                                const max = Math.max(0, el.scrollHeight - el.clientHeight);
+                                const next = Math.min(max, el.scrollTop + step);
+                                if (next > el.scrollTop + 1) {
+                                    el.scrollTop = next;
+                                    scrolling = true;
+                                }
+                            }
                             const now = Date.now();
-                            if (window.__xmKnownCount !== window.__xmPages.length) {
-                                window.__xmKnownCount = window.__xmPages.length;
-                                window.__xmLastImageAt = now;
+                            if (window.__xmSeenCount !== window.__xmSeen.size) {
+                                window.__xmSeenCount = window.__xmSeen.size;
+                                window.__xmChangedAt = now;
                             }
-                            if (!window.__xmStatusAt || now-window.__xmStatusAt > 1500) {
+                            if (scrolling) window.__xmBottomAt = 0;
+                            else if (!window.__xmBottomAt) window.__xmBottomAt = now;
+                            if (!window.__xmStatusAt || now - window.__xmStatusAt > 1800) {
                                 window.__xmStatusAt = now;
-                                window.xmangapages.post(JSON.stringify({stage:'images ' + window.__xmPages.length +
-                                    ', en attente ' + pending + ', ' + (atEnd ? 'bas' : 'défilement')}));
+                                const status = 'img=' + images.length + ', chargées=' + loaded +
+                                    ', URLs=' + window.__xmSeen.size + ', blob=' + blobImages +
+                                    ', canvas=' + body.querySelectorAll('canvas').length +
+                                    ', cadres=' + body.querySelectorAll('iframe').length +
+                                    ', zones à défiler=' + scrollables.length;
+                                window.xmangapages.post(JSON.stringify({stage: status}));
                             }
-                            // A single image from the site's header or a broken lazy
-                            // placeholder must not keep the reader blocked indefinitely.
-                            // Require the bottom and a stable image count, and give
-                            // remaining pages time to finish without endless waiting.
-                            if (atEnd && window.__xmPages.length &&
-                                now-(window.__xmFinishedAt || now)>4500 &&
-                                now-(window.__xmLastImageAt || now)>3500 &&
-                                (pending === 0 || now-(window.__xmFinishedAt || now)>14000)) {
-                                window.xmangapages.post(JSON.stringify(window.__xmPages));
+                            if (window.__xmSeen.size > 0 && !scrolling &&
+                                now - (window.__xmBottomAt || now) > 3500 &&
+                                now - (window.__xmChangedAt || now) > 3200) {
+                                window.xmangapages.post(JSON.stringify([...window.__xmSeen]));
                                 return 'done';
                             }
                             return 'waiting';
@@ -187,6 +200,7 @@ abstract class XManga : KeiSource() {
                         """.trimIndent(),
                     )
                 }
+
                 loadUrl(chapterUrl)
             }
         } catch (error: WebViewTimeoutException) {
@@ -200,10 +214,29 @@ abstract class XManga : KeiSource() {
 
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder().apply {
         page.imageUrl?.let(imageHeaders::get)?.forEach { (key, value) ->
-            if (!key.equals("Host", ignoreCase = true) && !key.equals("Content-Length", ignoreCase = true)) {
+            if (key.lowercase() !in setOf(
+                    "host",
+                    "content-length",
+                    "accept-encoding",
+                    "connection",
+                    "cookie",
+                    "sec-fetch-dest",
+                    "sec-fetch-mode",
+                    "sec-fetch-site",
+                )
+            ) {
                 header(key, value)
             }
         }
+        // A visible WebView may pass Cloudflare/CDN cookies even though its
+        // shouldInterceptRequest headers omit Cookie. Mihon's separate OkHttp
+        // image request must use the *target host's* browser cookies, without
+        // leaking x-manga.org cookies to a third-party image host.
+        page.imageUrl?.let { imageUrl ->
+            runCatching { CookieManager.getInstance().getCookie(imageUrl) }
+                .getOrNull()?.takeIf(String::isNotBlank)?.let { header("Cookie", it) }
+        }
+        header("User-Agent", headers["User-Agent"]!!)
         header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
     }.build()
 
