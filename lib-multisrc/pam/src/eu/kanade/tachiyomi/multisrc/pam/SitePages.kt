@@ -106,8 +106,6 @@ internal class SitePages(
                 var readerResult: ReaderResult? = null
                 val pageRequests = mutableListOf<Pair<String, Map<String, String>>>()
                 var readerMetadataReadyAt: TimeMark? = null
-                var readerNavigationAt = TimeSource.Monotonic.markNow()
-                var readerRetried = false
                 fun resolveWhenReady() {
                     val page = site ?: return
                     if (!readerV2) return resolve(page)
@@ -180,46 +178,18 @@ internal class SitePages(
                 }
                 // Challenges that pass by themselves take a few seconds; the rest need the user
                 poll(POLL_INTERVAL) {
-                    var navigated = false
+                    // This WebView wrapper permits exactly ONE loadUrl call per run.
+                    // A second loadUrl during polling throws "load already called".
+                    // Retrying must use a fresh runWebView invocation, not this one.
                     if (reader && allowMissingReaderPageRequest) {
-                        synchronized(lock) {
-                            resolveWhenReady()
-                            // A chapter can serve Inertia metadata but start its encrypted
-                            // worker too early for document-start instrumentation to attach.
-                            // Retry the navigation only once, and only for Epsilon Scan.
-                            if (pamReaderNavigationRetryAllowed(
-                                    enabled = allowMissingReaderPageRequest,
-                                    hasPage = hasPage.get(),
-                                    isReaderV2 = hasReaderV2.get(),
-                                    hasReaderResult = hasReaderResult.get(),
-                                    alreadyRetried = readerRetried,
-                                    wait = readerNavigationAt.elapsedNow(),
-                                )
-                            ) {
-                                readerRetried = true
-                                site = null
-                                readerV2 = false
-                                readerResult = null
-                                readerMetadataReadyAt = null
-                                pageRequests.clear()
-                                hasPage.set(false)
-                                hasReaderV2.set(false)
-                                hasReaderResult.set(false)
-                                hasPageRequest.set(false)
-                                readerNavigationAt = TimeSource.Monotonic.markNow()
-                                navigated = true
-                                loadUrl(url)
-                            }
-                        }
+                        synchronized(lock) { resolveWhenReady() }
                     }
-                    if (!navigated) {
-                        evaluateJs(readScript) {
-                            if (it != "\"challenge\"") {
-                                challengePolls = 0
-                            } else if (POLL_INTERVAL * ++challengePolls > CHALLENGE_WAIT) {
-                                failed(challenge = true)
-                                reject(IOException(SOLVE_IN_WEBVIEW))
-                            }
+                    evaluateJs(readScript) {
+                        if (it != "\"challenge\"") {
+                            challengePolls = 0
+                        } else if (POLL_INTERVAL * ++challengePolls > CHALLENGE_WAIT) {
+                            failed(challenge = true)
+                            reject(IOException(SOLVE_IN_WEBVIEW))
                         }
                     }
                 }
@@ -290,12 +260,3 @@ private const val SOLVE_IN_WEBVIEW = "Open in WebView to pass the site's verific
 /** Only an opted-in source may use manifest/key data without an intercepted image. */
 internal fun pamReaderFallbackAllowed(enabled: Boolean, wait: Duration): Boolean = enabled && wait >= 2.seconds
 
-/** A single retry on the Soft Epsilon WebView when the encrypted worker never supplies its key. */
-internal fun pamReaderNavigationRetryAllowed(
-    enabled: Boolean,
-    hasPage: Boolean,
-    isReaderV2: Boolean,
-    hasReaderResult: Boolean,
-    alreadyRetried: Boolean,
-    wait: Duration,
-): Boolean = enabled && hasPage && isReaderV2 && !hasReaderResult && !alreadyRetried && wait >= 18.seconds
