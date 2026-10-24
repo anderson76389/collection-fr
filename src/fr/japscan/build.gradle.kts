@@ -30,6 +30,7 @@ extensions.configure<ApplicationExtension> {
 dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.stdlib)
+    testImplementation(libs.jsoup)
 }
 
 tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {
