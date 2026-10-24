@@ -339,47 +339,47 @@ abstract class Japscan :
         }
 
         val pages = runWebView<List<String>>(timeout = 3.minutes) {
-                domStorageEnabled = true
-                javaScriptEnabled = true
-                blockImages = false
-                userAgent = headers["User-Agent"]!!
-                if (isWebtoon) {
-                    useWideViewPort = true
-                    loadWithOverviewMode = false
-                }
-
-                jsBridge("${interfaceName}_savePage") { dataUri ->
-                    savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
-                }
-
-                jsBridge("${interfaceName}_passDone") {
-                    done = true
-                    resolve(savedPaths)
-                }
-
-                // The reader pulls rotating ad hosts whose modals break the detached descrambler,
-                // so only the origins the reader needs are allowed.
-                interceptRequest { request ->
-                    val host = request.url.host ?: return@interceptRequest null
-                    if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
-                        null
-                    } else {
-                        // A null body keeps some WebView builds pending, stalling the capture
-                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                    }
-                }
-
-                injectAtDocumentStart(
-                    ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
-                    setOf(baseUrl),
-                )
-
-                onPageFinished {
-                    evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
-                }
-
-                loadData(chapterUrl, readerHtml)
+            domStorageEnabled = true
+            javaScriptEnabled = true
+            blockImages = false
+            userAgent = headers["User-Agent"]!!
+            if (isWebtoon) {
+                useWideViewPort = true
+                loadWithOverviewMode = false
             }
+
+            jsBridge("${interfaceName}_savePage") { dataUri ->
+                savePage(dataUri, sessionTag, savedPaths.size)?.let(savedPaths::add)
+            }
+
+            jsBridge("${interfaceName}_passDone") {
+                done = true
+                resolve(savedPaths)
+            }
+
+            // The reader pulls rotating ad hosts whose modals break the detached descrambler,
+            // so only the origins the reader needs are allowed.
+            interceptRequest { request ->
+                val host = request.url.host ?: return@interceptRequest null
+                if (ALLOWED_HOSTS.any { host == it || host.endsWith(".$it") }) {
+                    null
+                } else {
+                    // A null body keeps some WebView builds pending, stalling the capture
+                    WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                }
+            }
+
+            injectAtDocumentStart(
+                ACLIB_STUB + "\n" + if (isWebtoon) webtoonHooks(interfaceName) else PAGINATED_HOOK,
+                setOf(baseUrl),
+            )
+
+            onPageFinished {
+                evaluateJs(if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName))
+            }
+
+            loadData(chapterUrl, readerHtml)
+        }
         return pages.takeIf { done } ?: emptyList()
     }
 
