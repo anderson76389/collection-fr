@@ -33,6 +33,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.File
@@ -117,17 +118,67 @@ abstract class Japscan :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val response = client.get(baseUrl + manga.url)
-        val mangaSlug = extractMangaSlug(response.request.url)
-        val document = response.asJsoup()
-        val details = parseMangaDetails(document).apply {
+        val mangaUrl = baseUrl + manga.url
+        val mangaSlug = extractMangaSlug(mangaUrl.toHttpUrl())
+        // A Cloudflare response can be HTTP 200 with no chapter markup; never mistake it
+        // for an actual empty chapter list.
+        val httpDocument = runCatching { client.get(mangaUrl).asJsoup() }.getOrNull()
+        var document = httpDocument
+        var chapterList = document?.let { extractChapterList(it, mangaSlug) }.orEmpty()
+        if (chapterList.isEmpty()) {
+            document = chapterDocumentInWebView(mangaUrl)
+            chapterList = extractChapterList(document, mangaSlug)
+        }
+        if (chapterList.isEmpty()) {
+            throw IOException("Japscan : liste des chapitres introuvable après chargement de la WebView. Vérifiez l'accès au manga dans la WebView Mihon.")
+        }
+        val details = parseMangaDetails(document!!).apply {
             url = manga.url
             title = manga.title
         }
-        val chapterList = document.select(chapterListSelector()).mapNotNull { el ->
-            runCatching { parseChapter(el, mangaSlug) }.getOrNull()
-        }
         return SMangaUpdate(details, filterOutlierChapters(chapterList))
+    }
+
+    private fun extractChapterList(document: Document, slug: String?): List<SChapter> =
+        document.select(chapterListSelector()).mapNotNull { row ->
+            runCatching { parseChapter(row, slug) }.getOrNull()
+        }
+
+    // The regular HTTP client may receive a Cloudflare challenge even after the user has
+    // completed verification in Mihon's WebView. Load the manga directly in a browser session
+    // and wait for the chapter DOM rather than returning a silently empty chapter list.
+    private suspend fun chapterDocumentInWebView(url: String): Document {
+        val bridge = "jsc" + randomString()
+        val html = try {
+            runWebView<String>(timeout = 65.seconds) {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                blockImages = true
+                userAgent = headers["User-Agent"]!!
+                jsBridge(bridge) { html ->
+                    if (html.contains("list_chapters")) resolve(html)
+                }
+                onReceivedError { request, error ->
+                    if (request.isForMainFrame) reject(IOException("Japscan : erreur de chargement de la liste : ${error.description}"))
+                }
+                poll(600.milliseconds) {
+                    evaluateJs(
+                        """
+                        (function () {
+                            const root = document.getElementById('list_chapters');
+                            if (!root || !root.querySelector('.list_chapters')) return 'waiting';
+                            window.$bridge.post(document.documentElement.outerHTML);
+                            return 'sent';
+                        })()
+                        """.trimIndent(),
+                    )
+                }
+                loadUrl(url)
+            }
+        } catch (e: WebViewTimeoutException) {
+            throw IOException("Japscan : aucun chapitre accessible dans la WebView (vérification Cloudflare ou structure du site modifiée).", e)
+        }
+        return Jsoup.parse(html, url)
     }
 
     private fun parseMangaDetails(document: Document) = SManga.create().apply {
@@ -154,12 +205,9 @@ abstract class Japscan :
 
     // JapScan sometimes uploads some "spoiler preview" chapters, containing 2 or 3 untranslated pictures taken from a raw. Sometimes they also upload full RAWs/US versions and replace them with a translation as soon as available.
     // Those have a span.badge "SPOILER" or "RAW". The additional pseudo selector makes sure to exclude these from the chapter list.
-    private fun chapterListSelector() = "#list_chapters > div.collapse > div.list_chapters" +
-        if (preferences.getString(SHOW_SPOILER_CHAPTERS, "hide") == "hide") {
-            ":not(:has(.badge:contains(SPOILER),.badge:contains(RAW),.badge:contains(VUS)))"
-        } else {
-            ""
-        }
+    private fun chapterListSelector() = japscanChapterListSelector(
+        hideSpoilers = preferences.getString(SHOW_SPOILER_CHAPTERS, "hide") == "hide",
+    )
 
     // Backstop for a honeypot that clears the slug/number binding in parseChapter: its number
     // comes out wildly out of range (observed: 483181 among real 1174..1181), so cap on the median.
@@ -453,3 +501,11 @@ abstract class Japscan :
         private const val WEBVIEW_VIEWPORT_HEIGHT = 16384
     }
 }
+
+internal fun japscanChapterListSelector(hideSpoilers: Boolean): String =
+    "#list_chapters .list_chapters" +
+        if (hideSpoilers) {
+            ":not(:has(.badge:contains(SPOILER),.badge:contains(RAW),.badge:contains(VUS)))"
+        } else {
+            ""
+        }
