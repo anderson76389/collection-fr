@@ -264,6 +264,28 @@ internal fun readerReadyScript(isWebtoon: Boolean): String = if (isWebtoon) {
     """.trimIndent()
 }
 
+// When the selected reader is not mounting, detect the other active DOM
+// layout and restart in a fresh WebView instead of waiting twice for 45 seconds.
+internal fun alternateReaderScript(expectedWebtoon: Boolean): String = if (expectedWebtoon) {
+    """
+    (function(){
+        const reader = document.querySelector('[id^="single-reader"]');
+        const pages = document.getElementById('pages');
+        if (pages && (!reader || reader.getClientRects().length > 0)) return 'alternate';
+        return 'waiting';
+    })();
+    """.trimIndent()
+} else {
+    """
+    (function(){
+        const reader = document.getElementById('full-reader');
+        if (reader && reader.getClientRects().length > 0 &&
+            reader.querySelector('[id^="d-img-"]')) return 'alternate';
+        return 'waiting';
+    })();
+    """.trimIndent()
+}
+
 internal fun paginatedDriver(interfaceName: String) = $"""
                                 (async function(){
                                     // onPageFinished fires more than once per load (redirects,
