@@ -104,19 +104,36 @@ abstract class XManga : KeiSource() {
                         evaluateJs(
                             """
                             (function() {
-                                const imgs = Array.from(document.querySelectorAll('img'));
-                                imgs.forEach(img => { img.loading = 'eager'; });
-                                const urls = [...new Set(imgs.map(img => img.currentSrc || img.getAttribute('src') || img.getAttribute('data-src') || '')
-                                    .filter(src => /^https?:\/\//.test(src) && !/logo|avatar|cover|thumb|banner|poster|placeholder/i.test(src)))];
-                                const key = urls.join('|'), now = Date.now();
-                                if (window.__xmKey !== key) { window.__xmKey = key; window.__xmChange = now; }
-                                else if (urls.length && now - (window.__xmChange || now) > 2200) {
-                                    window.xmangapages.post(JSON.stringify(urls));
-                                    return 'sent';
+                                // The current site populates page images after JavaScript
+                                // hydration. Do not resolve on the site's logo or a single
+                                // prematurely loaded image while the page is still scrolling.
+                                const main = document.querySelector('main') || document.body;
+                                if (!/chapitre|chapter/i.test(main.innerText || '')) return 'reader-not-ready';
+                                const images = Array.from(main.querySelectorAll('img'));
+                                window.__xmPages = window.__xmPages || [];
+                                for (const img of images) {
+                                    img.loading = 'eager';
+                                    const url = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
+                                    if (!/^https?:\/\//i.test(url)) continue;
+                                    if (/avatar|logo|cover|thumb|banner|poster|placeholder/i.test(url + ' ' + img.alt)) continue;
+                                    if (!img.complete || img.naturalWidth < 250 || img.naturalHeight < 250) continue;
+                                    if (!window.__xmPages.includes(url)) window.__xmPages.push(url);
                                 }
-                                window.scrollTo(0, Math.min(document.body.scrollHeight, (window.__xmPos || 0) + innerHeight));
-                                window.__xmPos = window.scrollY;
-                                return 'waiting';
+                                const next = Math.min(document.documentElement.scrollHeight, window.scrollY + innerHeight * 1.6);
+                                window.scrollTo(0, next);
+                                const bottom = window.scrollY + innerHeight >= document.documentElement.scrollHeight - 16;
+                                const now = Date.now();
+                                if (!bottom) {
+                                    window.__xmAtBottom = 0;
+                                    return 'scrolling';
+                                }
+                                if (!window.__xmAtBottom) window.__xmAtBottom = now;
+                                if (window.__xmPages.length > 0 && now - window.__xmAtBottom > 3000) {
+                                    window.xmangapages.post(JSON.stringify(window.__xmPages));
+                                    return 'done';
+                                }
+                                return 'waiting-images';
+
                             })()
                             """.trimIndent(),
                         )
