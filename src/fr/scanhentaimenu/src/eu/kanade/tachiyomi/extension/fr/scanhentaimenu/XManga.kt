@@ -26,6 +26,10 @@ import kotlin.time.Duration.Companion.seconds
 // Preserve /manga/<slug>/ for existing libraries, use /read/<uuid>/ for chapters.
 @Source
 abstract class XManga : KeiSource() {
+    // Preserve the image request headers seen by the successful WebView
+    // session so Mihon can fetch the same CDN images with matching headers.
+    private val imageHeaders = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
+
     override fun getHomeUrl() = "$baseUrl/"
 
     override suspend fun getPopularManga(page: Int): MangasPage = browseCatalogue(page, "")
@@ -108,6 +112,17 @@ abstract class XManga : KeiSource() {
                         reject(IOException("X-Manga : chapitre inaccessible dans la WebView : " + error.description))
                     }
                 }
+                interceptRequest { request ->
+                    val url = request.url.toString()
+                    if (url.startsWith("https://") && (
+                            url.contains(".webp") || url.contains(".jpg") ||
+                                url.contains(".jpeg") || url.contains(".png") || url.contains(".avif")
+                            )
+                    ) {
+                        imageHeaders[url] = request.requestHeaders
+                    }
+                    null
+                }
                 poll(650.milliseconds) {
                     evaluateJs(
                         """
@@ -122,16 +137,19 @@ abstract class XManga : KeiSource() {
                             let pending = 0, candidates = 0;
                             for (const img of images) {
                                 img.loading = 'eager';
-                                const raw = img.currentSrc || img.getAttribute('data-src') || img.getAttribute('src') || '';
+                                // Some chapters keep a loading placeholder in src
+                                // and the real page address in data-src or data-original.
+                                const raw = img.getAttribute('data-src') || img.getAttribute('data-original') ||
+                                    img.currentSrc || img.getAttribute('src') || '';
                                 if (!raw || raw.startsWith('data:')) continue;
                                 let url;
                                 try { url = new URL(raw, location.href).href; } catch (e) { continue; }
                                 if (!/^https?:\/\//i.test(url)) continue;
                                 if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop/i.test(url + ' ' + img.alt)) continue;
-                                // Avoid site chrome, which is short and near the header.
-                                if (img.naturalWidth < 250 || img.naturalHeight < 250 || !img.complete) {
+                                if (img.naturalWidth < 220 || img.naturalHeight < 220 || !img.complete) {
                                     pending++;
-                                    try { img.scrollIntoView({block:'nearest'}); } catch(e) {}
+                                    // Calling scrollIntoView on every unloaded image jumps to
+                                    // the last page and starves the lazy-loaded middle pages.
                                     continue;
                                 }
                                 candidates++;
@@ -144,13 +162,23 @@ abstract class XManga : KeiSource() {
                             if (!atEnd) window.__xmFinishedAt = 0;
                             else if (!window.__xmFinishedAt) window.__xmFinishedAt = Date.now();
                             const now = Date.now();
+                            if (window.__xmKnownCount !== window.__xmPages.length) {
+                                window.__xmKnownCount = window.__xmPages.length;
+                                window.__xmLastImageAt = now;
+                            }
                             if (!window.__xmStatusAt || now-window.__xmStatusAt > 1500) {
                                 window.__xmStatusAt = now;
                                 window.xmangapages.post(JSON.stringify({stage:'images ' + window.__xmPages.length +
                                     ', en attente ' + pending + ', ' + (atEnd ? 'bas' : 'défilement')}));
                             }
-                            if (atEnd && window.__xmPages.length && pending === 0 &&
-                                now-(window.__xmFinishedAt || now)>4000) {
+                            // A single image from the site's header or a broken lazy
+                            // placeholder must not keep the reader blocked indefinitely.
+                            // Require the bottom and a stable image count, and give
+                            // remaining pages time to finish without endless waiting.
+                            if (atEnd && window.__xmPages.length &&
+                                now-(window.__xmFinishedAt || now)>4500 &&
+                                now-(window.__xmLastImageAt || now)>3500 &&
+                                (pending === 0 || now-(window.__xmFinishedAt || now)>14000)) {
                                 window.xmangapages.post(JSON.stringify(window.__xmPages));
                                 return 'done';
                             }
@@ -170,9 +198,14 @@ abstract class XManga : KeiSource() {
         return images.distinct().mapIndexed { idx, image -> Page(idx, url = chapterUrl, imageUrl = image) }
     }
 
-    override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
-        .header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
-        .build()
+    override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder().apply {
+        page.imageUrl?.let(imageHeaders::get)?.forEach { (key, value) ->
+            if (!key.equals("Host", ignoreCase = true) && !key.equals("Content-Length", ignoreCase = true)) {
+                header(key, value)
+            }
+        }
+        header("Referer", page.url.takeIf { it.startsWith(baseUrl) } ?: "$baseUrl/")
+    }.build()
 
     private suspend fun browserDocument(url: String, type: String, page: Int = 1, query: String = ""): Document {
         val safeQuery = org.json.JSONObject.quote(query)

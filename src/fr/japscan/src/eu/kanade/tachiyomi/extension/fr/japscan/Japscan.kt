@@ -323,7 +323,11 @@ abstract class Japscan :
     ): List<String> = try {
         runReaderWebView(chapterUrl, initialWebtoon, urlSegment)
     } catch (error: IOException) {
-        if (!error.message.orEmpty().contains("lecteur d’images ne s’est pas initialisé")) throw error
+        if (!error.message.orEmpty().contains("lecteur d’images ne s’est pas initialisé") &&
+            !error.message.orEmpty().contains("autre mode de lecteur détecté")
+        ) {
+            throw error
+        }
         try {
             runReaderWebView(chapterUrl, !initialWebtoon, urlSegment)
         } catch (other: IOException) {
@@ -402,6 +406,7 @@ abstract class Japscan :
                 // Starting the driver then used to report zero pages even when the
                 // catalogue and chapter HTML were available.
                 val readyScript = readerReadyScript(isWebtoon)
+                val alternateScript = alternateReaderScript(isWebtoon)
                 val driverScript = if (isWebtoon) webtoonDriver(interfaceName, urlSegment) else paginatedDriver(interfaceName)
                 val beganAt = SystemClock.elapsedRealtime()
                 var driverStarted = false
@@ -423,6 +428,12 @@ abstract class Japscan :
                                 if (state == "\"ready\"" && !driverStarted) {
                                     driverStarted = true
                                     evaluateJs(driverScript)
+                                } else if (SystemClock.elapsedRealtime() - beganAt > 14_000 && !driverStarted) {
+                                    evaluateJs(alternateScript) { alternate ->
+                                        if (alternate == "\"alternate\"" && !driverStarted) {
+                                            reject(IOException("Japscan : autre mode de lecteur détecté, tentative adaptée."))
+                                        }
+                                    }
                                 }
                             }
                         }
