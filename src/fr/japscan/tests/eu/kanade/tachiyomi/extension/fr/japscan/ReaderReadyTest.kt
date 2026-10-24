@@ -1,10 +1,35 @@
 package eu.kanade.tachiyomi.extension.fr.japscan
 
+import org.jsoup.Jsoup
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderReadyTest {
+    @Test
+    fun mangaChapterSelectorSurvivesDifferentCollapseWrappers() {
+        val document = Jsoup.parse("""
+            <div id="list_chapters">
+                <div class="collapse"><div class="list_chapters"><a href="/manga/one-piece/1/">Chapitre 1</a></div></div>
+                <section><div class="list_chapters"><a href="/manga/one-piece/2/">Chapitre 2</a></div></section>
+            </div>
+        """.trimIndent())
+        assertEquals(2, document.select(japscanChapterListSelector(hideSpoilers = true)).size)
+    }
+
+    @Test
+    fun spoilerPreferenceIsRetainedInTheNewChapterSelector() {
+        val document = Jsoup.parse("""
+            <div id="list_chapters">
+                <div class="list_chapters"><a href="/manga/test/1/">Chapitre 1</a></div>
+                <div class="list_chapters"><span class="badge">RAW</span><a href="/manga/test/2/">Chapitre 2</a></div>
+            </div>
+        """.trimIndent())
+        assertEquals(1, document.select(japscanChapterListSelector(hideSpoilers = true)).size)
+        assertEquals(2, document.select(japscanChapterListSelector(hideSpoilers = false)).size)
+    }
+
     @Test
     fun webtoonCaptureNeedsTheLongStripReaderAndImageContainers() {
         val readiness = readerReadyScript(isWebtoon = true)
