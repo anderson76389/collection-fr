@@ -325,7 +325,7 @@ abstract class Japscan :
                     if (completedAt != 0L) {
                         val currentPages = synchronized(saveLock) { savedPaths.toList() }
                         val expected = expectedPages.get()
-                        if (expected > 0 && currentPages.size == expected) {
+                        if (expected > 0 && currentPages.size >= expected) {
                             resolve(currentPages)
                         } else if (SystemClock.elapsedRealtime() - completedAt > 12_000) {
                             reject(IOException("Japscan : capture incomplète (${currentPages.size}/$expected images)."))
@@ -347,18 +347,18 @@ abstract class Japscan :
                 loadUrl(chapterUrl)
             }
         } catch (error: kotlinx.coroutines.CancellationException) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw error
         } catch (error: WebViewTimeoutException) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw IOException("Japscan : le lecteur n’a pas répondu. Ouvrez le chapitre dans la WebView de Mihon pour vérifier qu’il est accessible.", error)
         } catch (error: Exception) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw error
         }
 
         if (pages.isEmpty()) {
-            savedPaths.forEach { File(it).delete() }
+            synchronized(saveLock) { savedPaths.toList() }.forEach { File(it).delete() }
             throw IOException("Japscan : le lecteur n’a renvoyé aucune page.")
         }
         return pages
