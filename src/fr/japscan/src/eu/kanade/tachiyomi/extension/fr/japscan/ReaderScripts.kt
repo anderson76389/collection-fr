@@ -28,12 +28,14 @@ internal val PAGINATED_HOOK = """
                                     if (window.__japscanHooked) return;
                                     window.__japscanHooked = true;
                                     window.__japscanLastBlob = null;
+                                    window.__japscanBlobRevision = 0;
                                     var _orig = URL.createObjectURL.bind(URL);
                                     URL.createObjectURL = function(obj){
                                         var u = _orig(obj);
                                         try {
                                             if (obj && obj.type && /^image\//.test(obj.type)) {
                                                 window.__japscanLastBlob = u;
+                                                window.__japscanBlobRevision++;
                                             }
                                         } catch(e) {}
                                         return u;
@@ -290,24 +292,28 @@ internal fun paginatedDriver(interfaceName: String) = $"""
                                         return false;
                                     }
 
-                                    async function waitForBlob(timeoutMs){
-                                        var w = 0;
-                                        while (!window.__japscanLastBlob && w < timeoutMs) {
-                                            await sleep(100); w += 100;
-                                        }
-                                        if (!window.__japscanLastBlob) return -1;
-                                        var lastUrl = window.__japscanLastBlob;
-                                        var stable = 0;
-                                        while (stable < 400) {
-                                            await sleep(100);
-                                            if (window.__japscanLastBlob !== lastUrl) {
-                                                lastUrl = window.__japscanLastBlob;
-                                                stable = 0;
-                                            } else {
-                                                stable += 100;
+                                    // A new blob revision is required after each navigation. Waiting
+                                    // only for a non-null URL could reuse an old or prefetched page.
+                                    async function waitForBlobAfter(revision, timeoutMs){
+                                        var deadline = Date.now() + timeoutMs;
+                                        var stableRevision = -1;
+                                        var stableSince = 0;
+                                        var stableUrl = null;
+                                        while (Date.now() < deadline) {
+                                            var current = window.__japscanBlobRevision || 0;
+                                            var blob = window.__japscanLastBlob;
+                                            if (current > revision && blob) {
+                                                if (current !== stableRevision) {
+                                                    stableRevision = current;
+                                                    stableSince = Date.now();
+                                                    stableUrl = blob;
+                                                } else if (Date.now() - stableSince >= 300) {
+                                                    return stableUrl;
+                                                }
                                             }
+                                            await sleep(75);
                                         }
-                                        return w;
+                                        return null;
                                     }
 
                                     var sel = document.getElementById('pages');
@@ -330,38 +336,28 @@ internal fun paginatedDriver(interfaceName: String) = $"""
                                         }
                                     }
 
-                                    // The reader pre-renders pages on load (the final pre-render is
-                                    // the *last* page, not page 1), so the very first blob the hook
-                                    // sees is unreliable. Wait for the pre-render to settle, discard
-                                    // whatever was captured, then bounce next->prev to force a clean
-                                    // page-1 render before we start harvesting.
-                                    //
-                                    // waitForBlob already means "a blob arrived and stopped changing
-                                    // for 400ms", which is exactly the settle condition — a fixed
-                                    // sleep was both slower here and too short on a loaded device.
-                                    await waitForBlob(10000);
-                                    window.__japscanLastBlob = null;
+                                    // The initial pre-render may be the last page. Navigate
+                                    // next then previous, but wait for each NEW render before
+                                    // harvesting page 1. Never click ahead while saving a page.
+                                    await waitForBlobAfter(-1, 10000);
 
+                                    var before = window.__japscanBlobRevision || 0;
                                     nav(nextBtn, 'ArrowRight');
-                                    await waitForBlob(8000);
-                                    window.__japscanLastBlob = null;
+                                    await waitForBlobAfter(before, 8000);
 
+                                    before = window.__japscanBlobRevision || 0;
                                     nav(prevBtn, 'ArrowLeft');
-                                    var t0 = await waitForBlob(8000);
-                                    var u0 = window.__japscanLastBlob;
-                                    window.__japscanLastBlob = null;
-                                    if (total > 1) nav(nextBtn, 'ArrowRight');
-                                    var saved = u0 ? ((await saveBlobUrl(u0)) ? 1 : 0) : 0;
-                                    console.log('[japscan] page 1 captured after ' + t0 + 'ms (saved=' + saved + ')');
+                                    var firstBlob = await waitForBlobAfter(before, 8000);
+                                    var saved = firstBlob && await saveBlobUrl(firstBlob) ? 1 : 0;
+                                    console.log('[japscan] page 1 captured (saved=' + saved + ')');
 
                                     for (var i = 1; i < total; i++) {
-                                        var t = await waitForBlob(8000);
-                                        var u = window.__japscanLastBlob;
-                                        window.__japscanLastBlob = null;
-                                        if (i < total - 1) nav(nextBtn, 'ArrowRight');
-                                        var ok = u ? await saveBlobUrl(u) : false;
+                                        before = window.__japscanBlobRevision || 0;
+                                        nav(nextBtn, 'ArrowRight');
+                                        var url = await waitForBlobAfter(before, 8000);
+                                        var ok = url ? await saveBlobUrl(url) : false;
                                         if (ok) saved++;
-                                        console.log('[japscan] page ' + (i + 1) + ' captured after ' + t + 'ms (saved=' + saved + ')');
+                                        console.log('[japscan] page ' + (i + 1) + ' captured (saved=' + saved + ')');
                                     }
 
                                     console.log('[japscan] done, ' + saved + ' / ' + total + ' pages saved');
