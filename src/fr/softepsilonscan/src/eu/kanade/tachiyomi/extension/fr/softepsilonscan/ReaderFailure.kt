@@ -12,7 +12,7 @@ internal fun softEpsilonReaderFailure(reason: String?): String {
         "canvas is blocked" in message || "canvas blocked" in message ->
             "Soft Epsilon : le lecteur du site refuse l’export des pages. Ouvrez le chapitre dans la WebView de Mihon ; la capture automatique n’est pas disponible."
         "403" in message || "429" in message || "verification" in message || "challenge" in message ||
-            "webview" in message && "pass" in message ->
+            ("webview" in message && "pass" in message) ->
             "Soft Epsilon : vérification ou limitation d’accès du site. Ouvrez le chapitre dans la WebView de Mihon et effectuez la vérification demandée avant de réessayer."
         "404" in message || "not found" in message ->
             "Soft Epsilon : chapitre introuvable (404). Vérifiez son adresse dans la WebView de Mihon."
