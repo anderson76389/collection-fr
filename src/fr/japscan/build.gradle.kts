@@ -7,7 +7,7 @@ plugins {
 
 keiyoushi {
     name = "Japscan"
-    versionCode = 13
+    versionCode = 14
     contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
 
@@ -30,6 +30,7 @@ extensions.configure<ApplicationExtension> {
 dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.stdlib)
+    testImplementation(libs.jsoup)
 }
 
 tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {

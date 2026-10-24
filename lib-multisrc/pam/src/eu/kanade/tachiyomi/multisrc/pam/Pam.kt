@@ -264,23 +264,16 @@ abstract class Pam :
     }
 
     /** The reader v2 session and manifest from a chapter page loaded with the reader. */
-    private fun encryptedSession(site: SitePage): Pair<EncryptedSession, ReaderResult.Manifest> {
+    private fun encryptedSession(site: SitePage, chapterUrl: String): Pair<EncryptedSession, ReaderResult.Manifest> {
         val result = site.reader!!
 
         // Used in page URLs and headers
         val manifest = result.manifest.takeIf { MANIFEST_BASE_REGEX.matches(it.base) && it.count > 0 }
         val contentKey = runCatching { Base64.decode(result.contentKey, Base64.DEFAULT) }.getOrNull()?.takeIf { it.size == 32 }
         if (manifest == null || contentKey == null) throw IOException("Unexpected reader result")
-        // The site's X- headers on page requests, less the WebView's X-Requested-With
-        val siteHeaders = Headers.Builder().apply {
-            site.pageHeaders
-                .filter { (name, value) ->
-                    SITE_HEADER_REGEX.matches(name) &&
-                        !name.equals("X-Requested-With", ignoreCase = true) &&
-                        HEADER_VALUE_REGEX.matches(value)
-                }
-                .forEach { (name, value) -> add(name, value) }
-        }.build()
+        // Forward the reader's authorization headers and referer to OkHttp.
+        // Without the chapter referer, WebView images may work while Mihon retries 403s.
+        val siteHeaders = pamReaderImageHeaders(site.pageHeaders, chapterUrl)
 
         return EncryptedSession(contentKey, siteHeaders) to manifest
     }
@@ -314,7 +307,7 @@ abstract class Pam :
             }
         }
 
-        val (session, manifest) = encryptedSession(site)
+        val (session, manifest) = encryptedSession(site, "$baseUrl${chapter.url}")
         sessions[id] = session
 
         // Some sites list oversized variants they never serve.
@@ -387,13 +380,20 @@ abstract class Pam :
         val response = chain.proceed(
             request.newBuilder().apply { session.siteHeaders.forEach { (name, value) -> header(name, value) } }.build(),
         )
-        if (!response.isSuccessful) return response
+        if (!response.isSuccessful) {
+            val status = response.code
+            response.close()
+            throw IOException("Soft Epsilon : image refusée (HTTP $status). La vérification WebView ou les en-têtes du lecteur ne sont plus valides.")
+        }
 
+        val decrypted = try {
+            Ece.decrypt(response.body.bytes(), session.contentKey)
+        } catch (e: Exception) {
+            response.close()
+            throw IOException("Soft Epsilon : déchiffrement de l'image impossible (clé du lecteur expirée ou contenu inattendu).", e)
+        }
         return response.newBuilder()
-            .body(
-                Ece.decrypt(response.body.bytes(), session.contentKey)
-                    .toResponseBody("image/webp".toMediaType()),
-            )
+            .body(decrypted.toResponseBody("image/webp".toMediaType()))
             .build()
     }
 
@@ -478,3 +478,16 @@ private const val HIDE_PREMIUM_PREF = "pref_hide_premium_chapters"
 private const val CHUNK_SIZE = 65536 + 17 // libsodium secretstream chunk + ABYTES
 private const val PREFIX_LENGTH = 192
 private const val STREAM_HEADER_LENGTH = 24
+
+/** WebView does not always expose implicit Referer headers in requestHeaders. */
+internal fun pamReaderImageHeaders(pageHeaders: Map<String, String>, chapterUrl: String): Headers = Headers.Builder().apply {
+    pageHeaders
+        .filter { (name, value) ->
+            SITE_HEADER_REGEX.matches(name) &&
+                !name.equals("X-Requested-With", ignoreCase = true) &&
+                HEADER_VALUE_REGEX.matches(value)
+        }
+        .forEach { (name, value) -> add(name, value) }
+    // The chapter is the actual reader origin, not the title/library URL.
+    set("Referer", chapterUrl)
+}.build()

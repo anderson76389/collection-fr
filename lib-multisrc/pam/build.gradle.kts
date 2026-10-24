@@ -10,7 +10,7 @@ dependencies {
 }
 
 keiyoushi {
-    baseVersionCode = 9
+    baseVersionCode = 10
     libVersion = "1.6"
 }
 
@@ -27,4 +27,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.stdlib)
     testImplementation(libs.jsoup)
+    testImplementation(libs.okhttp.core)
 }
