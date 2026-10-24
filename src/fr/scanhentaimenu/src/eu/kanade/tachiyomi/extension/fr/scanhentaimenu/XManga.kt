@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.scanhentaimenu
 
+import android.os.SystemClock
 import android.webkit.CookieManager
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
@@ -90,12 +91,16 @@ abstract class XManga : KeiSource() {
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterUrl = getChapterUrl(chapter)
-        // HTML delivered before hydration contains placeholders and decorative
-        // <img> tags. Never treat those as pages: capture the actual loaded
-        // reader images in the browser that owns the chapter session.
-        val lastState = java.util.concurrent.atomic.AtomicReference("attente du lecteur")
+        val lastState = java.util.concurrent.atomic.AtomicReference("lecteur en initialisation")
+        val readerRequests = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val readerSeen = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        val startedAt = SystemClock.elapsedRealtime()
+
+        // X-Manga's real chapter images are served from reader.hentai.gifts,
+        // unlike the decorative <img> tags in its React page. Capture the
+        // resource requests too: lazy-loading images may not yet be in the DOM.
         val raw = try {
-            runWebView<String>(timeout = 95.seconds) {
+            runWebView<String>(timeout = 55.seconds) {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 blockImages = false
@@ -115,100 +120,53 @@ abstract class XManga : KeiSource() {
                 }
                 interceptRequest { request ->
                     val url = request.url.toString()
+                    if (request.url.host.equals("reader.hentai.gifts", ignoreCase = true) &&
+                        url.startsWith("https://") && readerSeen.add(url)
+                    ) {
+                        readerRequests.add(url)
+                    }
                     if (url.startsWith("https://") && (
                             url.contains(".webp") || url.contains(".jpg") ||
                                 url.contains(".jpeg") || url.contains(".png") || url.contains(".avif")
-                            )
+                        )
                     ) {
                         imageHeaders[url] = request.requestHeaders
                     }
                     null
                 }
-                poll(650.milliseconds) {
-                    evaluateJs(
-                        """
-                        (function() {
-                            const body = document.body, root = document.scrollingElement;
-                            if (!body || !root) return 'waiting';
-                            if (/just a moment|access denied|attention required/i.test(document.title)) {
-                                window.xmangapages.post(JSON.stringify({stage: 'vérification du site : ' + document.title}));
-                                return 'challenge';
-                            }
-                            window.__xmSeen = window.__xmSeen || new Set();
-                            const images = Array.from(body.querySelectorAll('img'));
-                            let loaded = 0, blobImages = 0;
-                            for (const img of images) {
-                                img.loading = 'eager';
-                                const sources = [img.getAttribute('data-original'), img.getAttribute('data-src'),
-                                    img.getAttribute('data-lazy-src'), img.currentSrc, img.getAttribute('src')];
-                                const srcset = img.getAttribute('data-srcset') || img.getAttribute('srcset');
-                                if (srcset) sources.push(srcset.split(',').pop().trim().split(/\s+/)[0]);
-                                for (const raw of sources) {
-                                    if (!raw || raw.startsWith('data:')) continue;
-                                    if (raw.startsWith('blob:')) { blobImages++; continue; }
-                                    let url;
-                                    try { url = new URL(raw, location.href).href; } catch (_) { continue; }
-                                    if (!/^https?:\/\//.test(url)) continue;
-                                    if (/avatar|logo|cover|thumb|banner|poster|placeholder|backdrop|favicon/i.test(
-                                        url + ' ' + (img.alt || '') + ' ' + (img.className || ''))) continue;
-                                    window.__xmSeen.add(url);
-                                    break;
-                                }
-                                if (img.complete && img.naturalWidth > 80 && img.naturalHeight > 80) loaded++;
-                            }
-                            // The reader may live inside overflow-y:auto; scrolling only
-                            // document.body never triggers its lazy-loaded page images.
-                            const scrollables = [root, ...Array.from(body.querySelectorAll('*')).filter(el => {
-                                if (el.scrollHeight <= el.clientHeight + 80) return false;
-                                const overflow = getComputedStyle(el).overflowY;
-                                return /auto|scroll/.test(overflow);
-                            })].slice(0, 12);
-                            const step = Math.max(260, Math.floor(innerHeight * .7));
-                            let scrolling = false;
-                            for (const el of scrollables) {
-                                const max = Math.max(0, el.scrollHeight - el.clientHeight);
-                                const next = Math.min(max, el.scrollTop + step);
-                                if (next > el.scrollTop + 1) {
-                                    el.scrollTop = next;
-                                    scrolling = true;
-                                }
-                            }
-                            const now = Date.now();
-                            if (window.__xmSeenCount !== window.__xmSeen.size) {
-                                window.__xmSeenCount = window.__xmSeen.size;
-                                window.__xmChangedAt = now;
-                            }
-                            if (scrolling) window.__xmBottomAt = 0;
-                            else if (!window.__xmBottomAt) window.__xmBottomAt = now;
-                            if (!window.__xmStatusAt || now - window.__xmStatusAt > 1800) {
-                                window.__xmStatusAt = now;
-                                const status = 'img=' + images.length + ', chargées=' + loaded +
-                                    ', URLs=' + window.__xmSeen.size + ', blob=' + blobImages +
-                                    ', canvas=' + body.querySelectorAll('canvas').length +
-                                    ', cadres=' + body.querySelectorAll('iframe').length +
-                                    ', zones à défiler=' + scrollables.length;
-                                window.xmangapages.post(JSON.stringify({stage: status}));
-                            }
-                            if (window.__xmSeen.size > 0 && !scrolling &&
-                                now - (window.__xmBottomAt || now) > 3500 &&
-                                now - (window.__xmChangedAt || now) > 3200) {
-                                window.xmangapages.post(JSON.stringify([...window.__xmSeen]));
-                                return 'done';
-                            }
-                            return 'waiting';
-                        })()
-                        """.trimIndent(),
-                    )
+                poll(700.milliseconds) {
+                    // Prevent an endless spinner if the detached WebView never
+                    // reaches the end of a dynamically expanding reader.
+                    val elapsed = SystemClock.elapsedRealtime() - startedAt
+                    if (elapsed >= 42_000) {
+                        if (readerRequests.isNotEmpty()) {
+                            resolve(JSONArray(readerRequests.toList()).toString())
+                        } else {
+                            reject(
+                                IOException(
+                                    "X-Manga : aucune image du lecteur détectée après 42 s (" +
+                                        lastState.get() + ").",
+                                ),
+                            )
+                        }
+                    } else {
+                        evaluateJs(XMANGA_CHAPTER_CAPTURE_SCRIPT)
+                    }
                 }
-
                 loadUrl(chapterUrl)
             }
         } catch (error: WebViewTimeoutException) {
-            throw IOException("X-Manga : lecteur non initialisé (" + lastState.get() + ").", error)
+            if (readerRequests.isEmpty()) {
+                throw IOException("X-Manga : le lecteur n'a fourni aucune page (" + lastState.get() + ").", error)
+            }
+            JSONArray(readerRequests.toList()).toString()
         }
         val array = JSONArray(raw)
-        val images = (0 until array.length()).map(array::getString)
-        if (images.isEmpty()) throw IOException("X-Manga : aucune image disponible dans ce chapitre.")
+        val fromWebView = (0 until array.length()).map(array::getString)
+        // The CDN request list is the most reliable source because the site
+        // may recycle/defer <img> elements while a chapter is rendered.
+        val images = if (readerRequests.isNotEmpty()) readerRequests.toList() else fromWebView
+        if (images.isEmpty()) throw IOException("X-Manga : aucune page trouvée (" + lastState.get() + ").")
         return images.distinct().mapIndexed { idx, image -> Page(idx, url = chapterUrl, imageUrl = image) }
     }
 
@@ -308,6 +266,91 @@ abstract class XManga : KeiSource() {
         return Jsoup.parse(html, url)
     }
 }
+
+// The live X-Manga chapter images are hosted on reader.hentai.gifts.
+// Prefer those images over logos/covers or old lazy-loading placeholders.
+internal val XMANGA_CHAPTER_CAPTURE_SCRIPT = """
+    (function() {
+        if (!document.body) return 'waiting-body';
+        const now = Date.now();
+        if (!window.__xmStartedAt) window.__xmStartedAt = now;
+        if (!window.__xmReaderSeen) window.__xmReaderSeen = new Set();
+        if (!window.__xmOtherSeen) window.__xmOtherSeen = new Set();
+
+        const images = Array.from(document.querySelectorAll('img'));
+        for (const img of images) {
+            img.loading = 'eager';
+            const attrs = ['data-src', 'data-original', 'data-lazy-src', 'src'];
+            const candidates = attrs.map(a => img.getAttribute(a)).concat([img.currentSrc]);
+            for (const raw of candidates) {
+                if (!raw || raw.startsWith('data:') || raw.startsWith('blob:')) continue;
+                let url;
+                try { url = new URL(raw, location.href); } catch (e) { continue; }
+                if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
+                if (url.hostname === 'reader.hentai.gifts') {
+                    window.__xmReaderSeen.add(url.href);
+                    break;
+                }
+                const path = url.pathname.toLowerCase();
+                if (!/\.(?:jpe?g|webp|png|avif)$/.test(path) ||
+                    /avatar|logo|cover|thumb|banner|poster|placeholder|backdrop|favicon/.test(path)) continue;
+                if (img.naturalWidth > 250 && img.naturalHeight > 250) {
+                    window.__xmOtherSeen.add(url.href);
+                    break;
+                }
+            }
+        }
+
+        // The reader can be inside an overflow container; scrolling window
+        // alone does not trigger its lazy-loaded page images.
+        const scrollers = [document.scrollingElement, ...Array.from(document.body.querySelectorAll('*')).filter(el => {
+            if (el.scrollHeight <= el.clientHeight + 100) return false;
+            return /auto|scroll/.test(getComputedStyle(el).overflowY);
+        })].filter(Boolean).slice(0, 12);
+        let moving = false;
+        for (const el of scrollers) {
+            const next = Math.min(el.scrollHeight - el.clientHeight, el.scrollTop + Math.max(350, innerHeight * .8));
+            if (next > el.scrollTop + 1) { el.scrollTop = next; moving = true; }
+        }
+
+        // Catch images generated by fetch or lazy-loading outside <img> tags.
+        const resources = performance.getEntriesByType('resource');
+        for (const entry of resources) {
+            try {
+                const url = new URL(entry.name);
+                if (url.hostname === 'reader.hentai.gifts' && url.protocol === 'https:') {
+                    window.__xmReaderSeen.add(url.href);
+                }
+            } catch (e) {}
+        }
+
+        const pages = window.__xmReaderSeen.size
+            ? [...window.__xmReaderSeen] : [...window.__xmOtherSeen];
+        const stamp = pages.join('|');
+        if (stamp !== window.__xmPageStamp) {
+            window.__xmPageStamp = stamp;
+            window.__xmChangedAt = now;
+        }
+        if (moving) window.__xmStoppedAt = 0;
+        else if (!window.__xmStoppedAt) window.__xmStoppedAt = now;
+        if (!window.__xmReportAt || now - window.__xmReportAt > 2000) {
+            window.__xmReportAt = now;
+            window.xmangapages.post(JSON.stringify({
+                stage: 'CDN=' + window.__xmReaderSeen.size + ', autres=' + window.__xmOtherSeen.size +
+                    ', img=' + images.length + ', zones=' + scrollers.length
+            }));
+        }
+        // A perpetually extending scroller must not block completed pages.
+        const stable = now - (window.__xmChangedAt || now) > 3500;
+        const atEnd = !moving && now - (window.__xmStoppedAt || now) > 2400;
+        const bounded = now - window.__xmStartedAt > 24000;
+        if (pages.length && stable && (atEnd || bounded)) {
+            window.xmangapages.post(JSON.stringify(pages));
+            return 'done';
+        }
+        return 'waiting';
+    })()
+""".trimIndent()
 
 internal fun xMangaCards(document: Document): List<SManga> = document.select("a[href*=/manga/]").mapNotNull { link ->
     val href = link.absUrl("href")
