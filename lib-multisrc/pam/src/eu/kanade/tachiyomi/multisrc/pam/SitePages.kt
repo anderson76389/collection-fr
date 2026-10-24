@@ -21,6 +21,7 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -120,7 +121,7 @@ internal class SitePages(
                         val since = readerMetadataReadyAt
                         if (since == null) {
                             readerMetadataReadyAt = TimeSource.Monotonic.markNow()
-                        } else if (since.elapsedNow() >= 2.seconds) {
+                        } else if (pamReaderFallbackAllowed(allowMissingReaderPageRequest, since.elapsedNow())) {
                             resolve(SitePage(page.page, reader = captured))
                         }
                     }
@@ -252,3 +253,6 @@ private val WEBVIEW_TIMEOUT = 60.seconds
 private val UNUSED_PATHS = listOf("/api/v1/stickers", "/cdn-cgi/speculation", "/favicon.ico", "/gmetrics/")
 private val STYLE_EXTENSIONS = listOf(".css", ".woff2", ".woff", ".ttf")
 private const val SOLVE_IN_WEBVIEW = "Open in WebView to pass the site's verification"
+
+/** Only an opted-in source may use manifest/key data without an intercepted image. */
+internal fun pamReaderFallbackAllowed(enabled: Boolean, wait: Duration): Boolean = enabled && wait >= 2.seconds
