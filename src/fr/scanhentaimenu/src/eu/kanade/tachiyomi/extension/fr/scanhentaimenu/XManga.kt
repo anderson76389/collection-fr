@@ -117,7 +117,7 @@ abstract class XManga : KeiSource() {
                     if (url.startsWith("https://") && (
                             url.contains(".webp") || url.contains(".jpg") ||
                                 url.contains(".jpeg") || url.contains(".png") || url.contains(".avif")
-                        )
+                            )
                     ) {
                         imageHeaders[url] = request.requestHeaders
                     }
