@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import io.github.keiyoushi.gradle.api.ContentWarning
 
 plugins {
@@ -6,7 +7,7 @@ plugins {
 
 keiyoushi {
     name = "Soft Epsilon Scan"
-    versionCode = 6
+    versionCode = 7
     contentWarning = ContentWarning.SAFE
     libVersion = "1.6"
     theme = "pam"
@@ -15,4 +16,22 @@ keiyoushi {
         lang = "fr"
         baseUrl = "https://epsilonsoft.to"
     }
+}
+
+extensions.configure<ApplicationExtension> {
+    sourceSets.named("test") {
+        java.directories.clear()
+        java.directories.add("tests")
+        kotlin.directories.clear()
+        kotlin.directories.add("tests")
+    }
+}
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.stdlib)
+}
+
+tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {
+    enabled = false
 }
