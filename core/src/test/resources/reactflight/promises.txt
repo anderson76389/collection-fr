@@ -1,2 +1,0 @@
-0:{"mangaTitle":"Async Manga","chapters":"$@1"}
-1:[{"number":2,"title":"Second"},{"number":1,"title":"First"}]
