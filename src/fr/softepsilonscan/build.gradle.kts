@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import io.github.keiyoushi.gradle.api.ContentWarning
 
 plugins {
@@ -15,4 +16,22 @@ keiyoushi {
         lang = "fr"
         baseUrl = "https://epsilonsoft.to"
     }
+}
+
+extensions.configure<ApplicationExtension> {
+    sourceSets.named("test") {
+        java.directories.clear()
+        java.directories.add("tests")
+        kotlin.directories.clear()
+        kotlin.directories.add("tests")
+    }
+}
+
+dependencies {
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlin.stdlib)
+}
+
+tasks.matching { it.name == "kspDebugUnitTestKotlin" }.configureEach {
+    enabled = false
 }
