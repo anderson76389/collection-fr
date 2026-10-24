@@ -95,6 +95,7 @@ def main() -> None:
 
             "src/fr/hentaiorigines": "hentai-origines",
             "src/fr/scanhentaimenu": "x-manga",
+            "src/fr/softepsilonscan": "Epsilon-Scan",
             "src/fr/ortegascans": "ortegascans",
             "src/fr/lelmanga": "lelmanga",
 
