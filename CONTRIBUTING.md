@@ -18,7 +18,7 @@ or fix them directly by submitting a Pull Request.
   - [Getting help](#getting-help)
   - [Writing an extension](#writing-an-extension)
     - [Setting up a new Gradle module](#setting-up-a-new-gradle-module)
-      - [Using ext-bootstrap.py](#using-ext-bootstrappy)
+      - [Creating an extension manually](#creating-an-extension-manually)
     - [Loading a subset of Gradle modules](#loading-a-subset-of-gradle-modules)
       - [Extension file structure](#extension-file-structure)
       - [build.gradle.kts](#buildgradlekts)
@@ -236,7 +236,7 @@ and [negative refspecs](https://github.blog/2020-10-19-git-2-29-released/#user-c
 
 ## Writing an extension
 
-The quickest way to get started is by using the [ext-bootstrap.py](#using-ext-bootstrappy) script.
+To get started, copy the structure of an existing source module and adapt it manually.
 We also recommend reading through the code of a few existing extensions before beginning.
 
 ### Setting up a new Gradle module
@@ -250,37 +250,14 @@ In the `source {}` block in `build.gradle.kts`, set `lang = "pt-BR"` to specify 
 Do NOT declare or override `lang` in the source class itself, as it is owned by the DSL/codegen and
 doing so will throw a fatal KSP compiler error.
 
-#### Using ext-bootstrap.py
+#### Creating an extension manually
 
-Instead of setting this up by hand, you can use the `ext-bootstrap.py` script to scaffold a new
-extension module automatically:
+The optional scaffolding script is not included in this repository. To create a new extension:
 
-```console
-$ python ext-bootstrap.py -n "My Source" -l en -u https://mysource.com
-```
-
-This creates `src/<lang>/<mysourcename>/build.gradle.kts` along with the extension's package
-directory and a starter source class. New (non-multisrc) sources are scaffolded extending
-`KeiSource` with `libVersion = "1.6"`; sources based on an existing multisrc theme (`-m`) inherit
-whatever base class and `libVersion` that theme uses.
-
-Available options:
-
-| Flag                         | Description                                                              |
-|------------------------------|--------------------------------------------------------------------------|
-| `-n`, `--extname`            | Extension name                                                           |
-| `-l`, `--lang`, `--language` | Extension language (2- or 3-letter ISO code, or `all`)                   |
-| `-u`, `--baseurl`            | Extension base URL (must be `https://`)                                  |
-| `--source-name`              | Source name (defaults to `--extname`)                                    |
-| `-c`, `--content-warning`    | `SAFE`, `MIXED`, or `NSFW` (default: `SAFE`)                             |
-| `-m`, `--multisrc`           | Name of an existing multisrc theme to base the source on                 |
-| `--path`                     | Path to the extension repo directory (defaults to the current directory) |
-
-For example, to scaffold a source based on the `madara` multisrc theme:
-
-```console
-$ python ext-bootstrap.py -n "My Source" -l en -u https://mysource.com -m madara
-```
+1. Pick an existing module in `src/fr` or `src/all` with a similar source or multisrc theme.
+2. Copy its `build.gradle.kts`, resources, and source class into `src/<lang>/<mysourcename>/`.
+3. Update its `source {}` metadata, package path, base URL, and any theme configuration. Follow the conventions documented in the surrounding sections.
+4. Build and lint the new module before publishing; keep existing module identities unchanged.
 
 ### Loading a subset of Gradle modules
 
