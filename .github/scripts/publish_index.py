@@ -104,10 +104,12 @@ def main() -> None:
             "src/fr/webtoons": "webtoons.com",
             "src/all/saymanhwa": "saymanhwa",
         }
-        if module in apk_names:
-            published_apk = apk.with_name(f"MAKOFF-{apk_names[module]}-v{info['versionName']}.apk")
-            shutil.copyfile(apk, published_apk)
-            apk = published_apk
+        # Uniform APK branding for every source; preserve all Android package names,
+        # source IDs, signing keys and the existing per-source display filenames.
+        apk_label = apk_names.get(module, Path(module).name)
+        published_apk = apk.with_name(f"MAKOFF-{apk_label}-v{info['versionName']}.apk")
+        shutil.copyfile(apk, published_apk)
+        apk = published_apk
         assets.extend([apk, jar])
         outputs_by_package[package_name] = (apk, jar)
 
