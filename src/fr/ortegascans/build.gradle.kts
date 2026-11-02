@@ -6,12 +6,14 @@ plugins {
 
 keiyoushi {
     name = "Ortega Scans"
-    versionCode = 4
+    versionCode = 5
     contentWarning = ContentWarning.NSFW
     libVersion = "1.6"
 
     source {
-        lang = "fr"
+        // Keep the existing Mihon source ID to preserve library and reading history.
+        lang = "all"
+        id = 8598370605081191622L
         baseUrl = "https://ortegascans.fr"
     }
 }
