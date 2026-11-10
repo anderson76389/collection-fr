@@ -62,10 +62,14 @@ internal object ScanMangaReader {
             false,
             webViewClassLoader,
         )
-        val factory = (glue.getDeclaredMethod("createWebViewProviderFactory")
-            .invoke(null) as InvocationHandler).boundary<ScanMangaWebViewFactoryBoundary>()
+        val factory = (
+            glue.getDeclaredMethod("createWebViewProviderFactory")
+                .invoke(null) as InvocationHandler
+            ).boundary<ScanMangaWebViewFactoryBoundary>()
         val features = factory.supportedFeatures.toSet()
-        if ("CUSTOM_REQUEST_HEADERS" !in features || "MULTI_PROFILE" !in features ||
+        if (
+            "CUSTOM_REQUEST_HEADERS" !in features ||
+            "MULTI_PROFILE" !in features ||
             "DOCUMENT_START_SCRIPT:1" !in features
         ) {
             throw IllegalStateException("Mettez à jour Android System WebView (Chromium 142 minimum).")
@@ -112,7 +116,9 @@ internal object ScanMangaReader {
                     val capturedUrl = data.getString("url").toHttpUrlOrNull() ?: return
                     if (capturedUrl.scheme != "https" || capturedUrl.host != expectedHost ||
                         capturedUrl.encodedPath != expectedPath
-                    ) return
+                    ) {
+                        return
+                    }
                     val body = data.getString("body")
                     val requestJson = JSONObject(body)
                     if (!requestJson.has("a") || !requestJson.has("b") || !requestJson.has("c")) return
