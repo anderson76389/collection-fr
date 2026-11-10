@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.fr.scanmanga
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.content.res.Resources
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
@@ -10,6 +11,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.view.View
+import android.view.ViewGroup
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
@@ -152,6 +155,14 @@ internal object ScanMangaReader {
                 view.settings.javaScriptEnabled = true
                 view.settings.domStorageEnabled = true
                 view.settings.blockNetworkImage = true
+                // Keep viewport-triggered reader scripts functional without attaching a visible view.
+                val display = Resources.getSystem().displayMetrics
+                view.layoutParams = ViewGroup.LayoutParams(display.widthPixels, display.heightPixels)
+                view.measure(
+                    View.MeasureSpec.makeMeasureSpec(display.widthPixels, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(display.heightPixels, View.MeasureSpec.EXACTLY),
+                )
+                view.layout(0, 0, display.widthPixels, display.heightPixels)
                 view.addJavascriptInterface(bridge, bridgeName)
                 view.webViewClient = object : WebViewClient() {
                     override fun onReceivedError(
@@ -169,8 +180,12 @@ internal object ScanMangaReader {
                         request: WebResourceRequest?,
                         errorResponse: WebResourceResponse?,
                     ) {
-                        if (request?.isForMainFrame == true && (errorResponse?.statusCode ?: 0) >= 400) {
-                            fail(IllegalStateException("La page Scan-Manga renvoie HTTP ${errorResponse?.statusCode}."))
+                        if (request?.isForMainFrame == true) {
+                            val status = errorResponse?.statusCode ?: 0
+                            when (status) {
+                                403, 503 -> fail(ChallengeRequired())
+                                in 400..599 -> fail(IllegalStateException("La page Scan-Manga renvoie HTTP $status."))
+                            }
                         }
                     }
                 }
