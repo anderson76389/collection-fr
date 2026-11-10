@@ -443,15 +443,17 @@ abstract class ScanManga :
             ScanMangaReader.capture(chapterUrl, chapterId)
         } catch (e: ScanMangaReader.ChallengeRequired) {
             runCatching {
-                applicationContext.startActivity(Intent().apply {
-                    component = ComponentName(
-                        applicationContext,
-                        "eu.kanade.tachiyomi.ui.webview.WebViewActivity",
-                    )
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra("url_key", chapterUrl)
-                    putExtra("source_key", id)
-                })
+                applicationContext.startActivity(
+                    Intent().apply {
+                        component = ComponentName(
+                            applicationContext,
+                            "eu.kanade.tachiyomi.ui.webview.WebViewActivity",
+                        )
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        putExtra("url_key", chapterUrl)
+                        putExtra("source_key", id)
+                    },
+                )
             }
             throw IllegalStateException(
                 "Vérification Cloudflare : résolvez-la dans la WebView, puis réouvrez le chapitre.",
