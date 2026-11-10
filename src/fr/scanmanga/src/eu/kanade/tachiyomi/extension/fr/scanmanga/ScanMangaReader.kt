@@ -13,6 +13,12 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
+import org.chromium.support_lib_boundary.ScanMangaWebViewProfileBoundary
+import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
+import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import java.util.UUID
@@ -20,12 +26,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
-import org.chromium.support_lib_boundary.ScanMangaWebViewProfileBoundary
-import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
-import org.json.JSONObject
 
 /**
  * Source-local reader fallback. It captures the site's own /lel/ request rather than
