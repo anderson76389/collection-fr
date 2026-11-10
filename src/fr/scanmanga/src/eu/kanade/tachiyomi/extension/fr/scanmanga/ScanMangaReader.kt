@@ -15,7 +15,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-
 import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.InvocationTargetException
