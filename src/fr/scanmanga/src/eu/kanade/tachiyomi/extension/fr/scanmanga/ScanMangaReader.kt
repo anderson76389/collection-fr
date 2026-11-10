@@ -15,9 +15,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
-import org.chromium.support_lib_boundary.ScanMangaWebViewProfileBoundary
-import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
+import org.chromium.support_lib_boundary.ProfileBoundaryInterface
+import org.chromium.support_lib_boundary.WebViewProviderBoundaryInterface
+import org.chromium.support_lib_boundary.WebViewProviderFactoryBoundaryInterface
 import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
@@ -65,7 +65,7 @@ internal object ScanMangaReader {
         val factory = (
             glue.getDeclaredMethod("createWebViewProviderFactory")
                 .invoke(null) as InvocationHandler
-            ).boundary<ScanMangaWebViewFactoryBoundary>()
+            ).boundary<WebViewProviderFactoryBoundaryInterface>()
         val features = factory.supportedFeatures.toSet()
         if (
             "CUSTOM_REQUEST_HEADERS" !in features ||
@@ -74,8 +74,8 @@ internal object ScanMangaReader {
         ) {
             throw IllegalStateException("Mettez à jour Android System WebView (Chromium 142 minimum).")
         }
-        val provider = factory.createWebView(view).boundary<ScanMangaWebViewProviderBoundary>()
-        val profile = provider.getProfile().boundary<ScanMangaWebViewProfileBoundary>()
+        val provider = factory.createWebView(view).boundary<WebViewProviderBoundaryInterface>()
+        val profile = provider.getProfile().boundary<ProfileBoundaryInterface>()
         profile.clearOriginMatchedHeader("X-Requested-With", "")
         profile.addOriginMatchedHeader("X-Requested-With", "", setOf("https://*.$domain"))
         // The hook must run before the site's own scripts build the dynamic lel request.
