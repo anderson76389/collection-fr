@@ -420,7 +420,67 @@ abstract class ScanManga :
             }
         }
 
-        return Observable.just(parsePageList(body))
+        // Keep the established parser for chapters it still handles. The site now computes
+        // sml/sme dynamically on other chapters: capture its actual reader request only then.
+        return try {
+            Observable.just(parsePageList(body))
+        } catch (e: Exception) {
+            val readerFormatChanged = listOf(
+                "Failed to extract sml parameter",
+                "Failed to extract sme parameter",
+                "Failed to find packed reader script",
+                "Failed to match obfuscation pattern",
+            ).any { e.message.orEmpty().contains(it) }
+            if (!readerFormatChanged) throw e
+            Observable.just(fetchPagesFromSiteReader(chapterUrl))
+        }
+    }
+
+    private fun fetchPagesFromSiteReader(chapterUrl: String): List<Page> {
+        val chapterId = chapterUrl.substringAfterLast('_').substringBefore('.').toIntOrNull()
+            ?: throw IllegalStateException("Scan-Manga : identifiant du chapitre introuvable.")
+        val call = try {
+            ScanMangaReader.capture(chapterUrl, chapterId)
+        } catch (e: ScanMangaReader.ChallengeRequired) {
+            runCatching {
+                applicationContext.startActivity(Intent().apply {
+                    component = ComponentName(
+                        applicationContext,
+                        "eu.kanade.tachiyomi.ui.webview.WebViewActivity",
+                    )
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra("url_key", chapterUrl)
+                    putExtra("source_key", id)
+                })
+            }
+            throw IllegalStateException(
+                "Vérification Cloudflare : résolvez-la dans la WebView, puis réouvrez le chapitre.",
+                e,
+            )
+        }
+
+        val requestHeaders = readerHeaders.newBuilder()
+            .set("Origin", "${chapterUrl.toHttpUrl().scheme}://${chapterUrl.toHttpUrl().host}")
+            .set("Referer", chapterUrl)
+            .apply { call.headers.forEach { (name, value) -> set(name, value) } }
+            .build()
+        val readerRequest = POST(
+            url = call.url,
+            headers = requestHeaders,
+            body = call.body.toRequestBody("application/json; charset=UTF-8".toMediaType()),
+        )
+        // The reader API is a cookie-free XHR; do not run the global Cloudflare solver.
+        val apiClient = client.newBuilder()
+            .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
+            .cookieJar(CookieJar.NO_COOKIES)
+            .build()
+        val responseData = apiClient.newCall(readerRequest).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IllegalStateException("Scan-Manga : API lecteur HTTP ${response.code}.")
+            }
+            dataAPI(response.body.string(), chapterId)
+        }
+        return responseData.generateImageUrls().map { (index, url) -> Page(index, imageUrl = url) }
     }
 
     private val sessionWarmedUp = AtomicBoolean(false)
