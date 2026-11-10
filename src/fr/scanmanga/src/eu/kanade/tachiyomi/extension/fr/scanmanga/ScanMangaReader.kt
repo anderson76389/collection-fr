@@ -12,6 +12,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
+import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
+import org.chromium.support_lib_boundary.ScanMangaWebViewProfileBoundary
 import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
@@ -32,20 +35,6 @@ internal object ScanMangaReader {
 
     class ChallengeRequired : Exception("Cloudflare demande une vérification dans la WebView.")
 
-    private interface WebViewFactory {
-        val supportedFeatures: Array<String>
-        fun createWebView(webView: WebView): InvocationHandler
-    }
-
-    private interface WebViewProvider {
-        fun getProfile(): InvocationHandler
-    }
-
-    private interface WebViewProfile {
-        fun clearOriginMatchedHeader(headerName: String, headerValue: String)
-        fun addOriginMatchedHeader(headerName: String, headerValue: String, originRules: Set<String>)
-    }
-
     private inline fun <reified T> InvocationHandler.boundary(): T = Proxy.newProxyInstance(
         T::class.java.classLoader,
         arrayOf(T::class.java),
@@ -56,7 +45,7 @@ internal object ScanMangaReader {
      * The current site returns a fake 404 when WebView injects its default
      * X-Requested-With. Chromium 142+ can override it per origin.
      */
-    private fun configureReaderHeaders(view: WebView, domain: String) {
+    private fun configureReaderHeaders(view: WebView, domain: String, script: String) {
         val webViewClassLoader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WebView.getWebViewClassLoader()
         } else {
@@ -71,29 +60,19 @@ internal object ScanMangaReader {
             webViewClassLoader,
         )
         val factory = (glue.getDeclaredMethod("createWebViewProviderFactory")
-            .invoke(null) as InvocationHandler).boundary<WebViewFactory>()
+            .invoke(null) as InvocationHandler).boundary<ScanMangaWebViewFactoryBoundary>()
         val features = factory.supportedFeatures.toSet()
-        if ("CUSTOM_REQUEST_HEADERS" !in features || "MULTI_PROFILE" !in features) {
+        if ("CUSTOM_REQUEST_HEADERS" !in features || "MULTI_PROFILE" !in features ||
+            "DOCUMENT_START_SCRIPT:1" !in features
+        ) {
             throw IllegalStateException("Mettez à jour Android System WebView (Chromium 142 minimum).")
         }
-        val provider = factory.createWebView(view).boundary<WebViewProvider>()
-        val profile = provider.getProfile().boundary<WebViewProfile>()
+        val provider = factory.createWebView(view).boundary<ScanMangaWebViewProviderBoundary>()
+        val profile = provider.getProfile().boundary<ScanMangaWebViewProfileBoundary>()
         profile.clearOriginMatchedHeader("X-Requested-With", "")
         profile.addOriginMatchedHeader("X-Requested-With", "", setOf("https://*.$domain"))
-    }
-
-    private fun installReaderHook(view: WebView, script: String, domain: String) {
-        // Reuse the stable document-start facility already present in the app's core.
-        // It installs before the reader's own scripts, unlike onPageFinished injection.
-        val glue = Class.forName("keiyoushi.webview.internal.WebViewGlueBridge")
-        val instance = glue.getField("INSTANCE").get(null)
-        val installed = glue.getMethod(
-            "addDocumentStartJavaScript",
-            WebView::class.java,
-            String::class.java,
-            Set::class.java,
-        ).invoke(instance, view, script, setOf("https://*.$domain")) as Boolean
-        if (!installed) throw IllegalStateException("Android System WebView ne permet pas l'injection au chargement.")
+        // The hook must run before the site's own scripts build the dynamic lel request.
+        provider.addDocumentStartJavaScript(script, arrayOf("https://*.$domain"))
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -168,7 +147,7 @@ internal object ScanMangaReader {
         main.post {
             if (completed.get()) return@post
             try {
-                val view = WebView(eu.kanade.tachiyomi.extension.fr.scanmanga.ScanMangaReaderContext.context())
+                val view = WebView(keiyoushi.utils.applicationContext)
                 viewRef.set(view)
                 view.settings.javaScriptEnabled = true
                 view.settings.domStorageEnabled = true
@@ -195,8 +174,7 @@ internal object ScanMangaReader {
                         }
                     }
                 }
-                configureReaderHeaders(view, domain)
-                installReaderHook(view, hook, domain)
+                configureReaderHeaders(view, domain, hook)
 
                 val poll = object : Runnable {
                     override fun run() {
@@ -241,7 +219,3 @@ internal object ScanMangaReader {
     }
 }
 
-/** App context is provided by core; this wrapper avoids sharing mutable state with other sources. */
-private object ScanMangaReaderContext {
-    fun context() = keiyoushi.utils.applicationContext
-}
