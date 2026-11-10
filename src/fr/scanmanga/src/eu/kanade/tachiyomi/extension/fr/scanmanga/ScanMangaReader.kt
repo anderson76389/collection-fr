@@ -239,4 +239,3 @@ internal object ScanMangaReader {
         return call.get() ?: throw IllegalStateException("Le lecteur Scan-Manga n'a pas transmis la requête des pages.")
     }
 }
-
