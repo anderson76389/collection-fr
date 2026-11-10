@@ -590,8 +590,15 @@ abstract class ScanManga :
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 
     override fun imageRequest(page: Page): Request {
+        // Scan-Manga's image CDN expects the same CORS/XHR headers as its web reader,
+        // not a browser image-navigation request (which can return HTTP 403).
         val imgHeaders = readerHeaders.newBuilder()
-            .add("Origin", baseUrl)
+            .set("Accept", "*/*")
+            .set("Sec-Fetch-Mode", "cors")
+            .set("Sec-Fetch-Dest", "empty")
+            .set("Sec-Fetch-Site", "same-site")
+            .set("Origin", baseUrl)
+            .set("Referer", "$baseUrl/")
             .build()
 
         return GET(page.imageUrl!!, imgHeaders)
