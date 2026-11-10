@@ -16,8 +16,8 @@ import android.view.ViewGroup
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.chromium.support_lib_boundary.ScanMangaWebViewFactoryBoundary
-import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
 import org.chromium.support_lib_boundary.ScanMangaWebViewProfileBoundary
+import org.chromium.support_lib_boundary.ScanMangaWebViewProviderBoundary
 import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
