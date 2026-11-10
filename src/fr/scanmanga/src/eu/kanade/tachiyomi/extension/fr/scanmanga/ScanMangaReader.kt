@@ -80,14 +80,13 @@ internal object ScanMangaReader {
         )
         val factory = glue.getDeclaredMethod("createWebViewProviderFactory")
             .invoke(null) as InvocationHandler
-        val features = (
-            factory.callWebViewBoundary(
-                webViewClassLoader,
-                "WebViewProviderFactoryBoundaryInterface",
-                "getSupportedFeatures",
-                emptyArray(),
-            ) as Array<*>
-            ).filterIsInstance<String>().toSet()
+        val supportedFeatures = factory.callWebViewBoundary(
+            webViewClassLoader,
+            "WebViewProviderFactoryBoundaryInterface",
+            "getSupportedFeatures",
+            emptyArray(),
+        ) as Array<*>
+        val features = supportedFeatures.filterIsInstance<String>().toSet()
         if (
             "CUSTOM_REQUEST_HEADERS" !in features ||
             "MULTI_PROFILE" !in features ||
