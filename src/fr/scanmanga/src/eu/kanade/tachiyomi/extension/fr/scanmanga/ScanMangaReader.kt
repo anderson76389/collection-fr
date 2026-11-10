@@ -15,11 +15,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import org.chromium.support_lib_boundary.ProfileBoundaryInterface
-import org.chromium.support_lib_boundary.WebViewProviderBoundaryInterface
-import org.chromium.support_lib_boundary.WebViewProviderFactoryBoundaryInterface
+
 import org.json.JSONObject
 import java.lang.reflect.InvocationHandler
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Proxy
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -38,11 +37,28 @@ internal object ScanMangaReader {
 
     class ChallengeRequired : Exception("Cloudflare demande une vérification dans la WebView.")
 
-    private inline fun <reified T> InvocationHandler.boundary(): T = Proxy.newProxyInstance(
-        T::class.java.classLoader,
-        arrayOf(T::class.java),
-        this,
-    ) as T
+    // Chromium's reflection bridge resolves each Method's declaring class by its exact
+    // fully-qualified name in the WebView APK. Use the provider's own boundary classes
+    // instead of source-local copies (core already bundles some of those interfaces).
+    private fun InvocationHandler.callWebViewBoundary(
+        webViewClassLoader: ClassLoader,
+        interfaceName: String,
+        methodName: String,
+        parameterTypes: Array<Class<*>>,
+        vararg arguments: Any?,
+    ): Any? {
+        val boundary = Class.forName(
+            "org.chromium.support_lib_boundary.$interfaceName",
+            false,
+            webViewClassLoader,
+        )
+        val proxy = Proxy.newProxyInstance(webViewClassLoader, arrayOf(boundary), this)
+        return try {
+            boundary.getMethod(methodName, *parameterTypes).invoke(proxy, *arguments)
+        } catch (e: InvocationTargetException) {
+            throw e.targetException
+        }
+    }
 
     /**
      * The current site returns a fake 404 when WebView injects its default
@@ -62,11 +78,16 @@ internal object ScanMangaReader {
             false,
             webViewClassLoader,
         )
-        val factory = (
-            glue.getDeclaredMethod("createWebViewProviderFactory")
-                .invoke(null) as InvocationHandler
-            ).boundary<WebViewProviderFactoryBoundaryInterface>()
-        val features = factory.supportedFeatures.toSet()
+        val factory = glue.getDeclaredMethod("createWebViewProviderFactory")
+            .invoke(null) as InvocationHandler
+        val features = (
+            factory.callWebViewBoundary(
+                webViewClassLoader,
+                "WebViewProviderFactoryBoundaryInterface",
+                "getSupportedFeatures",
+                emptyArray(),
+            ) as Array<*>
+            ).filterIsInstance<String>().toSet()
         if (
             "CUSTOM_REQUEST_HEADERS" !in features ||
             "MULTI_PROFILE" !in features ||
@@ -74,12 +95,45 @@ internal object ScanMangaReader {
         ) {
             throw IllegalStateException("Mettez à jour Android System WebView (Chromium 142 minimum).")
         }
-        val provider = factory.createWebView(view).boundary<WebViewProviderBoundaryInterface>()
-        val profile = provider.getProfile().boundary<ProfileBoundaryInterface>()
-        profile.clearOriginMatchedHeader("X-Requested-With", "")
-        profile.addOriginMatchedHeader("X-Requested-With", "", setOf("https://*.$domain"))
+        val provider = factory.callWebViewBoundary(
+            webViewClassLoader,
+            "WebViewProviderFactoryBoundaryInterface",
+            "createWebView",
+            arrayOf(WebView::class.java),
+            view,
+        ) as InvocationHandler
+        val profile = provider.callWebViewBoundary(
+            webViewClassLoader,
+            "WebViewProviderBoundaryInterface",
+            "getProfile",
+            emptyArray(),
+        ) as InvocationHandler
+        profile.callWebViewBoundary(
+            webViewClassLoader,
+            "ProfileBoundaryInterface",
+            "clearOriginMatchedHeader",
+            arrayOf(String::class.java, String::class.java),
+            "X-Requested-With",
+            "",
+        )
+        profile.callWebViewBoundary(
+            webViewClassLoader,
+            "ProfileBoundaryInterface",
+            "addOriginMatchedHeader",
+            arrayOf(String::class.java, String::class.java, Set::class.java),
+            "X-Requested-With",
+            "",
+            setOf("https://*.$domain"),
+        )
         // The hook must run before the site's own scripts build the dynamic lel request.
-        provider.addDocumentStartJavaScript(script, arrayOf("https://*.$domain"))
+        provider.callWebViewBoundary(
+            webViewClassLoader,
+            "WebViewProviderBoundaryInterface",
+            "addDocumentStartJavaScript",
+            arrayOf(String::class.java, Array<String>::class.java),
+            script,
+            arrayOf("https://*.$domain"),
+        )
     }
 
     @SuppressLint("SetJavaScriptEnabled")
