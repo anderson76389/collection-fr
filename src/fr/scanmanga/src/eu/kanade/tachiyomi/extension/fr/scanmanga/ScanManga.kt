@@ -531,14 +531,14 @@ abstract class ScanManga :
         )
 
         val lelResponse = client.newCall(pageListRequest).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val errorBody = response.body.string()
-                        .replace(Regex("\\s+"), " ")
-                        .take(240)
-                    error("Unexpected error while fetching lel. HTTP ${response.code} at ${response.request.url}: $errorBody")
-                }
-                dataAPI(response.body.string(), chapterId.toInt())
+            if (!response.isSuccessful) {
+                val errorBody = response.body.string()
+                    .replace(Regex("\\s+"), " ")
+                    .take(240)
+                error("Unexpected error while fetching lel. HTTP ${response.code} at ${response.request.url}: $errorBody")
             }
+            dataAPI(response.body.string(), chapterId.toInt())
+        }
 
         return lelResponse.generateImageUrls().map { Page(it.first, imageUrl = it.second) }
     }
