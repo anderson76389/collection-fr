@@ -1,8 +1,6 @@
 package eu.kanade.tachiyomi.extension.fr.scanmanga
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -357,13 +355,11 @@ abstract class ScanManga :
     }
 
     override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
-        val context = applicationContext
         val chapterUrl = getChapterUrl(chapter)
         val chapterHost = chapterUrl.toHttpUrl()
         if (chapterHost.topPrivateDomain() != baseUrl.toHttpUrl().topPrivateDomain()) {
-            return Observable.error(Exception("Ce chapitre est hébergé sur ${chapterHost.host}. Ouvrez-le dans la WebView."))
+            return Observable.error(Exception("Ce chapitre est hébergé sur ${chapterHost.host}, en dehors de Scan-Manga."))
         }
-        val isReader = Exception().stackTrace.any { it.className.contains("reader") }
 
         fun fetch(): Document? = try {
             readerClient.newCall(GET(chapterUrl, readerHeaders)).execute().use { resp ->
@@ -375,49 +371,16 @@ abstract class ScanManga :
 
         var body = fetch()
         if (body == null) {
-            // Cold-session path: CF refuses to issue cf_clearance to a session that's
-            // never touched the host. Warm up by loading the homepage in a hidden WV,
-            // then re-probe — usually clears it without ever needing WebViewActivity.
+            // A headless warm-up can restore the HTTP session without navigating away
+            // from Mihon's native reader.
             warmupWebViewSession()
             body = fetch()
         }
         if (body == null) {
-            try {
-                val intent = Intent().apply {
-                    component = ComponentName(context, "eu.kanade.tachiyomi.ui.webview.WebViewActivity")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra("url_key", chapterUrl)
-                    putExtra("source_key", id)
-                    putExtra("title_key", "Résolvez le challenge Cloudflare, fermez la WebView et réouvrez le chapitre.")
-                }
-                context.startActivity(intent)
-            } catch (_: Exception) {
-                throw Exception("Résolvez le challenge Cloudflare depuis la WebView puis réouvrez le chapitre.")
-            }
-
-            for (attempt in 1..CF_MAX_POLLS) {
-                Thread.sleep(CF_POLL_INTERVAL_MS)
-                body = fetch()
-                if (body != null) {
-                    val closeIntent = Intent().apply {
-                        val target = if (isReader) {
-                            "eu.kanade.tachiyomi.ui.reader.ReaderActivity"
-                        } else {
-                            "eu.kanade.tachiyomi.ui.main.MainActivity"
-                        }
-                        component = ComponentName(context, target)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    }
-                    context.startActivity(closeIntent)
-                    break
-                }
-            }
-            if (body == null) {
-                // WV flow exhausted itself; the warmup we did wasn't enough either.
-                // Clear the gate so the next attempt warms again from scratch.
-                sessionWarmedUp.set(false)
-                throw Exception("Résolvez le challenge Cloudflare, fermez la WebView et réouvrez le chapitre.")
-            }
+            // Some chapters reject the plain HTTP request even after warm-up. Capture
+            // the site's own reader API request invisibly, then return native Page URLs.
+            // Never launch WebViewActivity or switch Mihon's current activity.
+            return Observable.just(fetchPagesFromSiteReader(chapterUrl))
         }
 
         // Keep the established parser for chapters it still handles. The site now computes
@@ -442,21 +405,12 @@ abstract class ScanManga :
         val call = try {
             ScanMangaReader.capture(chapterUrl, chapterId)
         } catch (e: ScanMangaReader.ChallengeRequired) {
-            runCatching {
-                applicationContext.startActivity(
-                    Intent().apply {
-                        component = ComponentName(
-                            applicationContext,
-                            "eu.kanade.tachiyomi.ui.webview.WebViewActivity",
-                        )
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        putExtra("url_key", chapterUrl)
-                        putExtra("source_key", id)
-                    },
-                )
-            }
+            // A genuine human verification cannot be completed in the background.
+            // Keep Mihon's native reader open; users may resolve it manually via
+            // Mihon's WebView button if the site requires it.
             throw IllegalStateException(
-                "Vérification Cloudflare : résolvez-la dans la WebView, puis réouvrez le chapitre.",
+                "Scan-Manga exige une vérification Cloudflare. Ouvrez manuellement la WebView depuis la fiche du manga, " +
+                    "validez la vérification, puis réessayez le chapitre dans le lecteur Mihon.",
                 e,
             )
         }
@@ -700,8 +654,6 @@ abstract class ScanManga :
         private const val PAGE_LIST_URL = "https://bqj.{topDomain}/lel/{chapterId}.json"
         private const val REQUEST_BODY = """{"a":"{sme}","b":"{sml}","c":"{fingerprint}"}"""
         private const val LEL_TOKEN = "yf"
-        private const val CF_POLL_INTERVAL_MS = 5000L
-        private const val CF_MAX_POLLS = 15
         private const val WARMUP_SETTLE_MS = 200L
         private const val WARMUP_TIMEOUT_SECONDS = 8L
     }
