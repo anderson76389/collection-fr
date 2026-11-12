@@ -440,47 +440,38 @@ abstract class ScanManga :
             )
         }
 
-        // The first choice is the actual response from the site's reader in
-        // Android WebView, not a replay in OkHttp with a different network session.
-        if (call.responseStatus == 200 && call.responseBody.isNotBlank()) {
-            runCatching { dataAPI(call.responseBody, chapterId).generateImageUrls() }
-                .getOrNull()
-                ?.takeIf { it.isNotEmpty() }
-                ?.let { urls -> return urls.map { (index, url) -> Page(index, imageUrl = url) } }
-        }
-
-        val requestHeaders = readerHeaders.newBuilder()
+        // The site's own /lel/ fetch cannot finish in Android WebView due
+        // to a cross-origin preflight. Use only its captured request parameters
+        // and send the POST from the app, like the current source reader.
+        // Do not inherit document-navigation headers: they differ from a
+        // browser XHR and can cause an API 500 or an empty response.
+        val requestHeaders = Headers.Builder()
+            .set("User-Agent", readerUserAgent)
+            .set("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7")
             .set("Accept", "*/*")
             .set("Origin", "${chapterUrl.toHttpUrl().scheme}://${chapterUrl.toHttpUrl().host}")
             .set("Referer", "$baseUrl/")
-            .set("Source", chapterUrl)
-            .set("Token", LEL_TOKEN)
             .set("Sec-Fetch-Site", "same-site")
             .set("Sec-Fetch-Mode", "cors")
             .set("Sec-Fetch-Dest", "empty")
-            // The browser-captured reader parameters and headers take priority.
             .apply { call.headers.forEach { (name, value) -> set(name, value) } }
             .removeAll("Cookie")
             .build()
+        val contentType = (call.headers.entries.firstOrNull {
+            it.key.equals("Content-Type", ignoreCase = true)
+        }?.value ?: "application/json").toMediaType()
         val readerRequest = POST(
             url = call.url,
             headers = requestHeaders,
-            body = call.body.toRequestBody("application/json; charset=UTF-8".toMediaType()),
+            body = call.body.toRequestBody(contentType),
         )
-        // Only the reader API is isolated. The chapter page still reuses Mihon's
-        // validated browser session and all pages return to the native reader.
         val responseData = readerApiClient.newCall(readerRequest).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IllegalStateException(
-                    "Scan-Manga : API lecteur HTTP ${response.code} (WebView HTTP ${call.responseStatus}).",
-                )
+                throw IllegalStateException("Scan-Manga : API lecteur HTTP ${response.code}.")
             }
             val responseBody = response.body.string()
-            if (responseBody.isBlank()) {
-                throw IllegalStateException(
-                    "Scan-Manga : API lecteur HTTP ${response.code} mais réponse vide " +
-                        "(WebView HTTP ${call.responseStatus}, ${call.responseBody.length} caractères).",
-                )
+            check(responseBody.isNotBlank()) {
+                "Scan-Manga : API lecteur HTTP ${response.code} mais réponse vide."
             }
             dataAPI(responseBody, chapterId)
         }
