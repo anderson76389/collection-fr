@@ -451,6 +451,11 @@ abstract class ScanManga :
             .set("Accept", "*/*")
             .set("Origin", "${chapterUrl.toHttpUrl().scheme}://${chapterUrl.toHttpUrl().host}")
             .set("Referer", "$baseUrl/")
+            // These are reader-API parameters, not browser-navigation headers.
+            // The website has historically required them on /lel/ requests.
+            // Captured script values (when present) must take precedence.
+            .set("Source", chapterUrl)
+            .set("Token", LEL_TOKEN)
             .set("Sec-Fetch-Site", "same-site")
             .set("Sec-Fetch-Mode", "cors")
             .set("Sec-Fetch-Dest", "empty")
@@ -473,7 +478,11 @@ abstract class ScanManga :
             }
             val responseBody = response.body.string()
             check(responseBody.isNotBlank()) {
-                "Scan-Manga : API lecteur HTTP ${response.code} mais réponse vide."
+                val contentType = response.header("Content-Type").orEmpty().ifBlank { "absent" }
+                val length = response.header("Content-Length").orEmpty().ifBlank { "non indiqué" }
+                "Scan-Manga : API lecteur HTTP ${response.code}, réponse vide " +
+                    "(Content-Type : $contentType ; Content-Length : $length). " +
+                    "Le serveur ne fournit aucune donnée de pages pour ce chapitre."
             }
             dataAPI(responseBody, chapterId)
         }
