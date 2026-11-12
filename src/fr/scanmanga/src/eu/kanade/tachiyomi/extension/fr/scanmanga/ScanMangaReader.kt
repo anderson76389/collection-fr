@@ -32,13 +32,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Intentionally kept inside Scan-Manga: no shared WebView/core behavior is changed.
  */
 internal object ScanMangaReader {
-    data class LelCall(
-        val url: String,
-        val headers: Map<String, String>,
-        val body: String,
-        val responseStatus: Int,
-        val responseBody: String,
-    )
+    data class LelCall(val url: String, val headers: Map<String, String>, val body: String)
 
     class ChallengeRequired : Exception("Cloudflare demande une vérification dans la WebView.")
 
@@ -182,10 +176,8 @@ internal object ScanMangaReader {
                     if (!requestJson.has("a") || !requestJson.has("b") || !requestJson.has("c")) return
                     val headerJson = data.getJSONObject("headers")
                     val headers = headerJson.keys().asSequence().associateWith { headerJson.getString(it) }
-                    val status = data.getInt("status")
-                    val responseBody = data.getString("responseBody")
                     if (completed.compareAndSet(false, true)) {
-                        call.set(LelCall(capturedUrl.toString(), headers, body, status, responseBody))
+                        call.set(LelCall(capturedUrl.toString(), headers, body))
                         latch.countDown()
                     }
                 } catch (_: Exception) {
@@ -201,22 +193,17 @@ internal object ScanMangaReader {
                     const target = String((input && input.url) || input);
                     if (!target.includes("$expectedPath")) return originalFetch.apply(this, arguments);
                     const request = new Request(input, init);
-                    // Let the site's own browser perform the request with its actual
-                    // session and Chromium network handling. Capture the response
-                    // instead of replaying it blindly in a different HTTP client.
-                    return originalFetch.apply(this, arguments).then(function (response) {
-                        Promise.all([request.clone().text(), response.clone().text()])
-                            .then(function (parts) {
-                                window.$bridgeName.post(JSON.stringify({
-                                    url: request.url,
-                                    headers: Object.fromEntries(request.headers),
-                                    body: parts[0],
-                                    status: response.status,
-                                    responseBody: parts[1]
-                                }));
-                            });
-                        return response;
+                    // The site's cross-origin /lel/ fetch requires a CORS preflight
+                    // that fails in an Android WebView. Capture its request and let
+                    // the native OkHttp client perform the POST instead.
+                    request.clone().text().then(function (body) {
+                        window.$bridgeName.post(JSON.stringify({
+                            url: request.url,
+                            headers: Object.fromEntries(request.headers),
+                            body: body
+                        }));
                     });
+                    return new Promise(function () {});
                 };
             })();
         """.trimIndent()
@@ -290,7 +277,7 @@ internal object ScanMangaReader {
         }
 
         val finished = try {
-            latch.await(40, TimeUnit.SECONDS)
+            latch.await(30, TimeUnit.SECONDS)
         } finally {
             completed.set(true)
             main.post {
@@ -303,7 +290,12 @@ internal object ScanMangaReader {
                 }
             }
         }
-        if (!finished) throw IllegalStateException("Scan-Manga : délai de lecture dépassé (40 s).")
+        if (!finished) {
+            throw IllegalStateException(
+                "Scan-Manga : aucune requête de lecture reçue depuis la page du chapitre. " +
+                    "Le site peut avoir changé de lecteur ou exiger une vérification Cloudflare.",
+            )
+        }
         failure.get()?.let { throw it }
         return call.get() ?: throw IllegalStateException("Le lecteur Scan-Manga n'a pas transmis la requête des pages.")
     }
