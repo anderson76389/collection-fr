@@ -32,7 +32,13 @@ import java.util.concurrent.atomic.AtomicReference
  * Intentionally kept inside Scan-Manga: no shared WebView/core behavior is changed.
  */
 internal object ScanMangaReader {
-    data class LelCall(val url: String, val headers: Map<String, String>, val body: String)
+    data class LelCall(
+        val url: String,
+        val headers: Map<String, String>,
+        val body: String,
+        val responseStatus: Int,
+        val responseBody: String,
+    )
 
     class ChallengeRequired : Exception("Cloudflare demande une vérification dans la WebView.")
 
@@ -176,8 +182,10 @@ internal object ScanMangaReader {
                     if (!requestJson.has("a") || !requestJson.has("b") || !requestJson.has("c")) return
                     val headerJson = data.getJSONObject("headers")
                     val headers = headerJson.keys().asSequence().associateWith { headerJson.getString(it) }
+                    val status = data.getInt("status")
+                    val responseBody = data.getString("responseBody")
                     if (completed.compareAndSet(false, true)) {
-                        call.set(LelCall(capturedUrl.toString(), headers, body))
+                        call.set(LelCall(capturedUrl.toString(), headers, body, status, responseBody))
                         latch.countDown()
                     }
                 } catch (_: Exception) {
@@ -193,14 +201,22 @@ internal object ScanMangaReader {
                     const target = String((input && input.url) || input);
                     if (!target.includes("$expectedPath")) return originalFetch.apply(this, arguments);
                     const request = new Request(input, init);
-                    request.clone().text().then(function (body) {
-                        window.$bridgeName.post(JSON.stringify({
-                            url: request.url,
-                            headers: Object.fromEntries(request.headers),
-                            body: body
-                        }));
+                    // Let the site's own browser perform the request with its actual
+                    // session and Chromium network handling. Capture the response
+                    // instead of replaying it blindly in a different HTTP client.
+                    return originalFetch.apply(this, arguments).then(function (response) {
+                        Promise.all([request.clone().text(), response.clone().text()])
+                            .then(function (parts) {
+                                window.$bridgeName.post(JSON.stringify({
+                                    url: request.url,
+                                    headers: Object.fromEntries(request.headers),
+                                    body: parts[0],
+                                    status: response.status,
+                                    responseBody: parts[1]
+                                }));
+                            });
+                        return response;
                     });
-                    return new Promise(function () {});
                 };
             })();
         """.trimIndent()
