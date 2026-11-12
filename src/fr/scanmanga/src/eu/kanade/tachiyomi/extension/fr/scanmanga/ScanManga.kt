@@ -457,9 +457,11 @@ abstract class ScanManga :
             .apply { call.headers.forEach { (name, value) -> set(name, value) } }
             .removeAll("Cookie")
             .build()
-        val contentType = (call.headers.entries.firstOrNull {
-            it.key.equals("Content-Type", ignoreCase = true)
-        }?.value ?: "application/json").toMediaType()
+        val contentType = (
+            call.headers.entries.firstOrNull {
+                it.key.equals("Content-Type", ignoreCase = true)
+            }?.value ?: "application/json"
+            ).toMediaType()
         val readerRequest = POST(
             url = call.url,
             headers = requestHeaders,
