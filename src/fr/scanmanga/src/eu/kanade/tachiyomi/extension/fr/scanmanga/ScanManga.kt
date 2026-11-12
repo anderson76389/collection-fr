@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.preference.EditTextPreference
@@ -22,7 +23,6 @@ import keiyoushi.utils.applicationContext
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
-import okhttp3.CookieJar
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -89,10 +89,13 @@ abstract class ScanManga :
             .build()
     }
 
-    // Mobile reader requests are redirected to a separately protected host.
+    // Match the user agent of the installed Android WebView across both HTTP and
+    // the reader. A hard-coded desktop UA differs from the real verified browser.
+    private val readerUserAgent by lazy { WebSettings.getDefaultUserAgent(applicationContext) }
+
     private val readerHeaders by lazy {
         headers.newBuilder()
-            .set("User-Agent", DESKTOP_USER_AGENT)
+            .set("User-Agent", readerUserAgent)
             .build()
     }
 
@@ -403,7 +406,7 @@ abstract class ScanManga :
         val chapterId = chapterUrl.substringAfterLast('_').substringBefore('.').toIntOrNull()
             ?: throw IllegalStateException("Scan-Manga : identifiant du chapitre introuvable.")
         val call = try {
-            ScanMangaReader.capture(chapterUrl, chapterId)
+            ScanMangaReader.capture(chapterUrl, chapterId, readerUserAgent)
         } catch (e: ScanMangaReader.ChallengeRequired) {
             // A genuine human verification cannot be completed in the background.
             // Keep Mihon's native reader open; users may resolve it manually via
@@ -425,10 +428,9 @@ abstract class ScanManga :
             headers = requestHeaders,
             body = call.body.toRequestBody("application/json; charset=UTF-8".toMediaType()),
         )
-        // The reader API is a cookie-free XHR; do not run the global Cloudflare solver.
+        // Preserve the Mihon cookie jar for an already validated site session.
         val apiClient = client.newBuilder()
             .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
-            .cookieJar(CookieJar.NO_COOKIES)
             .build()
         val responseData = apiClient.newCall(readerRequest).execute().use { response ->
             if (!response.isSuccessful) {
@@ -452,7 +454,7 @@ abstract class ScanManga :
             val wv = WebView(applicationContext)
             wv.settings.javaScriptEnabled = true
             wv.settings.domStorageEnabled = true
-            wv.settings.userAgentString = DESKTOP_USER_AGENT
+            wv.settings.userAgentString = readerUserAgent
 
             val cm = android.webkit.CookieManager.getInstance()
             cm.setAcceptCookie(true)
@@ -528,16 +530,15 @@ abstract class ScanManga :
             body = requestBody.toRequestBody(mediaType),
         )
 
-        val lelResponse = client.newBuilder().cookieJar(CookieJar.NO_COOKIES).build()
-            .newCall(pageListRequest).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val errorBody = response.body.string()
-                        .replace(Regex("\\s+"), " ")
-                        .take(240)
-                    error("Unexpected error while fetching lel. HTTP ${response.code} at ${response.request.url}: $errorBody")
-                }
-                dataAPI(response.body.string(), chapterId.toInt())
+        val lelResponse = client.newCall(pageListRequest).execute().use { response ->
+            if (!response.isSuccessful) {
+                val errorBody = response.body.string()
+                    .replace(Regex("\\s+"), " ")
+                    .take(240)
+                error("Unexpected error while fetching lel. HTTP ${response.code} at ${response.request.url}: $errorBody")
             }
+            dataAPI(response.body.string(), chapterId.toInt())
+        }
 
         return lelResponse.generateImageUrls().map { Page(it.first, imageUrl = it.second) }
     }
@@ -643,7 +644,6 @@ abstract class ScanManga :
     }
 
     companion object {
-        private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
         private val HUNTER_OBFUSCATION_REGEX = Regex(
             """eval\s*\(\s*(?:/\*.*?\*/\s*)?function\s*\(\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*,\s*\w\s*(?:,\s*[^)]+)?\)\s*\{\s*.*?\s*\}\s*\(\s*"([^"]+)"\s*,\s*\d+\s*,\s*"([^"]+)"\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*\d+\s*\)\s*\)""",
             RegexOption.DOT_MATCHES_ALL,
