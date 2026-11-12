@@ -546,8 +546,8 @@ abstract class ScanManga :
             body = requestBody.toRequestBody(mediaType),
         )
 
-        val lelResponse = readerApiClient.newCall(pageListRequest.newBuilder().removeHeader("Cookie").build())
-            .execute().use { response ->
+        val isolatedRequest = pageListRequest.newBuilder().removeHeader("Cookie").build()
+        val lelResponse = readerApiClient.newCall(isolatedRequest).execute().use { response ->
             if (!response.isSuccessful) {
                 val errorBody = response.body.string()
                     .replace(Regex("\\s+"), " ")
