@@ -135,7 +135,7 @@ internal object ScanMangaReader {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    fun capture(chapterUrl: String, chapterId: Int): LelCall {
+    fun capture(chapterUrl: String, chapterId: Int, userAgent: String): LelCall {
         check(Looper.myLooper() != Looper.getMainLooper()) {
             "Le lecteur Scan-Manga ne doit pas bloquer le fil principal Android."
         }
@@ -212,6 +212,7 @@ internal object ScanMangaReader {
                 viewRef.set(view)
                 view.settings.javaScriptEnabled = true
                 view.settings.domStorageEnabled = true
+                view.settings.userAgentString = userAgent
                 view.settings.blockNetworkImage = true
                 // Keep viewport-triggered reader scripts functional without attaching a visible view.
                 val display = Resources.getSystem().displayMetrics
