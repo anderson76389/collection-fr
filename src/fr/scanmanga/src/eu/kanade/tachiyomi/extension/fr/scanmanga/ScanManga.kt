@@ -340,20 +340,27 @@ abstract class ScanManga :
     private val multipleSpaces = Regex("""\s+""")
 
     private fun dataAPI(data: String, idc: Int): UrlPayload {
-        if (data.contains("error")) {
-            error("Received error response from data API: ${multipleSpaces.replace(data, " ").trim()}")
+        val payload = data.trim()
+        check(payload.isNotEmpty()) {
+            "Scan-Manga : réponse API lecteur vide, impossible de récupérer les pages."
+        }
+        if (payload.contains("error")) {
+            error("Received error response from data API: ${multipleSpaces.replace(payload, " ").trim()}")
         }
 
         // Step 1: Base64 decode the input
-        val compressedBytes = Base64.decode(data, Base64.NO_WRAP or Base64.NO_PADDING)
+        val compressedBytes = Base64.decode(payload, Base64.NO_WRAP or Base64.NO_PADDING)
 
         // Step 2: Inflate (zlib decompress)
         val inflater = Inflater()
-        inflater.setInput(compressedBytes)
         val outputBuffer = ByteArray(512 * 1024)
-        val decompressedLength = inflater.inflate(outputBuffer)
-        inflater.end()
-
+        val decompressedLength = try {
+            inflater.setInput(compressedBytes)
+            inflater.inflate(outputBuffer)
+        } finally {
+            inflater.end()
+        }
+        check(decompressedLength > 0) { "Scan-Manga : données API lecteur décompressées vides." }
         val inflated = String(outputBuffer, 0, decompressedLength)
 
         // Step 3: Remove trailing hex string and reverse
@@ -362,8 +369,10 @@ abstract class ScanManga :
         val reversed = cleaned.reversed()
 
         // Step 4: Base64 decode and parse JSON
-        val finalJsonStr = String(Base64.decode(reversed, Base64.DEFAULT))
-
+        val finalJsonStr = String(Base64.decode(reversed, Base64.DEFAULT)).trim()
+        check(finalJsonStr.startsWith("{")) {
+            "Scan-Manga : réponse JSON des pages absente ou invalide."
+        }
         return finalJsonStr.parseAs<UrlPayload>()
     }
 
@@ -406,6 +415,9 @@ abstract class ScanManga :
                 "Failed to extract sme parameter",
                 "Failed to find packed reader script",
                 "Failed to match obfuscation pattern",
+                "Scan-Manga : réponse API lecteur vide",
+                "Scan-Manga : données API lecteur décompressées vides",
+                "Scan-Manga : réponse JSON des pages absente ou invalide",
             ).any { e.message.orEmpty().contains(it) }
             if (!readerFormatChanged) throw e
             Observable.just(fetchPagesFromSiteReader(chapterUrl))
@@ -426,6 +438,15 @@ abstract class ScanManga :
                     "validez la vérification, puis réessayez le chapitre dans le lecteur Mihon.",
                 e,
             )
+        }
+
+        // The first choice is the actual response from the site's reader in
+        // Android WebView, not a replay in OkHttp with a different network session.
+        if (call.responseStatus == 200 && call.responseBody.isNotBlank()) {
+            runCatching { dataAPI(call.responseBody, chapterId).generateImageUrls() }
+                .getOrNull()
+                ?.takeIf { it.isNotEmpty() }
+                ?.let { urls -> return urls.map { (index, url) -> Page(index, imageUrl = url) } }
         }
 
         val requestHeaders = readerHeaders.newBuilder()
@@ -450,9 +471,18 @@ abstract class ScanManga :
         // validated browser session and all pages return to the native reader.
         val responseData = readerApiClient.newCall(readerRequest).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IllegalStateException("Scan-Manga : API lecteur HTTP ${response.code}.")
+                throw IllegalStateException(
+                    "Scan-Manga : API lecteur HTTP ${response.code} (WebView HTTP ${call.responseStatus}).",
+                )
             }
-            dataAPI(response.body.string(), chapterId)
+            val responseBody = response.body.string()
+            if (responseBody.isBlank()) {
+                throw IllegalStateException(
+                    "Scan-Manga : API lecteur HTTP ${response.code} mais réponse vide " +
+                        "(WebView HTTP ${call.responseStatus}, ${call.responseBody.length} caractères).",
+                )
+            }
+            dataAPI(responseBody, chapterId)
         }
         return responseData.generateImageUrls().map { (index, url) -> Page(index, imageUrl = url) }
     }
