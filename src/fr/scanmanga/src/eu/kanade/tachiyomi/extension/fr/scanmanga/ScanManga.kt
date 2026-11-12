@@ -23,6 +23,7 @@ import keiyoushi.utils.applicationContext
 import keiyoushi.utils.asJsoup
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.parseAs
+import okhttp3.CookieJar
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -86,6 +87,15 @@ abstract class ScanManga :
     private val readerClient: OkHttpClient by lazy {
         client.newBuilder()
             .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
+            .build()
+    }
+
+    // bqj.scan-manga.com can return HTTP 500 when the page-navigation cookies
+    // are forwarded to its reader API. Keep Mihon's cookies on chapter GETs,
+    // but use a separate cookie-free client for the API POSTs only.
+    private val readerApiClient: OkHttpClient by lazy {
+        readerClient.newBuilder()
+            .cookieJar(CookieJar.NO_COOKIES)
             .build()
     }
 
@@ -419,20 +429,26 @@ abstract class ScanManga :
         }
 
         val requestHeaders = readerHeaders.newBuilder()
+            .set("Accept", "*/*")
             .set("Origin", "${chapterUrl.toHttpUrl().scheme}://${chapterUrl.toHttpUrl().host}")
-            .set("Referer", chapterUrl)
+            .set("Referer", "$baseUrl/")
+            .set("Source", chapterUrl)
+            .set("Token", LEL_TOKEN)
+            .set("Sec-Fetch-Site", "same-site")
+            .set("Sec-Fetch-Mode", "cors")
+            .set("Sec-Fetch-Dest", "empty")
+            // The browser-captured reader parameters and headers take priority.
             .apply { call.headers.forEach { (name, value) -> set(name, value) } }
+            .removeAll("Cookie")
             .build()
         val readerRequest = POST(
             url = call.url,
             headers = requestHeaders,
             body = call.body.toRequestBody("application/json; charset=UTF-8".toMediaType()),
         )
-        // Preserve the Mihon cookie jar for an already validated site session.
-        val apiClient = client.newBuilder()
-            .apply { interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" } }
-            .build()
-        val responseData = apiClient.newCall(readerRequest).execute().use { response ->
+        // Only the reader API is isolated. The chapter page still reuses Mihon's
+        // validated browser session and all pages return to the native reader.
+        val responseData = readerApiClient.newCall(readerRequest).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IllegalStateException("Scan-Manga : API lecteur HTTP ${response.code}.")
             }
@@ -530,7 +546,8 @@ abstract class ScanManga :
             body = requestBody.toRequestBody(mediaType),
         )
 
-        val lelResponse = client.newCall(pageListRequest).execute().use { response ->
+        val lelResponse = readerApiClient.newCall(pageListRequest.newBuilder().removeHeader("Cookie").build())
+            .execute().use { response ->
             if (!response.isSuccessful) {
                 val errorBody = response.body.string()
                     .replace(Regex("\\s+"), " ")
