@@ -114,6 +114,9 @@ jobs:
             :src:fr:scanmanga
             :src:fr:poseidonscans
             :src:fr:raijinscans
+            :src:fr:crunchyscanunoriginal
+            :src:fr:bdplus
+            :src:fr:solarisscans
             :src:all:saymanhwa
           )
           tasks=()
