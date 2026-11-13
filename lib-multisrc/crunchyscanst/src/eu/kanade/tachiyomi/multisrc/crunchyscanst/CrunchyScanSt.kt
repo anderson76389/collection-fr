@@ -20,6 +20,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import okhttp3.CacheControl
+import okhttp3.Dispatcher
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -37,6 +38,11 @@ import kotlin.time.Duration.Companion.seconds
 abstract class CrunchyScanSt : KeiSource() {
 
     private val verificationLock = Mutex()
+
+    // Expired image links are refreshed inside an OkHttp interceptor. Use a
+    // separate dispatcher for the nested reader HTML request, otherwise five
+    // concurrent images can occupy all same-host slots and deadlock their refresh.
+    private val readerClient by lazy { client.newBuilder().dispatcher(Dispatcher()).build() }
 
     @Volatile
     private var verifiedAt = 0L
@@ -204,7 +210,7 @@ abstract class CrunchyScanSt : KeiSource() {
         } else {
             CacheControl.Builder().maxAge(20, TimeUnit.SECONDS).build()
         }
-        return client.get(pageUrl, cacheControl = cacheControl).asJsoup()
+        return readerClient.get(pageUrl, cacheControl = cacheControl).asJsoup()
     }
 
     private fun Document.turnstileSiteKey() = selectFirst(".cf-turnstile")
