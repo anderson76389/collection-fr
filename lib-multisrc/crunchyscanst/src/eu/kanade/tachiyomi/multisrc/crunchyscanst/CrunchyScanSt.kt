@@ -167,8 +167,17 @@ abstract class CrunchyScanSt : KeiSource() {
     // Each reader page holds a single image, behind a signed link only issued to a verified session.
     override suspend fun getImageUrl(page: Page): String {
         val now = System.currentTimeMillis()
-        recentImages[page.url]?.takeIf { it.first > now }?.let { return it.second.withPage(page.url) }
+        recentImages[page.url]?.takeIf { it.first > now }?.let { cached ->
+            val expiry = runCatching { cached.second.toHttpUrl().queryParameter("e")?.toLongOrNull() }.getOrNull()
+            if (expiry == null || expiry > now / 1000 + EXPIRY_MARGIN_SECONDS) {
+                return cached.second.withPage(page.url)
+            }
+        }
         val url = fetchReaderPage(page.url).pageImageUrl()
+        if (recentImages.size > MAX_CACHED_PAGES) {
+            recentImages.entries.removeIf { it.value.first <= now }
+            if (recentImages.size > MAX_CACHED_PAGES) recentImages.clear()
+        }
         recentImages[page.url] = System.currentTimeMillis() + IMAGE_CACHE_MS to url
         return url.withPage(page.url)
     }
@@ -234,6 +243,7 @@ abstract class CrunchyScanSt : KeiSource() {
         const val EXPIRY_MARGIN_SECONDS = 30
         const val IMAGE_CACHE_MS = 45_000L
         const val MAX_READER_PAGES = 1_000
+        const val MAX_CACHED_PAGES = 300
 
         val ZONE: ZoneId = ZoneId.of("Europe/Paris")
         val DATE_FORMAT = DateTimeFormatterBuilder()
