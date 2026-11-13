@@ -37,7 +37,12 @@ abstract class SolarisScans :
         get() = preferences.getBoolean(PREF_HIDE_PREMIUM, true)
 
     override fun OkHttpClient.Builder.configureClient() = apply {
-        rateLimit(2)
+        // Like Keiyoushi, keep requests to the manga catalogue/chapters limited.
+        // But cover images can be served by this host or a CDN: delaying every image
+        // behind the same two-requests-per-second limiter makes grids render slowly.
+        rateLimit(2) { url ->
+            url.host == baseUrl.toHttpUrl().host && url.pathSegments.firstOrNull() == "manga"
+        }
     }
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
