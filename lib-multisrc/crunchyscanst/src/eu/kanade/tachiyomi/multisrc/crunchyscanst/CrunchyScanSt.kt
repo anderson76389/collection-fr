@@ -89,7 +89,7 @@ abstract class CrunchyScanSt : KeiSource() {
         return SManga.create().apply {
             setUrlWithoutDomain(absUrl("href"))
             title = mangaTitle
-            thumbnail_url = selectFirst("img")?.absUrl("data-src")?.ifBlank { null }
+            thumbnail_url = selectFirst("img")?.absUrl("data-src")?.takeIf { it.isNotBlank() }
                 ?: selectFirst("img")?.absUrl("src")
         }
     }
