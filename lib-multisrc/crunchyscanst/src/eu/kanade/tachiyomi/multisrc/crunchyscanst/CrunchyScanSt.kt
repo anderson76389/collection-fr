@@ -240,16 +240,16 @@ abstract class CrunchyScanSt : KeiSource() {
 
     // Each reader page holds a single image, behind a signed link only issued to a verified session.
     override suspend fun getImageUrl(page: Page): String {
-        val prefetched = pendingImages[page.url]?.let { task ->
-            try {
-                task.await()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                null
+        val imageUrl = cachedPageImage(page.url)
+            ?: pendingImages[page.url]?.let { task ->
+                try {
+                    task.await()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
             }
-        }
-        val imageUrl = cachedPageImage(page.url) ?: prefetched
             ?: fetchReaderPage(page.url).pageImageUrl().also { storePageImage(page.url, it) }
         prefetchFollowing(page)
         return imageUrl.withPage(page.url)
