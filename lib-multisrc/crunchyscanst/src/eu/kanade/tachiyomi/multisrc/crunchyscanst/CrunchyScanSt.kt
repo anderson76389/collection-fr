@@ -6,7 +6,6 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
-import keiyoushi.network.Fetch
 import keiyoushi.network.get
 import keiyoushi.network.post
 import keiyoushi.network.rateLimit
@@ -56,7 +55,7 @@ abstract class CrunchyScanSt : KeiSource() {
             filters.forEach { it.addToUrl(this) }
             if (page > 1) addQueryParameter("page", page.toString())
         }.build()
-        val document = client.get(url, Fetch.DOCUMENT).asJsoup()
+        val document = client.get(url).asJsoup()
         val mangas = document.select("a[data-card-slug]").map { it.toSManga() }
         val hasNextPage = document.selectFirst("a[href*='page=${page + 1}']") != null
         return MangasPage(mangas, hasNextPage)
@@ -74,7 +73,7 @@ abstract class CrunchyScanSt : KeiSource() {
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(baseUrl + manga.url, Fetch.DOCUMENT).asJsoup()
+        val document = client.get(baseUrl + manga.url).asJsoup()
         return SMangaUpdate(
             manga = document.toSManga(manga.url),
             chapters = document.select("a[data-chapter-slug]").map { it.toSChapter() },
@@ -84,7 +83,7 @@ abstract class CrunchyScanSt : KeiSource() {
     override suspend fun getMangaByUrl(url: HttpUrl): SManga? {
         if (url.host != baseUrl.toHttpUrl().host || url.pathSegments.size < 2) return null
         val path = "/${url.pathSegments[0]}/${url.pathSegments[1]}"
-        val response = client.get(baseUrl + path, headers, Fetch.DOCUMENT, ensureSuccess = false)
+        val response = client.get(baseUrl + path, headers, ensureSuccess = false)
         if (!response.isSuccessful) {
             response.close()
             return null
@@ -161,13 +160,13 @@ abstract class CrunchyScanSt : KeiSource() {
         }
     }
 
-    private suspend fun getReaderDocument(pageUrl: String) = client.get(pageUrl, Fetch.DOCUMENT, CacheControl.FORCE_NETWORK).asJsoup()
+    private suspend fun getReaderDocument(pageUrl: String) = client.get(pageUrl, cacheControl = CacheControl.FORCE_NETWORK).asJsoup()
 
     private fun Document.turnstileSiteKey() = selectFirst(".cf-turnstile")?.attr("data-sitekey")
 
     private suspend fun verifySession(pageUrl: String, siteKey: String) {
         val token = getTurnstileToken(pageUrl, siteKey)
-        val verified = client.post("$baseUrl/api/verify-turnstile", headers, Fetch.XHR.from(pageUrl), VerifyRequestDto(token).toJsonRequestBody())
+        val verified = client.post("$baseUrl/api/verify-turnstile", headers.from(pageUrl), VerifyRequestDto(token).toJsonRequestBody())
             .parseAs<VerifyResponseDto>().ok
         if (!verified) throw Exception(VERIFICATION_REFUSED)
         verifiedAt = System.currentTimeMillis()

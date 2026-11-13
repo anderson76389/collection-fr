@@ -7,7 +7,6 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.SMangaUpdate
 import keiyoushi.annotation.Source
-import keiyoushi.network.Fetch
 import keiyoushi.network.get
 import keiyoushi.source.KeiSource
 import keiyoushi.utils.asJsoup
@@ -26,11 +25,11 @@ abstract class BDplus : KeiSource() {
     override suspend fun getPopularManga(page: Int): MangasPage = getSearchMangaList(page, "", FilterList())
 
     override suspend fun getLatestUpdates(page: Int): MangasPage {
-        val config = client.get(baseUrl, Fetch.DOCUMENT).asJsoup()
+        val config = client.get(baseUrl).asJsoup()
             .selectFirst("script#homeCfg")!!
             .data()
             .parseAs<HomeConfigDto>()
-        val updates = client.get(baseUrl + config.upd, Fetch.XHR).parseAs<UpdatesDto>().g
+        val updates = client.get(baseUrl + config.upd).parseAs<UpdatesDto>().g
 
         return updates.toMangasPage(page) { it.toSManga(baseUrl) }
     }
@@ -40,7 +39,7 @@ abstract class BDplus : KeiSource() {
         val genre = filters.firstInstanceOrNull<GenreFilter>()?.selected
         val comparator = (filters.firstInstanceOrNull<SortFilter>() ?: SortFilter()).comparator()
 
-        val entries = client.get("$baseUrl/data/search_corpus.json", Fetch.XHR).parseAs<CorpusDto>().docs
+        val entries = client.get("$baseUrl/data/search_corpus.json").parseAs<CorpusDto>().docs
             .filter { genre == null || genre in it.genres }
             .filter { entry -> searchTerm.isEmpty() || entry.searchTerms().any { searchTerm in it.normalize() } }
             .sortedWith(comparator)
@@ -52,7 +51,7 @@ abstract class BDplus : KeiSource() {
         if (url.host != baseUrl.toHttpUrl().host || url.pathSegments.firstOrNull() != "serie_static") return null
         val slug = url.pathSegments.getOrNull(1)?.removeSuffix(".html") ?: return null
 
-        return client.get(seriesUrl(slug), Fetch.DOCUMENT).asJsoup().toSManga(slug)
+        return client.get(seriesUrl(slug)).asJsoup().toSManga(slug)
     }
 
     override fun getMangaUrl(manga: SManga) = seriesUrl(manga.url)
@@ -63,7 +62,7 @@ abstract class BDplus : KeiSource() {
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(getMangaUrl(manga), Fetch.DOCUMENT).asJsoup()
+        val document = client.get(getMangaUrl(manga)).asJsoup()
 
         val chapterList = document.select("#tl a.tr").map { element ->
             SChapter.create().apply {
@@ -86,7 +85,7 @@ abstract class BDplus : KeiSource() {
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val tomeUrl = "$baseUrl/_converted/${chapter.url}"
 
-        return client.get("$tomeUrl/pages.json", Fetch.XHR).parseAs<PagesDto>().pages.mapIndexed { index, page ->
+        return client.get("$tomeUrl/pages.json").parseAs<PagesDto>().pages.mapIndexed { index, page ->
             val imageUrl = if (page.url.startsWith("/")) baseUrl + page.url else "$tomeUrl/${page.url}"
             Page(index, imageUrl = imageUrl)
         }
