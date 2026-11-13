@@ -166,7 +166,7 @@ abstract class CrunchyScanSt : KeiSource() {
 
     private suspend fun verifySession(pageUrl: String, siteKey: String) {
         val token = getTurnstileToken(pageUrl, siteKey)
-        val verified = client.post("$baseUrl/api/verify-turnstile", headers.from(pageUrl), VerifyRequestDto(token).toJsonRequestBody())
+        val verified = client.post("$baseUrl/api/verify-turnstile", headers.newBuilder().set("Referer", pageUrl).set("X-Requested-With", "XMLHttpRequest").build(), VerifyRequestDto(token).toJsonRequestBody())
             .parseAs<VerifyResponseDto>().ok
         if (!verified) throw Exception(VERIFICATION_REFUSED)
         verifiedAt = System.currentTimeMillis()
