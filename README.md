@@ -58,14 +58,14 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les extensions effectivement publiées (30 avant cet ajout). Soft Epsilon Scan et les autres extensions sont conservées. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les 32 extensions actuellement publiées. Soft Epsilon Scan et les autres extensions sont conservées. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
 
 **Mangas et scans**
 
-`AnimeSama` · `Astral-Manga` · `CrunchyScan` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 

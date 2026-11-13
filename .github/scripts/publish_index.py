@@ -51,7 +51,6 @@ EXPECTED_MODULES = {
     "src/fr/poseidonscans",
     "src/fr/raijinscans",
     "src/all/saymanhwa",
-    "src/fr/crunchyscanunoriginal",
     "src/fr/bdplus",
     "src/fr/solarisscans",
 }
