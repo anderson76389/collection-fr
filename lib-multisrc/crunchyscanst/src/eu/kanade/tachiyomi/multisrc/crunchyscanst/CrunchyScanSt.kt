@@ -22,6 +22,7 @@ import kotlinx.serialization.json.JsonElement
 import okhttp3.CacheControl
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -30,6 +31,7 @@ import org.jsoup.nodes.Element
 import java.time.ZoneId
 import java.time.format.DateTimeFormatterBuilder
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
 abstract class CrunchyScanSt : KeiSource() {
@@ -38,6 +40,27 @@ abstract class CrunchyScanSt : KeiSource() {
 
     @Volatile
     private var verifiedAt = 0L
+
+    // Short-lived, bounded reader cache: revisiting a page must not redo the
+    // Turnstile flow and HTML request when the previously signed image is valid.
+    private val pageImages = object : LinkedHashMap<String, String>(96, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>): Boolean = size > 96
+    }
+
+    private fun cachedPageImage(pageUrl: String): String? = synchronized(pageImages) {
+        val imageUrl = pageImages[pageUrl] ?: return@synchronized null
+        val expiry = imageUrl.toHttpUrlOrNull()?.queryParameter("e")?.toLongOrNull()
+        if (expiry != null && expiry <= System.currentTimeMillis() / 1000 + EXPIRY_MARGIN_SECONDS) {
+            pageImages.remove(pageUrl)
+            null
+        } else {
+            imageUrl
+        }
+    }
+
+    private fun storePageImage(pageUrl: String, imageUrl: String) = synchronized(pageImages) {
+        pageImages[pageUrl] = imageUrl
+    }
 
     override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor { refreshExpiredImage(it) }
         // Every reader page is its own HTML document; images are static files.
@@ -56,15 +79,19 @@ abstract class CrunchyScanSt : KeiSource() {
             if (page > 1) addQueryParameter("page", page.toString())
         }.build()
         val document = client.get(url).asJsoup()
-        val mangas = document.select("a[data-card-slug]").map { it.toSManga() }
+        val mangas = document.select("a[data-card-slug]").mapNotNull { it.toSManga() }
         val hasNextPage = document.selectFirst("a[href*='page=${page + 1}']") != null
         return MangasPage(mangas, hasNextPage)
     }
 
-    private fun Element.toSManga() = SManga.create().apply {
-        setUrlWithoutDomain(absUrl("href"))
-        title = selectFirst("h3")!!.text()
-        thumbnail_url = selectFirst("img")?.absUrl("src")
+    private fun Element.toSManga(): SManga? {
+        val mangaTitle = selectFirst("h3")?.text()?.takeIf { it.isNotBlank() } ?: return null
+        return SManga.create().apply {
+            setUrlWithoutDomain(absUrl("href"))
+            title = mangaTitle
+            thumbnail_url = selectFirst("img")?.absUrl("data-src")?.ifBlank { null }
+                ?: selectFirst("img")?.absUrl("src")
+        }
     }
 
     override suspend fun fetchMangaUpdate(
@@ -95,7 +122,9 @@ abstract class CrunchyScanSt : KeiSource() {
 
     private fun Document.toSManga(mangaUrl: String) = SManga.create().apply {
         val info = select("dt").associate { it.text() to it.nextElementSibling()?.text() }
-        val series = selectFirst("script[type='application/ld+json']")?.data()?.parseAs<LdJsonDto>()?.series
+        val series = selectFirst("script[type='application/ld+json']")?.data()?.let {
+            runCatching { it.parseAs<LdJsonDto>().series }.getOrNull()
+        }
 
         url = mangaUrl
         title = selectFirst("h1")!!.text()
@@ -132,7 +161,11 @@ abstract class CrunchyScanSt : KeiSource() {
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val document = fetchReaderPage(getChapterUrl(chapter))
         val firstImage = document.pageImageUrl()
-        val pageCount = document.selectFirst("script#reader-history")!!.data().parseAs<ReaderHistoryDto>().pages
+        storePageImage(getChapterUrl(chapter), firstImage)
+        val pageCount = document.selectFirst("script#reader-history")?.data()?.let {
+            runCatching { it.parseAs<ReaderHistoryDto>().pages }.getOrNull()
+        }?.takeIf { it in 1..1000 }
+            ?: throw IllegalStateException("CrunchyScan : nombre de pages introuvable pour ce chapitre")
         return (1..pageCount).map { number ->
             val pageUrl = "$baseUrl${chapter.url}/$number"
             Page(number - 1, url = pageUrl, imageUrl = if (number == 1) firstImage.withPage(pageUrl) else null)
@@ -140,7 +173,12 @@ abstract class CrunchyScanSt : KeiSource() {
     }
 
     // Each reader page holds a single image, behind a signed link only issued to a verified session.
-    override suspend fun getImageUrl(page: Page): String = fetchReaderPage(page.url).pageImageUrl().withPage(page.url)
+    override suspend fun getImageUrl(page: Page): String {
+        val imageUrl = cachedPageImage(page.url) ?: fetchReaderPage(page.url).pageImageUrl().also {
+            storePageImage(page.url, it)
+        }
+        return imageUrl.withPage(page.url)
+    }
 
     /**
      * Fetches a reader page. Without a verified session the site shows a Turnstile check instead
@@ -155,14 +193,23 @@ abstract class CrunchyScanSt : KeiSource() {
             // The reader loads many pages at once: verify once, for all of them.
             if (verifiedAt < requestedAt) verifySession(pageUrl, siteKey)
         }
-        return getReaderDocument(pageUrl).also {
+        return getReaderDocument(pageUrl, forceNetwork = true).also {
             if (it.turnstileSiteKey() != null) throw Exception(VERIFICATION_REFUSED)
         }
     }
 
-    private suspend fun getReaderDocument(pageUrl: String) = client.get(pageUrl, cacheControl = CacheControl.FORCE_NETWORK).asJsoup()
+    private suspend fun getReaderDocument(pageUrl: String, forceNetwork: Boolean = false): Document {
+        val cacheControl = if (forceNetwork) {
+            CacheControl.FORCE_NETWORK
+        } else {
+            CacheControl.Builder().maxAge(20, TimeUnit.SECONDS).build()
+        }
+        return client.get(pageUrl, cacheControl = cacheControl).asJsoup()
+    }
 
-    private fun Document.turnstileSiteKey() = selectFirst(".cf-turnstile")?.attr("data-sitekey")
+    private fun Document.turnstileSiteKey() = selectFirst(".cf-turnstile")
+        ?.attr("data-sitekey")
+        ?.takeIf { it.isNotBlank() }
 
     private suspend fun verifySession(pageUrl: String, siteKey: String) {
         val token = getTurnstileToken(pageUrl, siteKey)
@@ -187,7 +234,10 @@ abstract class CrunchyScanSt : KeiSource() {
         if (pagePath == null || expiry == null || expiry > System.currentTimeMillis() / 1000 + EXPIRY_MARGIN_SECONDS) {
             return chain.proceed(request)
         }
-        val freshUrl = runBlocking { fetchReaderPage(baseUrl + pagePath) }.pageImageUrl()
+        val readerUrl = baseUrl + pagePath
+        val freshUrl = cachedPageImage(readerUrl) ?: runBlocking {
+            fetchReaderPage(readerUrl).pageImageUrl().also { storePageImage(readerUrl, it) }
+        }
         return chain.proceed(request.newBuilder().url(freshUrl).build())
     }
 
