@@ -273,7 +273,7 @@ abstract class SolarisScans :
         return emptyList()
     }
 
-    override fun getImageRequest(page: Page): Request = super.getImageRequest(page).newBuilder()
+    override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
         .header("Referer", page.url)
         .build()
 
