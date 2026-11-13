@@ -18,14 +18,19 @@ import keiyoushi.utils.asJsoup
 import keiyoushi.utils.firstInstanceOrNull
 import keiyoushi.utils.getPreferencesLazy
 import keiyoushi.utils.textOrNull
+import keiyoushi.utils.parseAs
+import keiyoushi.utils.runWebView
 import kotlinx.serialization.json.JsonElement
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 @Source
 abstract class SolarisScans :
@@ -79,18 +84,34 @@ abstract class SolarisScans :
             }
         }.build()
 
-        val document = client.get(url).asJsoup()
+        val document = fetchDocument(url.toString())
 
-        val mangas = document.select("article.solaris-catalog-card").mapNotNull { element ->
-            val titleElement = element.selectFirst("h2 a") ?: return@mapNotNull null
-            val title = titleElement.text().takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val href = titleElement.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        // Solaris has used both catalogue cards and directly linked manga tiles.
+        val cards = document.select("article.solaris-catalog-card")
+        val links = if (cards.isNotEmpty()) {
+            cards.mapNotNull { it.selectFirst("h2 a[href], h3 a[href], a[href*='/manga/']") }
+        } else {
+            document.select("a[href*='/manga/']").filter { link ->
+                link.absUrl("href").toHttpUrlOrNull()?.let { linkUrl ->
+                    linkUrl.host == baseUrl.toHttpUrl().host &&
+                        linkUrl.pathSegments.size == 2 &&
+                        linkUrl.pathSegments.firstOrNull() == "manga" &&
+                        link.selectFirst("img, h2, h3, h4") != null
+                } ?: false
+            }
+        }
+        val mangas = links.mapNotNull { link ->
+            val title = link.selectFirst("h2, h3, h4")?.textOrNull()
+                ?: link.selectFirst("img[alt]")?.attr("alt")?.takeIf { it.isNotBlank() }
+                ?: link.text().takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            val href = link.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             SManga.create().apply {
                 this.title = title
                 setUrlWithoutDomain(href)
-                thumbnail_url = imageUrl(element.selectFirst(".solaris-catalog-card__cover img"))
+                thumbnail_url = imageUrl(link.selectFirst("img") ?: link.parent()?.selectFirst("img"))
             }
-        }
+        }.distinctBy { it.url }
 
         val nextPage = (page + 1).toString()
         val hasNextPage = document.select("a[href]").any {
@@ -120,11 +141,10 @@ abstract class SolarisScans :
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(getMangaUrl(manga)).asJsoup()
+        val document = fetchDocument(getMangaUrl(manga))
         val updatedManga = if (fetchDetails) parseDetails(document, manga.url) else manga
         // Extra chapter pages live behind ?chapters_page=N, so only fetch them when asked.
         val updatedChapters = if (fetchChapters) {
-            require(document.selectFirst("#swChapterGrid") != null) { "Chapter list not found." }
             fetchAllChapters(document).ifEmpty { chapters }
         } else {
             chapters
@@ -137,9 +157,9 @@ abstract class SolarisScans :
         if (url.isBlank()) {
             setUrlWithoutDomain(preserveUrl)
         }
-        title = document.selectFirst("section.sz-ri-info-card h1")?.text()
+        title = document.selectFirst("section.sz-ri-info-card h1, h1")?.text()
             ?: error("Manga title not found: ${document.location()}")
-        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img"))
+        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img, meta[property=og:image]"))
         description = document.selectFirst("[data-hero-synopsis-full]")?.textOrNull()
             ?: document.selectFirst("[data-hero-synopsis-short]")?.textOrNull()
 
@@ -195,7 +215,7 @@ abstract class SolarisScans :
         for (page in 2..totalPages.coerceAtMost(MAX_CHAPTER_PAGES)) {
             val url = base.newBuilder().setQueryParameter("chapters_page", page.toString()).build()
             val document = try {
-                client.get(url).asJsoup()
+                fetchDocument(url.toString())
             } catch (e: HttpException) {
                 if (e.message?.contains("404") == true) {
                     break
@@ -206,15 +226,25 @@ abstract class SolarisScans :
                 break
             }
         }
-        return chapters
+        return chapters.distinctBy { it.url }
     }
 
     private fun parseChapters(document: Document): List<Pair<SChapter, Boolean>> {
-        return document.select("#swChapterGrid a.sz-chapter-card").mapNotNull { element ->
+        val links = document.select("#swChapterGrid a.sz-chapter-card").ifEmpty {
+            document.select("a[href*='/chapitre-']").filter { element ->
+                val link = element.absUrl("href").toHttpUrlOrNull()
+                link != null && link.host == baseUrl.toHttpUrl().host &&
+                    link.pathSegments.size >= 3 && link.pathSegments[0] == "manga"
+            }
+        }
+        return links.mapNotNull { element ->
             val href = element.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val number = element.attr("data-number")
+            val number = element.attr("data-number").ifBlank {
+                Regex("""chapitre-(\\d+(?:[.-]\\d+)?)""").find(href)?.groupValues?.getOrNull(1).orEmpty()
+            }
             val baseName = element.selectFirst(".sz-ri-chapter-body strong")?.textOrNull()
                 ?: element.selectFirst("strong")?.textOrNull()
+                ?: element.textOrNull()
                 ?: number.takeIf { it.isNotBlank() }?.let { "Chapitre $it" }
                 ?: return@mapNotNull null
             val isPremium = element.hasClass("is-premium") ||
@@ -236,7 +266,7 @@ abstract class SolarisScans :
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterUrl = getChapterUrl(chapter)
-        val document = client.get(chapterUrl).asJsoup()
+        val document = fetchDocument(chapterUrl)
 
         val script = document.selectFirst("script#chapter_preloaded_images")?.data().orEmpty()
         val imageUrls = PRELOADED_IMAGE_REGEX.findAll(script).mapNotNull { match ->
@@ -260,7 +290,7 @@ abstract class SolarisScans :
             }
         }
 
-        val fallback = document.select(".reading-content img.wp-manga-chapter-img").mapNotNull { img ->
+        val fallback = document.select(".reading-content img.wp-manga-chapter-img, img[alt^=Page], img[data-page-img]").mapNotNull { img ->
             imageUrl(img)?.takeIf { it.startsWith("http") }?.replaceFirst("http://", "https://")
         }
 
@@ -270,7 +300,36 @@ abstract class SolarisScans :
             }
         }
 
-        return emptyList()
+        throw IllegalStateException("Solaris : aucune image trouvée pour ce chapitre. Ouvre la WebView puis réessaie.")
+    }
+
+    /**
+     * Cloudflare can allow the user-facing WebView while refusing direct OkHttp requests.
+     * Use the normal HTTP client first, and only render the document in Android WebView
+     * after an access-denied response. The chapter images still use native Mihon loading.
+     */
+    private suspend fun fetchDocument(url: String): Document = try {
+        client.get(url).asJsoup()
+    } catch (error: HttpException) {
+        if (!error.message.orEmpty().let { "403" in it || "503" in it }) throw error
+        runWebView<Document>(timeout = 35.seconds) {
+            poll(800.milliseconds) {
+                evaluateJs("document.documentElement.outerHTML") { json ->
+                    val html = runCatching { json.parseAs<String>() }.getOrNull() ?: return@evaluateJs
+                    val document = Jsoup.parse(html, url)
+                    val ready = when {
+                        "/chapitre-" in url -> document.selectFirst(
+                            "script#chapter_preloaded_images, img[alt^=Page], img[data-page-img], .reading-content img",
+                        ) != null
+                        "/manga/" in url && url.trimEnd('/').substringAfter("/manga/").isNotBlank() ->
+                            document.selectFirst("h1") != null
+                        else -> document.selectFirst("article.solaris-catalog-card, a[href*='/manga/']") != null
+                    }
+                    if (ready) resolve(document)
+                }
+            }
+            loadUrl(url)
+        }
     }
 
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
