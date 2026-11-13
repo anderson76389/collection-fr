@@ -81,16 +81,30 @@ abstract class SolarisScans :
 
         val document = client.get(url).asJsoup()
 
-        val mangas = document.select("article.solaris-catalog-card").mapNotNull { element ->
-            val titleElement = element.selectFirst("h2 a") ?: return@mapNotNull null
-            val title = titleElement.text().takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val href = titleElement.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        // The site has used both "solaris-catalog-card" and a newer catalogue layout.
+        // Resolve actual manga links instead of tying the catalogue to one CSS class.
+        val host = baseUrl.toHttpUrl().host
+        val root = document.selectFirst("main") ?: document
+        val mangas = root.select("a[href]").mapNotNull { link ->
+            val href = link.absUrl("href").toHttpUrlOrNull() ?: return@mapNotNull null
+            val segments = href.pathSegments.filter { it.isNotBlank() }
+            if (href.host != host || segments.size != 2 || segments.first() != "manga") {
+                return@mapNotNull null
+            }
+
+            val card = link.closest("article") ?: link.parent() ?: link
+            val title = link.selectFirst("h2, h3, h4, [class*=title]")?.textOrNull()
+                ?: card.selectFirst("h2, h3, h4, [class*=title]")?.textOrNull()
+                ?: link.selectFirst("img[alt]")?.attr("alt")?.takeIf { it.isNotBlank() }
+                ?: link.attr("title").takeIf { it.isNotBlank() }
+                ?: link.ownText().takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
             SManga.create().apply {
                 this.title = title
-                setUrlWithoutDomain(href)
-                thumbnail_url = imageUrl(element.selectFirst(".solaris-catalog-card__cover img"))
+                setUrlWithoutDomain(href.toString())
+                thumbnail_url = imageUrl(link.selectFirst("img") ?: card.selectFirst("img"))
             }
-        }
+        }.distinctBy { it.url }
 
         val nextPage = (page + 1).toString()
         val hasNextPage = document.select("a[href]").any {
@@ -124,7 +138,6 @@ abstract class SolarisScans :
         val updatedManga = if (fetchDetails) parseDetails(document, manga.url) else manga
         // Extra chapter pages live behind ?chapters_page=N, so only fetch them when asked.
         val updatedChapters = if (fetchChapters) {
-            require(document.selectFirst("#swChapterGrid") != null) { "Chapter list not found." }
             fetchAllChapters(document).ifEmpty { chapters }
         } else {
             chapters
@@ -137,9 +150,11 @@ abstract class SolarisScans :
         if (url.isBlank()) {
             setUrlWithoutDomain(preserveUrl)
         }
-        title = document.selectFirst("section.sz-ri-info-card h1")?.text()
+        title = document.selectFirst("section.sz-ri-info-card h1, main h1, h1")?.textOrNull()
+            ?: document.selectFirst("meta[property=og:title]")?.attr("content")
             ?: error("Manga title not found: ${document.location()}")
-        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img"))
+        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img, main img[alt*=Couverture]"))
+            ?: document.selectFirst("meta[property=og:image]")?.absUrl("content")
         description = document.selectFirst("[data-hero-synopsis-full]")?.textOrNull()
             ?: document.selectFirst("[data-hero-synopsis-short]")?.textOrNull()
 
@@ -210,67 +225,75 @@ abstract class SolarisScans :
     }
 
     private fun parseChapters(document: Document): List<Pair<SChapter, Boolean>> {
-        return document.select("#swChapterGrid a.sz-chapter-card").mapNotNull { element ->
-            val href = element.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val number = element.attr("data-number")
-            val baseName = element.selectFirst(".sz-ri-chapter-body strong")?.textOrNull()
-                ?: element.selectFirst("strong")?.textOrNull()
-                ?: number.takeIf { it.isNotBlank() }?.let { "Chapitre $it" }
-                ?: return@mapNotNull null
-            val isPremium = element.hasClass("is-premium") ||
-                element.selectFirst(".sz-ri-chapter-premium, .sz-ri-chapter-access") != null
+        val host = baseUrl.toHttpUrl().host
+        return document.select("a[href]").mapNotNull { element ->
+            val href = element.absUrl("href").toHttpUrlOrNull() ?: return@mapNotNull null
+            val segments = href.pathSegments.filter { it.isNotBlank() }
+            if (href.host != host || segments.size != 3 || segments.first() != "manga" ||
+                !segments.last().startsWith("chapitre-", ignoreCase = true)
+            ) {
+                return@mapNotNull null
+            }
+
+            val number = element.attr("data-number").ifBlank { segments.last().removePrefix("chapitre-") }
+            val baseName = element.selectFirst(".sz-ri-chapter-body strong, strong")?.textOrNull()
+                ?: element.textOrNull()?.takeIf { "chapitre" in it.lowercase() }
+                ?: "Chapitre ${number.replace('-', '.')}"
+            val isPremium = element.classNames().any { "premium" in it.lowercase() } ||
+                element.selectFirst(".sz-ri-chapter-premium, .sz-ri-chapter-access, [class*=premium]") != null ||
+                element.text().contains("premium", ignoreCase = true)
             val chapter = SChapter.create().apply {
-                setUrlWithoutDomain(href)
+                setUrlWithoutDomain(href.toString())
                 name = buildString {
-                    if (isPremium) {
-                        append("🔒 ")
-                    }
+                    if (isPremium) append("🔒 ")
                     append(baseName)
                 }
-                number.toFloatOrNull()?.let { chapter_number = it }
+                number.replace('-', '.').toFloatOrNull()?.let { chapter_number = it }
                 date_upload = element.attr("data-recent").toLongOrNull()?.times(1000L) ?: 0L
             }
             chapter to isPremium
-        }
+        }.distinctBy { it.first.url }
     }
 
     override suspend fun getPageList(chapter: SChapter): List<Page> {
         val chapterUrl = getChapterUrl(chapter)
         val document = client.get(chapterUrl).asJsoup()
 
-        val script = document.selectFirst("script#chapter_preloaded_images")?.data().orEmpty()
-        val imageUrls = PRELOADED_IMAGE_REGEX.findAll(script).mapNotNull { match ->
-            match.groupValues.getOrNull(1)
-                ?.replace("\\/", "/")
-                ?.replace("&amp;", "&")
-                ?.takeIf { it.isNotBlank() }
-                ?.let { src ->
-                    when {
-                        src.startsWith("http") -> src
-                        src.startsWith("//") -> "https:$src"
-                        src.startsWith("/") -> baseUrl + src
-                        else -> "$baseUrl/$src"
-                    }.replaceFirst("http://", "https://")
-                }
+        // Solaris now serves pages through WordPress' secure image endpoint rather than
+        // the old "solaris_chapter_image" URLs. The document already contains the
+        // per-page secure URLs, so preserve their order and fetch them directly in Mihon.
+        val secureImages = document.select(
+            "img[src*=solaris_secure_chapter_page], img[data-src*=solaris_secure_chapter_page], " +
+                "img[data-lazy-src*=solaris_secure_chapter_page], img[data-cfsrc*=solaris_secure_chapter_page]",
+        ).mapNotNull(::imageUrl)
+            .filter { "solaris_secure_chapter_page" in it }
+            .distinct()
+
+        val oldPreloaded = document.selectFirst("script#chapter_preloaded_images")?.data().orEmpty()
+        val embeddedImages = PRELOADED_IMAGE_REGEX.findAll(oldPreloaded).mapNotNull { match ->
+            match.groupValues.getOrNull(1)?.decodeImageUrl(chapterUrl)
         }.toList()
 
-        if (imageUrls.isNotEmpty()) {
-            return imageUrls.mapIndexed { index, imageUrl ->
-                Page(index, url = chapterUrl, imageUrl = imageUrl)
-            }
+        val imageUrls = when {
+            secureImages.isNotEmpty() -> secureImages
+            embeddedImages.isNotEmpty() -> embeddedImages
+            else -> document.select(".reading-content img.wp-manga-chapter-img, img[alt^=Page ]")
+                .mapNotNull(::imageUrl)
+                .filter { it.startsWith("https://") || it.startsWith("http://") }
+                .distinct()
         }
 
-        val fallback = document.select(".reading-content img.wp-manga-chapter-img").mapNotNull { img ->
-            imageUrl(img)?.takeIf { it.startsWith("http") }?.replaceFirst("http://", "https://")
+        if (imageUrls.isEmpty()) {
+            throw IllegalStateException("Solaris : aucune image dans le chapitre. Ouvre la WebView pour vérifier la page.")
         }
-
-        if (fallback.isNotEmpty()) {
-            return fallback.mapIndexed { index, imageUrl ->
-                Page(index, url = chapterUrl, imageUrl = imageUrl)
-            }
+        return imageUrls.mapIndexed { index, imageUrl ->
+            Page(index, url = chapterUrl, imageUrl = imageUrl)
         }
+    }
 
-        return emptyList()
+    private fun String.decodeImageUrl(chapterUrl: String): String? {
+        val decoded = replace("\\/", "/").replace("&amp;", "&").replace("\\u0026", "&").trim()
+        return chapterUrl.toHttpUrl().resolve(decoded)?.toString()
     }
 
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
