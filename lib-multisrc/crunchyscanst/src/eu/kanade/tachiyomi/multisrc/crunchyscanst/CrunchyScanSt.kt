@@ -51,6 +51,12 @@ abstract class CrunchyScanSt : KeiSource() {
     // separate dispatcher for the nested reader HTML request, otherwise five
     // concurrent images can occupy all same-host slots and deadlock their refresh.
     private val readerClient by lazy { client.newBuilder().dispatcher(Dispatcher()).build() }
+    private val prefetchClient by lazy {
+        readerClient.newBuilder().apply {
+            // Background work must never open Cloudflare's interactive verification UI.
+            interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" }
+        }.build()
+    }
 
     @Volatile
     private var verifiedAt = 0L
@@ -89,7 +95,7 @@ abstract class CrunchyScanSt : KeiSource() {
         val task = prefetchScope.async(start = CoroutineStart.LAZY) {
             try {
                 // Background prefetch must not open an interactive Turnstile dialog.
-                val document = getReaderDocument(pageUrl)
+                val document = prefetchClient.get(pageUrl).asJsoup()
                 if (document.turnstileSiteKey() != null) {
                     null
                 } else {
