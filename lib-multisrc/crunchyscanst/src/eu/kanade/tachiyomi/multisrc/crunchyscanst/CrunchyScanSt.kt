@@ -15,6 +15,13 @@ import keiyoushi.utils.getTurnstileToken
 import keiyoushi.utils.parseAs
 import keiyoushi.utils.toJsonRequestBody
 import keiyoushi.utils.tryParseDate
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -32,6 +39,7 @@ import org.jsoup.nodes.Element
 import java.time.ZoneId
 import java.time.format.DateTimeFormatterBuilder
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.seconds
 
@@ -43,6 +51,12 @@ abstract class CrunchyScanSt : KeiSource() {
     // separate dispatcher for the nested reader HTML request, otherwise five
     // concurrent images can occupy all same-host slots and deadlock their refresh.
     private val readerClient by lazy { client.newBuilder().dispatcher(Dispatcher()).build() }
+    private val prefetchClient by lazy {
+        readerClient.newBuilder().apply {
+            // Background work must never open Cloudflare's interactive verification UI.
+            interceptors().removeAll { it.javaClass.simpleName == "CloudflareInterceptor" }
+        }.build()
+    }
 
     @Volatile
     private var verifiedAt = 0L
@@ -68,9 +82,56 @@ abstract class CrunchyScanSt : KeiSource() {
         pageImages[pageUrl] = imageUrl
     }
 
+    // Reader pages generate signed image URLs one by one. Warm at most a couple
+    // of upcoming URLs in the background, while retaining Mihon's native loader.
+    private val prefetchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val pendingImages = ConcurrentHashMap<String, Deferred<String?>>()
+    private val chapterPageCounts = object : LinkedHashMap<String, Int>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>): Boolean = size > 16
+    }
+
+    private fun prefetchPageImage(pageUrl: String) {
+        if (cachedPageImage(pageUrl) != null || pendingImages.size >= MAX_PENDING_IMAGES) return
+        val task = prefetchScope.async(start = CoroutineStart.LAZY) {
+            try {
+                // Background prefetch must not open an interactive Turnstile dialog.
+                val document = prefetchClient.get(pageUrl).asJsoup()
+                if (document.turnstileSiteKey() != null) {
+                    null
+                } else {
+                    document.pageImageUrl().also { storePageImage(pageUrl, it) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+        }
+        if (pendingImages.putIfAbsent(pageUrl, task) == null) {
+            task.invokeOnCompletion { pendingImages.remove(pageUrl, task) }
+            task.start()
+        } else {
+            task.cancel()
+        }
+    }
+
+    private fun prefetchFollowing(page: Page) {
+        val chapterBase = page.url.substringBeforeLast('/')
+        val count = synchronized(chapterPageCounts) { chapterPageCounts[chapterBase] } ?: return
+        for (number in (page.index + 2)..minOf(count, page.index + 3)) {
+            prefetchPageImage("$chapterBase/$number")
+        }
+    }
+
     override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor { refreshExpiredImage(it) }
-        // Every reader page is its own HTML document; images are static files.
-        .rateLimit(permits = 4, period = 1.seconds) { !it.encodedPath.startsWith("/cdn/") }
+        // The Keiyoushi 4/s safeguard is for reader HTML, not static/signed
+        // page images, especially when they are served from another CDN host.
+        .rateLimit(permits = 4, period = 1.seconds) { url ->
+            url.host == baseUrl.toHttpUrl().host &&
+                !url.encodedPath.startsWith("/cdn/") &&
+                url.queryParameter("e") == null &&
+                url.encodedPath.substringAfterLast('.', "").lowercase() !in IMAGE_EXTENSIONS
+        }
 
     override suspend fun getPopularManga(page: Int): MangasPage = fetchCatalogue(page, "", listOf(SortFilter()))
 
@@ -172,17 +233,31 @@ abstract class CrunchyScanSt : KeiSource() {
             runCatching { it.parseAs<ReaderHistoryDto>().pages }.getOrNull()
         }?.takeIf { it in 1..1000 }
             ?: throw IllegalStateException("CrunchyScan : nombre de pages introuvable pour ce chapitre")
+        val chapterBase = "$baseUrl${chapter.url}"
+        synchronized(chapterPageCounts) { chapterPageCounts[chapterBase] = pageCount }
+        for (number in 2..minOf(pageCount, 3)) {
+            prefetchPageImage("$chapterBase/$number")
+        }
         return (1..pageCount).map { number ->
-            val pageUrl = "$baseUrl${chapter.url}/$number"
+            val pageUrl = "$chapterBase/$number"
             Page(number - 1, url = pageUrl, imageUrl = if (number == 1) firstImage.withPage(pageUrl) else null)
         }
     }
 
     // Each reader page holds a single image, behind a signed link only issued to a verified session.
     override suspend fun getImageUrl(page: Page): String {
-        val imageUrl = cachedPageImage(page.url) ?: fetchReaderPage(page.url).pageImageUrl().also {
-            storePageImage(page.url, it)
-        }
+        val imageUrl = cachedPageImage(page.url)
+            ?: pendingImages[page.url]?.let { task ->
+                try {
+                    task.await()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            ?: fetchReaderPage(page.url).pageImageUrl().also { storePageImage(page.url, it) }
+        prefetchFollowing(page)
         return imageUrl.withPage(page.url)
     }
 
@@ -257,6 +332,8 @@ abstract class CrunchyScanSt : KeiSource() {
     private companion object {
         const val VERIFICATION_REFUSED = "Vérification refusée, réessayez"
         const val EXPIRY_MARGIN_SECONDS = 30
+        const val MAX_PENDING_IMAGES = 4
+        val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "avif")
 
         val ZONE: ZoneId = ZoneId.of("Europe/Paris")
         val DATE_FORMAT = DateTimeFormatterBuilder()
