@@ -134,10 +134,7 @@ def main() -> None:
 
         original_icon = f"{Path(module).name}-icon.png"
         if not (SOURCE_DIR / "assets/source-logos" / original_icon).is_file():
-            original_icon = {
-                "src/fr/astralmanga": "astralmanga.png",
-                "src/fr/poseidonscans": "poseidonscans.png",
-            }.get(module)
+            original_icon = None
 
         extensions.append(
             {
