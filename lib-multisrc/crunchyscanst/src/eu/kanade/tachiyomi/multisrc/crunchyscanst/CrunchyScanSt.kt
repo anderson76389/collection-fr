@@ -82,10 +82,14 @@ abstract class CrunchyScanSt : KeiSource() {
         fetchDetails: Boolean,
         fetchChapters: Boolean,
     ): SMangaUpdate {
-        val document = client.get(baseUrl + manga.url).asJsoup()
+        val document = client.get(getMangaUrl(manga)).asJsoup()
         return SMangaUpdate(
-            manga = document.toSManga(manga.url),
-            chapters = document.select("a[data-chapter-slug]").map { it.toSChapter() },
+            manga = if (fetchDetails) document.toSManga(manga.url) else manga,
+            chapters = if (fetchChapters) {
+                document.select("a[data-chapter-slug]").mapNotNull { it.toSChapter() }.ifEmpty { chapters }
+            } else {
+                chapters
+            },
         )
     }
 
@@ -104,7 +108,9 @@ abstract class CrunchyScanSt : KeiSource() {
 
     private fun Document.toSManga(mangaUrl: String) = SManga.create().apply {
         val info = select("dt").associate { it.text() to it.nextElementSibling()?.text() }
-        val series = selectFirst("script[type='application/ld+json']")?.data()?.parseAs<LdJsonDto>()?.series
+        val series = runCatching {
+            selectFirst("script[type='application/ld+json']")?.data()?.parseAs<LdJsonDto>()?.series
+        }.getOrNull()
 
         url = mangaUrl
         title = selectFirst("h1")?.text()?.takeIf { it.isNotBlank() }
@@ -125,15 +131,20 @@ abstract class CrunchyScanSt : KeiSource() {
     }
 
     // Links point to the first page of the chapter: /<type>/<slug>/<chapter>/1
-    private fun Element.toSChapter() = SChapter.create().apply {
-        setUrlWithoutDomain(absUrl("href").substringBeforeLast('/'))
-        val label = selectFirst("[data-ch-num]")!!
-        name = label.text()
-        // "11 mai 2025 · 161 p."
-        val meta = label.parent()?.nextElementSibling()?.text()
-        date_upload = DATE_FORMAT.tryParseDate(meta?.substringBefore('·')?.trim(), ZONE)
-        if (name.startsWith("Chapitre")) {
-            chapter_number = attr("data-chapter-slug").toFloatOrNull() ?: -1f
+    private fun Element.toSChapter(): SChapter? {
+        val href = absUrl("href").takeIf { it.isNotBlank() } ?: return null
+        val label = selectFirst("[data-ch-num]")
+        val chapterName = label?.text()?.takeIf { it.isNotBlank() }
+            ?: attr("data-chapter-slug").takeIf { it.isNotBlank() }?.let { "Chapitre $it" }
+            ?: return null
+        return SChapter.create().apply {
+            setUrlWithoutDomain(href.trimEnd('/').substringBeforeLast('/'))
+            name = chapterName
+            val meta = label?.parent()?.nextElementSibling()?.text()
+            date_upload = DATE_FORMAT.tryParseDate(meta?.substringBefore('·')?.trim(), ZONE)
+            if (name.startsWith("Chapitre")) {
+                chapter_number = attr("data-chapter-slug").toFloatOrNull() ?: -1f
+            }
         }
     }
 
@@ -207,7 +218,7 @@ abstract class CrunchyScanSt : KeiSource() {
         if (pagePath == null || expiry == null || expiry > System.currentTimeMillis() / 1000 + EXPIRY_MARGIN_SECONDS) {
             return chain.proceed(request)
         }
-        val freshUrl = runBlocking { fetchReaderPage(baseUrl + pagePath) }.pageImageUrl()
+        val freshUrl = runBlocking { getImageUrl(Page(0, url = baseUrl + pagePath)) }.substringBefore('#')
         return chain.proceed(request.newBuilder().url(freshUrl).build())
     }
 
