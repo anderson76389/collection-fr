@@ -159,7 +159,8 @@ abstract class SolarisScans :
         }
         title = document.selectFirst("section.sz-ri-info-card h1, h1")?.text()
             ?: error("Manga title not found: ${document.location()}")
-        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img, meta[property=og:image]"))
+        thumbnail_url = imageUrl(document.selectFirst(".sz-ri-cover img"))
+            ?: document.selectFirst("meta[property=og:image]")?.absUrl("content")
         description = document.selectFirst("[data-hero-synopsis-full]")?.textOrNull()
             ?: document.selectFirst("[data-hero-synopsis-short]")?.textOrNull()
 
@@ -240,7 +241,7 @@ abstract class SolarisScans :
         return links.mapNotNull { element ->
             val href = element.absUrl("href").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             val number = element.attr("data-number").ifBlank {
-                Regex("""chapitre-(\\d+(?:[.-]\\d+)?)""").find(href)?.groupValues?.getOrNull(1).orEmpty()
+                Regex("""chapitre-(\d+(?:[.-]\d+)?)""").find(href)?.groupValues?.getOrNull(1).orEmpty()
             }
             val baseName = element.selectFirst(".sz-ri-chapter-body strong")?.textOrNull()
                 ?: element.selectFirst("strong")?.textOrNull()
@@ -322,7 +323,8 @@ abstract class SolarisScans :
                             "script#chapter_preloaded_images, img[alt^=Page], img[data-page-img], .reading-content img",
                         ) != null
                         "/manga/" in url && url.trimEnd('/').substringAfter("/manga/").isNotBlank() ->
-                            document.selectFirst("h1") != null
+                            document.selectFirst("h1") != null &&
+                                document.selectFirst("a[href*=\'/chapitre-\'], .sz-ri-info-card, [data-hero-synopsis-full]") != null
                         else -> document.selectFirst("article.solaris-catalog-card, a[href*='/manga/']") != null
                     }
                     if (ready) resolve(document)
