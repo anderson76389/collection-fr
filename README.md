@@ -65,7 +65,7 @@ L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anders
 
 **Mangas et scans**
 
-`AnimeSama` · `Astral-Manga` · `CrunchyScan` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 
