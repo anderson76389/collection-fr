@@ -7,8 +7,8 @@ plugins {
 
 keiyoushi {
     name = "Epsilon Scan"
-    versionCode = 14
-    contentWarning = ContentWarning.SAFE
+    versionCode = 15
+    contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
     theme = "pam"
 
