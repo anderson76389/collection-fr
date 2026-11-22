@@ -154,7 +154,7 @@ def main():
             raise ValueError(f'Invalid or missing base icon: {src}')
         selected, method, origin = baseline, 'upscaled-legacy', str(src.relative_to(ROOT))
         existing = open_image(target.read_bytes()) if target.exists() else None
-        if existing is not None and min(existing.size) >= 500 and slug != 'mangadex':
+        if existing is not None and min(existing.size) >= 500 and slug not in ('mangadex', 'asurascans', 'webtoons'):
             selected, method, origin = existing, 'preserved-local', str(target.relative_to(ROOT))
         else:
             gradle = (folder / 'build.gradle.kts').read_text('utf-8')

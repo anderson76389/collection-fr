@@ -146,5 +146,15 @@
       512
     ],
     "note": "Official MangaDex developer site icon; prevents replacing the logo with a CDN anti-bot challenge favicon."
+  },
+  {
+    "file": "assets/source-logos/asurascans-icon.png",
+    "source": "https://asurascans.com/images/logo.webp",
+    "note": "Official Asura Scans circular hooded logo, high-resolution webp"
+  },
+  {
+    "file": "assets/source-logos/webtoons-icon.png",
+    "source": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Webtoon_logo.png",
+    "note": "500x500 WEBTOON icon available on Wikimedia Commons"
   }
 ]
