@@ -7,7 +7,7 @@ plugins {
 
 keiyoushi {
     name = "Harmony-Scan"
-    versionCode = 4
+    versionCode = 5
     contentWarning = ContentWarning.MIXED
     libVersion = "1.6"
     theme = "madara"
