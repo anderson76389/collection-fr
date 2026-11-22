@@ -179,7 +179,7 @@ def main():
                       'note': 'Upscaling cannot restore details missing from the original.' if method == 'upscaled-legacy' else ''})
         print(f'{slug}: {method} ({raw_size[0]}x{raw_size[1]})', flush=True)
     (ASSETS / 'logo-audit.json').write_text(json.dumps(audit, indent=2, ensure_ascii=False) + '\n', 'utf-8')
-    if len(audit) != 31 or any(not (ASSETS / f"{d['name']}-icon.png").exists() for d in audit):
+    if len(audit) != len(modules) or any(not (ASSETS / f"{d['name']}-icon.png").exists() for d in audit):
         raise RuntimeError('Incomplete published logo set')
     print(f'Validated {len(audit)} local 512x512 logos')
 

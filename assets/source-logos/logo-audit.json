@@ -392,20 +392,6 @@
     "note": ""
   },
   {
-    "name": "softepsilonscan",
-    "size": [
-      512,
-      512
-    ],
-    "original_size": [
-      512,
-      512
-    ],
-    "method": "preserved-local",
-    "source": "assets/source-logos/softepsilonscan-icon.png",
-    "note": ""
-  },
-  {
     "name": "solarisscans",
     "size": [
       512,

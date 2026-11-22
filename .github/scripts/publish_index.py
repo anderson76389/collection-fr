@@ -17,7 +17,6 @@ if len(FINGERPRINT) != 64 or any(char not in "0123456789abcdef" for char in FING
 RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
-    "src/fr/softepsilonscan",
     "src/fr/banchanscan",
     "src/fr/mangakawaii",
 
@@ -93,7 +92,6 @@ def main() -> None:
             "src/all/mangadex": "mangadex",
 
             "src/fr/hentaiorigines": "hentai-origines",
-            "src/fr/softepsilonscan": "Soft-Epsilon-Scan",
             "src/fr/ortegascans": "ortegascans",
             "src/fr/lelmanga": "lelmanga",
 

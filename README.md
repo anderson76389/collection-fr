@@ -58,14 +58,14 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les 31 extensions actuellement publiées. Soft Epsilon Scan (`epsilonsoft.to`) reste disponible avec son identifiant historique. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les 30 extensions actuellement publiées. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
 
 **Mangas et scans**
 
-`Soft Epsilon Scan` · `AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 
@@ -87,7 +87,7 @@ L'index peut inclure des sources classées `all` ainsi que d'autres extensions r
 
 ## 🎨 Logos des extensions
 
-Les 31 logos publiés sont stockés localement dans `assets/source-logos/` en PNG 512 × 512, sans dépendance aux sites référencés au moment de l'affichage. Le workflow de publication récupère, quand c'est possible, les versions officielles de meilleure résolution, puis régénère les cinq densités Android. En l'absence d'original net, un agrandissement de qualité est utilisé ; **il ne restitue pas les détails qui n'existent pas dans la source**. Le rapport `assets/source-logos/logo-audit.json` précise le traitement appliqué à chaque icône.
+Les 30 logos publiés sont stockés localement dans `assets/source-logos/` en PNG 512 × 512, sans dépendance aux sites référencés au moment de l'affichage. Le workflow de publication récupère, quand c'est possible, les versions officielles de meilleure résolution, puis régénère les cinq densités Android. En l'absence d'original net, un agrandissement de qualité est utilisé ; **il ne restitue pas les détails qui n'existent pas dans la source**. Le rapport `assets/source-logos/logo-audit.json` précise le traitement appliqué à chaque icône.
 
 ## 🏗️ Organisation du dépôt
 
