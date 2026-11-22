@@ -74,7 +74,6 @@ internal class Covers(
         dir.mkdirs()
         val bridge = "k" + ByteArray(8).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
         val script = "(${javaClass.getResource("/assets/covers.js")!!.readText()})(\"$bridge\", ${batch.keys.toList().toJsonString()})"
-        val origin = baseUrl.toHttpUrl().let { "${it.scheme}://${it.host}" }
         runWebView<Unit>(timeout = BATCH_TIMEOUT) {
             userAgent = this@Covers.userAgent()
             val left = AtomicInteger(batch.size)
