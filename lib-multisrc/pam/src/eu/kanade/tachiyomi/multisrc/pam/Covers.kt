@@ -13,6 +13,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.File
 import java.io.IOException
 import java.security.SecureRandom
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -76,10 +77,10 @@ internal class Covers(
         val origin = baseUrl.toHttpUrl().let { "${it.scheme}://${it.host}" }
         runWebView<Unit>(timeout = BATCH_TIMEOUT) {
             userAgent = this@Covers.userAgent()
-            var left = batch.size
-            webMessageBridge(bridge, setOf(origin)) { message ->
+            val left = AtomicInteger(batch.size)
+            jsBridge(bridge) { message ->
                 val cover = message.parseAs<CoverMessage>()
-                val deferred = batch[cover.url] ?: return@webMessageBridge
+                val deferred = batch[cover.url] ?: return@jsBridge
                 if (cover.data != null && cover.type != null) {
                     val file = fileFor(cover.url)
                     file.writeBytes(Base64.decode(cover.data, Base64.DEFAULT))
@@ -88,7 +89,7 @@ internal class Covers(
                 } else {
                     deferred.completeExceptionally(IOException(cover.error))
                 }
-                if (--left == 0) resolve(Unit)
+                if (left.decrementAndGet() == 0) resolve(Unit)
             }
             onPageFinished { evaluateJs(script) }
             loadData(baseUrl, "<!DOCTYPE html><html><head></head><body></body></html>")
