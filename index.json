@@ -618,27 +618,6 @@
         ]
       },
       {
-        "name": "Soft Epsilon Scan",
-        "packageName": "eu.kanade.tachiyomi.extension.fr.softepsilonscan",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/39a9729/MAKOFF-Soft-Epsilon-Scan-v1.6.26.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/softepsilonscan-icon.png?v=44971629293",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/39a9729/MAKOFF-fr.softepsilonscan-v1.6.26.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106026",
-        "versionName": "1.6.26",
-        "contentWarning": "CONTENT_WARNING_MIXED",
-        "sources": [
-          {
-            "id": "4969929389259348100",
-            "name": "Soft Epsilon Scan",
-            "language": "fr",
-            "homeUrl": "https://epsilonsoft.to"
-          }
-        ]
-      },
-      {
         "name": "Solaris Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.solarisscans",
         "resources": {
