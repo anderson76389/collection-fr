@@ -261,27 +261,6 @@
         ]
       },
       {
-        "name": "Harmony-Scan",
-        "packageName": "eu.kanade.tachiyomi.extension.fr.bananascan",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/d9ac22c/MAKOFF-bananascan-v1.6.60.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/d9ac22c740f2977d53b2b2a7eeae7082d38a23a2/assets/source-logos/bananascan-icon.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/d9ac22c/MAKOFF-fr.bananascan-v1.6.60.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106060",
-        "versionName": "1.6.60",
-        "contentWarning": "CONTENT_WARNING_MIXED",
-        "sources": [
-          {
-            "id": "3121632933690925888",
-            "name": "Harmony-Scan",
-            "language": "fr",
-            "homeUrl": "https://harmony-scan.fr"
-          }
-        ]
-      },
-      {
         "name": "Banchan Scan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.banchanscan",
         "resources": {
@@ -362,27 +341,6 @@
             "name": "Dassou Scan",
             "language": "fr",
             "homeUrl": "https://dassouscan.com"
-          }
-        ]
-      },
-      {
-        "name": "Epsilon Scan",
-        "packageName": "eu.kanade.tachiyomi.extension.fr.epsilonscan",
-        "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/d9ac22c/MAKOFF-Epsilon-Scan-v1.6.11.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/fr/epsilonscan/res/mipmap-xxxhdpi/ic_launcher.png",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/d9ac22c/MAKOFF-fr.epsilonscan-v1.6.11.jar"
-        },
-        "extensionLib": "1.6",
-        "versionCode": "106011",
-        "versionName": "1.6.11",
-        "contentWarning": "CONTENT_WARNING_NSFW",
-        "sources": [
-          {
-            "id": "2577248042661857530",
-            "name": "Epsilon Scan",
-            "language": "fr",
-            "homeUrl": "https://epsilonscan.to"
           }
         ]
       },
