@@ -85,6 +85,10 @@ L'index peut inclure des sources classées `all` ainsi que d'autres extensions r
 > [!NOTE]
 > Une extension présente dans l'index ne signifie pas que **toutes** ses fonctions marchent en permanence. Les sites peuvent changer d'adresse, imposer un CAPTCHA, limiter leur accès ou modifier leurs lecteurs. Les résultats de compilation ne constituent pas une validation complète dans Mihon.
 
+## 🎨 Logos des extensions
+
+Les 31 logos publiés sont stockés localement dans `assets/source-logos/` en PNG 512 × 512, sans dépendance aux sites référencés au moment de l'affichage. Le workflow de publication récupère, quand c'est possible, les versions officielles de meilleure résolution, puis régénère les cinq densités Android. En l'absence d'original net, un agrandissement de qualité est utilisé ; **il ne restitue pas les détails qui n'existent pas dans la source**. Le rapport `assets/source-logos/logo-audit.json` précise le traitement appliqué à chaque icône.
+
 ## 🏗️ Organisation du dépôt
 
 Ce dépôt sépare le **code source** et les **fichiers distribués à Mihon**.

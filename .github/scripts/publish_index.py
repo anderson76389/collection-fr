@@ -141,7 +141,8 @@ def main() -> None:
                 "resources": {
                     "apkUrl": "",
                     "iconUrl": (
-                        f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT_SHA}/assets/source-logos/{original_icon}"
+                        f"https://raw.githubusercontent.com/{REPOSITORY}/main/assets/source-logos/{original_icon}"
+                        f"?v={os.environ.get('GITHUB_RUN_ID', COMMIT_SHA[:7])}"
                         if original_icon else
                         f"https://raw.githubusercontent.com/{REPOSITORY}/main/"
                         f"{module}/res/mipmap-xxxhdpi/ic_launcher.png"
