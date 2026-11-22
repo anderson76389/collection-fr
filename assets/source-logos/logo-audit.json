@@ -1,0 +1,436 @@
+[
+  {
+    "name": "asurascans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/asurascans/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "cosplaytele",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/cosplaytele/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "flamecomics",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/flamecomics/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "hivescans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/hivescans/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "mangadex",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      1024,
+      1024
+    ],
+    "method": "original-official",
+    "source": "https://mangadex.org/edge/challenge-assets/favicon.svg",
+    "note": ""
+  },
+  {
+    "name": "olympusscanlation",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/olympusscanlation/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "saymanhwa",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/all/saymanhwa/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "animesama",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/animesama-icon.png",
+    "note": ""
+  },
+  {
+    "name": "astralmanga",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/astralmanga-icon.png",
+    "note": ""
+  },
+  {
+    "name": "banchanscan",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/banchanscan/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "bdplus",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "original-official",
+    "source": "https://bdplus.cc/assets/icons/icon-512x512.png",
+    "note": ""
+  },
+  {
+    "name": "blossomscans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/blossomscans-icon.png",
+    "note": ""
+  },
+  {
+    "name": "dassouscan",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/dassouscan-icon.png",
+    "note": ""
+  },
+  {
+    "name": "hentaiorigines",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "original-official",
+    "source": "https://hentai-origines.com/wp-content/uploads/2026/09/cropped-icon_HO.png",
+    "note": ""
+  },
+  {
+    "name": "lelmanga",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/lelmanga/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "mangaball",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/mangaball/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "mangakawaii",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "original-official",
+    "source": "https://www.mangakawaii.fr/assets/img/pwa/mk-512.png",
+    "note": ""
+  },
+  {
+    "name": "mangascantrad",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/mangascantrad-icon.png",
+    "note": ""
+  },
+  {
+    "name": "mangasoriginesfr",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/mangasoriginesfr-icon.png",
+    "note": ""
+  },
+  {
+    "name": "manhuarm",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/manhuarm/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "ortegascans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      256,
+      256
+    ],
+    "method": "original-official",
+    "source": "https://ortegascans.fr/favicon.ico?favicon.42d539zzt9r1t.ico",
+    "note": ""
+  },
+  {
+    "name": "pantheonscan",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/pantheonscan-icon.png",
+    "note": ""
+  },
+  {
+    "name": "poseidonscans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/poseidonscans-icon.png",
+    "note": ""
+  },
+  {
+    "name": "raijinscans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/raijinscans/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "rimuscans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      500,
+      500
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/rimuscans-icon.png",
+    "note": ""
+  },
+  {
+    "name": "scanmanga",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      1024,
+      1024
+    ],
+    "method": "original-official",
+    "source": "https://static.scan-manga.com/img/logo_sm.svg",
+    "note": ""
+  },
+  {
+    "name": "scanreader",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/scanreader-icon.png",
+    "note": ""
+  },
+  {
+    "name": "scanvf",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      512,
+      512
+    ],
+    "method": "preserved-local",
+    "source": "assets/source-logos/scanvf-icon.png",
+    "note": ""
+  },
+  {
+    "name": "softepsilonscan",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/softepsilonscan/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "solarisscans",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/solarisscans/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  },
+  {
+    "name": "webtoons",
+    "size": [
+      512,
+      512
+    ],
+    "original_size": [
+      192,
+      192
+    ],
+    "method": "upscaled-legacy",
+    "source": "src/fr/webtoons/res/mipmap-xxxhdpi/ic_launcher.png",
+    "note": "Upscaling cannot restore details missing from the original."
+  }
+]
