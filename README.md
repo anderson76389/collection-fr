@@ -170,7 +170,13 @@ Le dépôt **ne publie plus les logos à partir d'Internet pendant les compilati
 .\scripts\backup-collection-fr.ps1 -Destination "E:\Sauvegardes\CollectionFR-2026"
 ~~~
 
-Le dossier généré contient un **bundle Git avec l'historique et les deux branches**, un miroir, l'index Mihon, tous les APK/JAR actuellement référencés et un inventaire SHA-256. **Le keystore de signature n'est jamais récupérable depuis GitHub Actions : conserver soi-même une copie du .jks et des mots de passe dans un coffre chiffré hors dépôt.** Prévoir au moins deux sauvegardes sur des supports indépendants.
+Le dossier généré contient un **bundle Git avec l'historique et les deux branches**, un miroir, l'index Mihon, tous les APK/JAR actuellement référencés et un inventaire SHA-256. Vérifier ensuite les fichiers (notamment après une copie sur un autre disque) :
+
+~~~powershell
+.\scripts\verify-collection-fr-backup.ps1 -BackupDirectory "E:\Sauvegardes\CollectionFR-2026"
+~~~
+
+ **Le keystore de signature n'est jamais récupérable depuis GitHub Actions : conserver soi-même une copie du .jks et des mots de passe dans un coffre chiffré hors dépôt.** Prévoir au moins deux sauvegardes sur des supports indépendants.
 
 La maintenance des Releases/Actions se fait via [**Safe history and release maintenance**](.github/workflows/maintenance.yml). La première exécution automatique protège les **quatre premières et les quatre dernières Releases**, toutes les Releases présentes dans l'index et celles dont les fichiers ont déjà été téléchargés. Les anciennes Releases utilisées sont archivées comme préversions (leurs liens continuent de fonctionner) ; seules les Releases non référencées, sans téléchargements, âgées d'au moins sept jours, peuvent être supprimées. Les runs Actions de plus de 30 jours sont nettoyés en conservant au moins les 150 derniers et le dernier par workflow. Les exécutions manuelles sont en **simulation par défaut** et produisent un rapport.
 
