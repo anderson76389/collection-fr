@@ -168,6 +168,35 @@ def main() -> None:
 
     extensions.sort(key=lambda item: item["packageName"])
 
+    # Fail closed: unexpected builds must not silently change identities or signing.
+    previous_index_path = REPO_DIR / "index.json"
+    if previous_index_path.is_file():
+        previous = json.loads(previous_index_path.read_text(encoding="utf-8"))
+        if previous.get("signingKey", "").lower() != FINGERPRINT:
+            raise RuntimeError("Signing key changed: installed APK updates could fail")
+        old_packages = {
+            item["packageName"]: item
+            for item in previous.get("extensionList", {}).get("extensions", [])
+        }
+        new_packages = {item["packageName"]: item for item in extensions}
+        removed_packages = old_packages.keys() - new_packages.keys()
+        if removed_packages:
+            raise RuntimeError(
+                "Unexpected removed extensions in Mihon index: "
+                + ", ".join(sorted(removed_packages))
+            )
+        for package, old in old_packages.items():
+            current = new_packages[package]
+            old_ids = {source["id"] for source in old["sources"]}
+            new_ids = {source["id"] for source in current["sources"]}
+            if old_ids != new_ids:
+                raise RuntimeError(f"Source IDs changed for {package}: {old_ids} -> {new_ids}")
+            if int(current["versionCode"]) < int(old["versionCode"]):
+                raise RuntimeError(
+                    f"Android versionCode decreased for {package}: "
+                    f"{old['versionCode']} -> {current['versionCode']}"
+                )
+
     release = run_gh("release", "view", RELEASE_TAG, check=False)
     if release.returncode != 0:
         run_gh(

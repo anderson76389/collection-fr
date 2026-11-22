@@ -1,0 +1,42 @@
+name: Safe history and release maintenance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/maintenance.yml"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only preview changes (recommended)"
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: collection-fr-history-maintenance
+  cancel-in-progress: false
+
+jobs:
+  housekeeping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MAINTENANCE_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the live Mihon index and archive safe historical releases
+        run: python3 .github/scripts/maintain_github_history.py
+      - name: Keep the maintenance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-fr-maintenance-report
+          path: maintenance-report.json
+          retention-days: 90
+          if-no-files-found: warn

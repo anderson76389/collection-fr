@@ -2,7 +2,7 @@ name: Validate selected sources
 
 on:
   push:
-    branches: [main, fix/reader-20261004, fix/three-readers-20261006, add/four-apks-20261006, fix/four-fr-layout-20261006, fix/reader-runtime-20261007]
+    branches: [main]
     paths:
       - "gradle/build-logic/**"
       - "settings.gradle.kts"
@@ -16,6 +16,7 @@ on:
       - "src/all/saymanhwa/**"
       - ".github/workflows/validate-manga-sources.yml"
       - ".github/scripts/publish_index.py"
+      - ".github/scripts/verify_catalog_integrity.py"
   pull_request:
     paths:
       - "gradle/build-logic/**"
@@ -49,8 +50,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Check publisher syntax
-        run: python -m py_compile .github/scripts/publish_index.py
+      - name: Check publisher and maintenance syntax
+        run: python3 -m py_compile .github/scripts/publish_index.py .github/scripts/verify_catalog_integrity.py .github/scripts/maintain_github_history.py
 
       - name: Validate retained modules and pinned logos
         run: python3 .github/scripts/verify_catalog_integrity.py

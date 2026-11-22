@@ -16,6 +16,7 @@ on:
       - "core/**"
       - ".github/workflows/build-and-publish.yml"
       - ".github/scripts/publish_index.py"
+      - ".github/scripts/verify_catalog_integrity.py"
 
 permissions:
   contents: write

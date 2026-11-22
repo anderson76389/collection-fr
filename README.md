@@ -160,6 +160,22 @@ Lance ensuite **Actions → Build and publish personal extensions → Run workfl
 > [!CAUTION]
 > **Ne commite jamais le fichier `.jks` et ne partage aucun secret.** Les APK signés avec une clé différente de celle d'une extension déjà installée ne peuvent pas automatiquement remplacer celle-ci sous Android : il peut être nécessaire de désinstaller l'ancienne version. Assure-toi de protéger les données de lecture avant toute migration.
 
+## 🛡️ Sauvegarde, signature et entretien
+
+Le dépôt **ne publie plus les logos à partir d'Internet pendant les compilations**. Le contrôle \`.github/scripts/verify_catalog_integrity.py\` vérifie les 30 modules et leurs images PNG (512 × 512 pour Mihon, cinq tailles Android). La publication vérifie aussi que la clé de signature, les identifiants des sources et les codes de version ne régressent pas.
+
+**Sauvegarde hors ligne Windows (PowerShell 5.1)** : installer Git et [GitHub CLI](https://cli.github.com/), puis lancer :
+
+~~~powershell
+.\scripts\backup-collection-fr.ps1 -Destination "E:\Sauvegardes\CollectionFR-2026"
+~~~
+
+Le dossier généré contient un **bundle Git avec l'historique et les deux branches**, un miroir, l'index Mihon, tous les APK/JAR actuellement référencés et un inventaire SHA-256. **Le keystore de signature n'est jamais récupérable depuis GitHub Actions : conserver soi-même une copie du .jks et des mots de passe dans un coffre chiffré hors dépôt.** Prévoir au moins deux sauvegardes sur des supports indépendants.
+
+La maintenance des Releases/Actions se fait via [**Safe history and release maintenance**](.github/workflows/maintenance.yml). La première exécution automatique protège les **quatre premières et les quatre dernières Releases**, toutes les Releases présentes dans l'index et celles dont les fichiers ont déjà été téléchargés. Les anciennes Releases utilisées sont archivées comme préversions (leurs liens continuent de fonctionner) ; seules les Releases non référencées, sans téléchargements, âgées d'au moins sept jours, peuvent être supprimées. Les runs Actions de plus de 30 jours sont nettoyés en conservant au moins les 150 derniers et le dernier par workflow. Les exécutions manuelles sont en **simulation par défaut** et produisent un rapport.
+
+L'historique des commits Git et les tags ne sont jamais réécrits par cette maintenance.
+
 ## 🔎 Suivi des correctifs et limitations
 
 Le dépôt contient des rapports de tests et de nettoyage, notamment :
