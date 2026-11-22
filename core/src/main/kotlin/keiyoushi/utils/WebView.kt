@@ -56,6 +56,10 @@ class WebViewTimeoutException internal constructor(
     timeout: Duration,
 ) : Exception("Timed out waiting for WebView after $timeout")
 
+/** Access to the native WebView must be limited to trusted source code. */
+@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+annotation class NativeWebViewApi
+
 /**
  * DSL for configuring and driving a single [runWebView] run.
  *
@@ -63,10 +67,6 @@ class WebViewTimeoutException internal constructor(
  * and [jsBridge] handlers run on WebView background threads. An exception thrown from any
  * callback fails the run via [reject].
  */
-/** Access to the native WebView must be limited to trusted source code. */
-@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
-annotation class NativeWebViewApi
-
 @SuppressLint("SetJavaScriptEnabled")
 class WebViewScope<T> internal constructor(
     internal val webView: WebView,
