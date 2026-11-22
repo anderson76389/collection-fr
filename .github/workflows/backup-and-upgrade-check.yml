@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/backup-and-upgrade-check.yml"
+      - ".github/scripts/verify_android_upgrade.py"
+      - ".github/scripts/create_offline_snapshot.py"
   workflow_dispatch:
 
 permissions:

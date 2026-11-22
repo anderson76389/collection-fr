@@ -77,8 +77,11 @@ def compare(old_index: dict, new_index: dict, old_dir: Path, new_dir: Path, repo
             match = re.search(
                 r"Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", output
             )
-            assert match and match.group(1).replace(":", "").lower() == expected_cert, (
-                f"{pkg} {label}: signing certificate does not match Mihon index"
+            actual = match.group(1).replace(":", "").lower() if match else "MISSING"
+            assert actual == expected_cert, (
+                f"{pkg} {label}: signing certificate mismatch on {apk.name}; "
+                f"expected={expected_cert}, actual={actual}; "
+                f"apksigner-output={output[:1000]!r}"
             )
             details = command(aapt, "dump", "badging", str(apk))
             found = re.search(
