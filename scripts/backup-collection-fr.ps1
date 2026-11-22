@@ -88,19 +88,6 @@ foreach ($Package in $Packages) {
     }
 }
 
-Write-Host "4/5 - Calcul et enregistrement des SHA-256..."
-$Manifest = Join-Path $Destination "SHA256SUMS.txt"
-$Lines = New-Object 'System.Collections.Generic.List[string]'
-Get-ChildItem -LiteralPath $Destination -Recurse -File |
-    Where-Object { $_.FullName -ne $Manifest } |
-    Sort-Object FullName |
-    ForEach-Object {
-        $Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        $Relative = $_.FullName.Substring($Destination.Length).TrimStart('\').Replace('\', '/')
-        $Lines.Add("$Hash  $Relative")
-    }
-[System.IO.File]::WriteAllLines($Manifest, $Lines, (New-Object System.Text.UTF8Encoding($false)))
-
 $Readme = Join-Path $Destination "RESTAURATION.txt"
 @"
 Collection FR - Sauvegarde effectuee le $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
@@ -124,6 +111,19 @@ ne figurent PAS dans cette sauvegarde. Les sauvegarder SEPARAMENT,
 dans un coffre-fort chiffre, hors de GitHub. Sans cette cle d'origine,
 il peut etre impossible de mettre a jour les APK installes.
 "@ | Set-Content -LiteralPath $Readme -Encoding UTF8
+
+Write-Host "4/5 - Calcul et enregistrement des SHA-256..."
+$Manifest = Join-Path $Destination "SHA256SUMS.txt"
+$Lines = New-Object 'System.Collections.Generic.List[string]'
+Get-ChildItem -LiteralPath $Destination -Recurse -File -Force |
+    Where-Object { $_.FullName -ne $Manifest } |
+    Sort-Object FullName |
+    ForEach-Object {
+        $Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        $Relative = $_.FullName.Substring($Destination.Length).TrimStart('\').Replace('\', '/')
+        $Lines.Add("$Hash  $Relative")
+    }
+[System.IO.File]::WriteAllLines($Manifest, $Lines, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "5/5 - Terminé : $Destination"
 Write-Host "Sauvegarde creee. N'oubliez pas de conserver la cle .jks separement et chiffree."

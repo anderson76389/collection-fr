@@ -162,7 +162,7 @@ Lance ensuite **Actions → Build and publish personal extensions → Run workfl
 
 ## 🛡️ Sauvegarde, signature et entretien
 
-Le dépôt **ne publie plus les logos à partir d'Internet pendant les compilations**. Le contrôle \`.github/scripts/verify_catalog_integrity.py\` vérifie les 30 modules et leurs images PNG (512 × 512 pour Mihon, cinq tailles Android). La publication vérifie aussi que la clé de signature, les identifiants des sources et les codes de version ne régressent pas.
+Le dépôt **ne publie plus les logos à partir d'Internet pendant les compilations**. Le contrôle `.github/scripts/verify_catalog_integrity.py` vérifie les 30 modules et leurs images PNG (512 × 512 pour Mihon, cinq tailles Android). La publication vérifie aussi que la clé de signature, les identifiants des sources et les codes de version ne régressent pas.
 
 **Sauvegarde hors ligne Windows (PowerShell 5.1)** : installer Git et [GitHub CLI](https://cli.github.com/), puis lancer :
 
