@@ -98,6 +98,8 @@ def official_icon(site, preferred=None):
     best = None
     seen = set()
     for url, priority in urls[:24]:
+        if url and any(token in url.lower() for token in ('challenge-assets', '/cdn-cgi/', 'challenge-platform')):
+            continue
         if not url or url in seen:
             continue
         seen.add(url)
@@ -152,7 +154,7 @@ def main():
             raise ValueError(f'Invalid or missing base icon: {src}')
         selected, method, origin = baseline, 'upscaled-legacy', str(src.relative_to(ROOT))
         existing = open_image(target.read_bytes()) if target.exists() else None
-        if existing is not None and min(existing.size) >= 500:
+        if existing is not None and min(existing.size) >= 500 and slug != 'mangadex':
             selected, method, origin = existing, 'preserved-local', str(target.relative_to(ROOT))
         else:
             gradle = (folder / 'build.gradle.kts').read_text('utf-8')

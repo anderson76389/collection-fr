@@ -133,5 +133,18 @@
       512
     ],
     "note": "Reconstructed edges; not an official high-resolution original."
+  },
+  {
+    "file": "assets/source-logos/mangadex-icon.png",
+    "source": "https://mangadex.dev/content/images/2021/08/icon.png",
+    "original_size": [
+      512,
+      512
+    ],
+    "published_size": [
+      512,
+      512
+    ],
+    "note": "Official MangaDex developer site icon; prevents replacing the logo with a CDN anti-bot challenge favicon."
   }
 ]
