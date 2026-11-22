@@ -414,6 +414,9 @@ suspend fun <T> runWebView(
     } finally {
         scope.destroyed = true
         webView.stopLoading()
+        // A PAM reader can host the WebView inside a virtual display.
+        // Detach it first so the display and image reader are released.
+        runCatching { (webView.parent as? ViewGroup)?.removeView(webView) }
         webView.destroy()
     }
 }
