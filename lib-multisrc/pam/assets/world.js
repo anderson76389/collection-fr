@@ -2,7 +2,9 @@
 (bridge, read) => {
     const channel = window[bridge];
     let postedAt = 0;
-    channel.onmessage = () => {
+    // The older source API exposes post(), not postMessage(), and has no
+    // separate script world. Keep the same acknowledgement/backpressure flow.
+    window[bridge + "Ack"] = () => {
         postedAt = 0;
     };
     setInterval(() => {
@@ -16,6 +18,6 @@
         }
         if (snapshot === null) return;
         postedAt = Date.now();
-        channel.postMessage(JSON.stringify(snapshot));
+        channel.post(JSON.stringify(snapshot));
     }, 150);
 }

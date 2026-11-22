@@ -10,9 +10,9 @@ import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
-import java.io.IOException
 import keiyoushi.annotation.Source
 import kotlinx.serialization.json.JsonElement
+import java.io.IOException
 
 @Source
 abstract class SoftEpsilonScan : Pam() {

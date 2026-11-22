@@ -1,7 +1,6 @@
 package eu.kanade.tachiyomi.multisrc.pam
 
 import android.webkit.WebResourceResponse
-import keiyoushi.utils.InjectionEvent
 import keiyoushi.utils.NativeWebViewApi
 import keiyoushi.utils.WebViewScope
 import keiyoushi.utils.WebViewTimeoutException
@@ -75,7 +74,6 @@ internal class SiteView(
         }
 
         val bridge = randomName()
-        val world = randomName()
         val script = "(${asset("world.js")})(\"$bridge\", () => (${asset("page.js")})(() => $read))"
         var challengeSince: TimeMark? = null
         var loaded = false
@@ -107,40 +105,48 @@ internal class SiteView(
                 onReceivedError { request, error ->
                     if (request.isForMainFrame) reject(IOException(error.description.toString()))
                 }
-                // The page's reads run in a world of their own: they share its DOM but none of its JavaScript
+                // Collection FR's older WebView API uses the existing JavascriptInterface
+                // bridge. The channel name is random for each reader session and external
+                // hosts are blocked above. Run UI interactions on the main thread.
                 var acting = false
-                webMessageBridge(bridge, siteOrigins, world) { message, reply ->
-                    // Unanswered reads are posted again, so one that arrives mid-action can wait
-                    if (acting) return@webMessageBridge
-                    val page = message.parseAs<PageRead>()
-                    when {
-                        page.challenge -> {
-                            val since = challengeSince ?: TimeSource.Monotonic.markNow().also { challengeSince = it }
-                            if (since.elapsedNow() > CHALLENGE_WAIT) return@webMessageBridge reject(IOException(SOLVE_IN_WEBVIEW))
-                            reply.postMessage("")
-                        }
-                        page.status != null -> {
-                            if (page.status == 403 || page.status == 429) refusedAt = TimeSource.Monotonic.markNow()
-                            reject(IOException("HTTP error ${page.status}"))
-                        }
-                        else -> {
-                            challengeSince = null
-                            loaded = true
-                            when (val next = step(surface!!, page.result!!)) {
-                                Step.Wait -> reply.postMessage("")
-                                is Step.Done -> resolve(next.value)
-                                is Step.Act -> {
-                                    acting = true
-                                    next.run {
-                                        acting = false
-                                        reply.postMessage("")
+                val acknowledge = { evaluateJs("window['" + bridge + "Ack']?.()") }
+                jsBridge(bridge) { message ->
+                    withNativeWebView {
+                        if (!acting) {
+                            val page = message.parseAs<PageRead>()
+                            when {
+                                page.challenge -> {
+                                    val since = challengeSince ?: TimeSource.Monotonic.markNow().also { challengeSince = it }
+                                    if (since.elapsedNow() > CHALLENGE_WAIT) {
+                                        reject(IOException(SOLVE_IN_WEBVIEW))
+                                    } else {
+                                        acknowledge()
+                                    }
+                                }
+                                page.status != null -> {
+                                    if (page.status == 403 || page.status == 429) refusedAt = TimeSource.Monotonic.markNow()
+                                    reject(IOException("HTTP error ${page.status}"))
+                                }
+                                else -> {
+                                    challengeSince = null
+                                    loaded = true
+                                    when (val next = step(surface!!, page.result!!)) {
+                                        Step.Wait -> acknowledge()
+                                        is Step.Done -> resolve(next.value)
+                                        is Step.Act -> {
+                                            acting = true
+                                            next.run {
+                                                acting = false
+                                                acknowledge()
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                addJavaScriptOnEvent(script, InjectionEvent.DOCUMENT_START, world, siteOrigins)
+                injectAtDocumentStart(script, siteOrigins)
                 loadUrl(url)
             }
         } catch (e: CancellationException) {
