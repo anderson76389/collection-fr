@@ -182,6 +182,14 @@ La maintenance des Releases/Actions se fait via [**Safe history and release main
 
 L'historique des commits Git et les tags ne sont jamais réécrits par cette maintenance.
 
+**Test des mises à jour Android et archive de récupération :** lancer [Verify Android updates and prepare offline backup](.github/workflows/backup-and-upgrade-check.yml) depuis **Actions → Run workflow**. Ce workflow :
+- compare les 30 packages entre une précédente Release et la publication courante ; vérifie les APK réellement signés, les identifiants de sources, les versions, puis installe chaque ancien APK et son successeur par-dessus sur un émulateur Android ;
+- produit une archive `collection-fr-offline-*.tar.gz` comprenant **toutes les branches et l'historique Git sous forme de bundle**, les fichiers `repo.json`/`index.json`, les APK et JAR référencés, un manifeste et les SHA-256 ;
+- fournit deux téléchargements dans les **Artifacts** de l'exécution GitHub Actions (conservation temporaire : 30 jours).
+
+**Important :** télécharger cette archive et la copier sur son propre PC, disque externe ou cloud chiffré est nécessaire pour que la sauvegarde soit réellement **hors GitHub**. Je ne peux pas sauvegarder automatiquement ta clé personnelle .jks : conserve-la toi-même, avec son alias et ses mots de passe, **séparément sous chiffrement**. Les vérifications de mise à jour ne lisent pas la bibliothèque privée Mihon ; il faut encore tester une mise à jour sur ton appareil en conservant tes mangas et tes favoris.
+
+
 ## 🔎 Suivi des correctifs et limitations
 
 Le dépôt contient des rapports de tests et de nettoyage, notamment :

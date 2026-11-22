@@ -1,0 +1,100 @@
+name: Verify Android updates and prepare offline backup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/backup-and-upgrade-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collection-fr-backup-and-upgrade
+  cancel-in-progress: false
+
+jobs:
+  offline-backup:
+    name: Full Git bundle and indexed APK/JAR backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out snapshot exporter
+        uses: actions/checkout@v4
+      - name: Create self-contained snapshot and validate SHA-256
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKUP_OUTPUT_DIR: offline-export
+        run: python3 .github/scripts/create_offline_snapshot.py
+      - name: Save downloadable archive for offline storage
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-fr-offline-backup
+          path: offline-export/*
+          retention-days: 30
+          if-no-files-found: error
+
+  android-upgrade:
+    name: 30 signed APK update checks and emulator installs
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Check out upgrade verifier
+        uses: actions/checkout@v4
+      - name: Set up Java for Android APK signing verification
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Download both signed releases and historical indexes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p upgrade/old upgrade/new
+          gh api "repos/${GITHUB_REPOSITORY}/contents/index.json?ref=f815983fcdc2bf287b254c67de7c0077873b09c9" \
+            --jq '.content' | base64 --decode > upgrade/old-index.json
+          gh api "repos/${GITHUB_REPOSITORY}/contents/index.json?ref=repo" \
+            --jq '.content' | base64 --decode > upgrade/new-index.json
+          OLD_TAG="$(python3 -c 'import json; x=json.load(open("upgrade/old-index.json")); print(next(iter({a["resources"]["apkUrl"].split("/download/")[1].split("/")[0] for a in x["extensionList"]["extensions"]})))')"
+          NEW_TAG="$(python3 -c 'import json; x=json.load(open("upgrade/new-index.json")); print(next(iter({a["resources"]["apkUrl"].split("/download/")[1].split("/")[0] for a in x["extensionList"]["extensions"]})))')"
+          echo "OLD_TAG=$OLD_TAG" >> "$GITHUB_ENV"
+          echo "NEW_TAG=$NEW_TAG" >> "$GITHUB_ENV"
+          gh release download "$OLD_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir upgrade/old
+          gh release download "$NEW_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir upgrade/new
+      - name: Validate all 30 APK packages, signatures, versions and source identifiers
+        run: |
+          python3 .github/scripts/verify_android_upgrade.py \
+            --old-index upgrade/old-index.json \
+            --new-index upgrade/new-index.json \
+            --old-apks upgrade/old --new-apks upgrade/new \
+            --old-tag "$OLD_TAG" --new-tag "$NEW_TAG" \
+            --repository "$GITHUB_REPOSITORY" \
+            --report upgrade-test-report.json
+      - name: Install old and new APKs in place in Android emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          ram-size: 3072M
+          disk-size: 6000M
+          disable-animations: true
+          script: |
+            python3 .github/scripts/verify_android_upgrade.py \
+              --old-index upgrade/old-index.json \
+              --new-index upgrade/new-index.json \
+              --old-apks upgrade/old --new-apks upgrade/new \
+              --old-tag "$OLD_TAG" --new-tag "$NEW_TAG" \
+              --repository "$GITHUB_REPOSITORY" --emulator \
+              --report upgrade-test-report.json
+      - name: Preserve verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-fr-upgrade-check-report
+          path: upgrade-test-report.json
+          retention-days: 30
+          if-no-files-found: warn
