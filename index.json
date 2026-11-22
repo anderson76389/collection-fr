@@ -12,9 +12,9 @@
         "name": "CosplayTele",
         "packageName": "eu.kanade.tachiyomi.extension.all.cosplaytele",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-cosplaytele-v1.4.5.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/cosplaytele-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.cosplaytele-v1.4.5.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-cosplaytele-v1.4.5.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/cosplaytele-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.cosplaytele-v1.4.5.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104005",
@@ -33,9 +33,9 @@
         "name": "Manga Ball",
         "packageName": "eu.kanade.tachiyomi.extension.all.mangaball",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-mangaball-v1.6.6.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangaball-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.mangaball-v1.6.6.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-mangaball-v1.6.6.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangaball-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.mangaball-v1.6.6.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106006",
@@ -54,9 +54,9 @@
         "name": "MangaDex",
         "packageName": "eu.kanade.tachiyomi.extension.all.mangadex",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-mangadex-v1.6.8.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangadex-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.mangadex-v1.6.8.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-mangadex-v1.6.8.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangadex-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.mangadex-v1.6.8.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106008",
@@ -75,9 +75,9 @@
         "name": "Manhuarm",
         "packageName": "eu.kanade.tachiyomi.extension.all.manhuarm",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-manhuarm-v1.6.6.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/manhuarm-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.manhuarm-v1.6.6.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-manhuarm-v1.6.6.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/manhuarm-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.manhuarm-v1.6.6.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106006",
@@ -96,9 +96,9 @@
         "name": "SayManhwa",
         "packageName": "eu.kanade.tachiyomi.extension.all.saymanhwa",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-saymanhwa-v1.6.4.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/saymanhwa-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.saymanhwa-v1.6.4.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-saymanhwa-v1.6.4.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/saymanhwa-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.saymanhwa-v1.6.4.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106004",
@@ -117,9 +117,9 @@
         "name": "Webtoons.com",
         "packageName": "eu.kanade.tachiyomi.extension.all.webtoons",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-webtoons.com-v1.6.5.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/webtoons-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-all.webtoons-v1.6.5.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-webtoons.com-v1.6.5.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/webtoons-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-all.webtoons-v1.6.5.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106005",
@@ -138,9 +138,9 @@
         "name": "Asura Scans",
         "packageName": "eu.kanade.tachiyomi.extension.en.asurascans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-asurascans-v1.6.70.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/asurascans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-en.asurascans-v1.6.70.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-asurascans-v1.6.70.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/asurascans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-en.asurascans-v1.6.70.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106070",
@@ -159,9 +159,9 @@
         "name": "Flame Comics",
         "packageName": "eu.kanade.tachiyomi.extension.en.flamecomics",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-flamecomics-v1.6.3.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/flamecomics-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-en.flamecomics-v1.6.3.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-flamecomics-v1.6.3.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/flamecomics-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-en.flamecomics-v1.6.3.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106003",
@@ -180,9 +180,9 @@
         "name": "Hive Scans",
         "packageName": "eu.kanade.tachiyomi.extension.en.infernalvoidscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-hivetoons-v1.6.72.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/hivescans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-en.infernalvoidscans-v1.6.72.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-hivetoons-v1.6.72.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/hivescans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-en.infernalvoidscans-v1.6.72.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106072",
@@ -201,9 +201,9 @@
         "name": "Olympus Scanlation",
         "packageName": "eu.kanade.tachiyomi.extension.es.olympusscanlation",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-olympusscanlation-v1.6.1.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/olympusscanlation-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-es.olympusscanlation-v1.6.1.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-olympusscanlation-v1.6.1.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/olympusscanlation-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-es.olympusscanlation-v1.6.1.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106001",
@@ -222,9 +222,9 @@
         "name": "AnimeSama",
         "packageName": "eu.kanade.tachiyomi.extension.fr.animesama",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-animesama-v1.4.23.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/animesama-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.animesama-v1.4.23.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-animesama-v1.4.23.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/animesama-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.animesama-v1.4.23.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104023",
@@ -243,9 +243,9 @@
         "name": "Astral-Manga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.astralmanga",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-astralmanga-v1.4.53.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/astralmanga-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.astralmanga-v1.4.53.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-astralmanga-v1.4.53.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/astralmanga-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.astralmanga-v1.4.53.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104053",
@@ -264,9 +264,9 @@
         "name": "Banchan Scan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.banchanscan",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-banchanscan-v1.6.2.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/banchanscan-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.banchanscan-v1.6.2.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-banchanscan-v1.6.2.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/banchanscan-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.banchanscan-v1.6.2.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106002",
@@ -285,9 +285,9 @@
         "name": "BDplus",
         "packageName": "eu.kanade.tachiyomi.extension.fr.bdplus",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-bdplus-v1.6.2.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/bdplus-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.bdplus-v1.6.2.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-bdplus-v1.6.2.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/bdplus-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.bdplus-v1.6.2.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106002",
@@ -306,9 +306,9 @@
         "name": "Blossom Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.blossomscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-blossomscans-v1.6.3.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/blossomscans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.blossomscans-v1.6.3.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-blossomscans-v1.6.3.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/blossomscans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.blossomscans-v1.6.3.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106003",
@@ -327,9 +327,9 @@
         "name": "Dassou Scan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.dassouscan",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-dassouscan-v1.6.5.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/dassouscan-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.dassouscan-v1.6.5.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-dassouscan-v1.6.5.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/dassouscan-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.dassouscan-v1.6.5.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106005",
@@ -348,9 +348,9 @@
         "name": "Hentai Origines",
         "packageName": "eu.kanade.tachiyomi.extension.fr.hentaiorigines",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-hentai-origines-v1.6.59.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/hentaiorigines-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.hentaiorigines-v1.6.59.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-hentai-origines-v1.6.59.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/hentaiorigines-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.hentaiorigines-v1.6.59.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106059",
@@ -369,9 +369,9 @@
         "name": "Lelmanga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.lelmanga",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-lelmanga-v1.6.3.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/lelmanga-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.lelmanga-v1.6.3.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-lelmanga-v1.6.3.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/lelmanga-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.lelmanga-v1.6.3.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106003",
@@ -390,9 +390,9 @@
         "name": "Mangakawaii",
         "packageName": "eu.kanade.tachiyomi.extension.fr.mangakawaii",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-mangakawaii-v1.6.4.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangakawaii-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.mangakawaii-v1.6.4.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-mangakawaii-v1.6.4.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangakawaii-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.mangakawaii-v1.6.4.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106004",
@@ -411,9 +411,9 @@
         "name": "Manga-Scantrad",
         "packageName": "eu.kanade.tachiyomi.extension.fr.mangascantrad",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-mangascantrad-v1.6.61.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangascantrad-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.mangascantrad-v1.6.61.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-mangascantrad-v1.6.61.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangascantrad-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.mangascantrad-v1.6.61.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106061",
@@ -432,9 +432,9 @@
         "name": "Mangas-Origines.fr",
         "packageName": "eu.kanade.tachiyomi.extension.fr.mangasoriginesfr",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-mangasoriginesfr-v1.6.63.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangasoriginesfr-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.mangasoriginesfr-v1.6.63.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-mangasoriginesfr-v1.6.63.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangasoriginesfr-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.mangasoriginesfr-v1.6.63.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106063",
@@ -453,9 +453,9 @@
         "name": "Ortega Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.ortegascans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-ortegascans-v1.6.5.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/ortegascans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.ortegascans-v1.6.5.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-ortegascans-v1.6.5.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/ortegascans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.ortegascans-v1.6.5.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106005",
@@ -474,9 +474,9 @@
         "name": "Pantheon Scan",
         "packageName": "eu.kanade.tachiyomi.extension.fr.pantheonscan",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-pantheonscan-v1.6.59.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/pantheonscan-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.pantheonscan-v1.6.59.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-pantheonscan-v1.6.59.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/pantheonscan-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.pantheonscan-v1.6.59.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106059",
@@ -495,9 +495,9 @@
         "name": "Poseidon Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.poseidonscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-poseidonscans-v1.4.54.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/poseidonscans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.poseidonscans-v1.4.54.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-poseidonscans-v1.4.54.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/poseidonscans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.poseidonscans-v1.4.54.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104054",
@@ -516,9 +516,9 @@
         "name": "Aniverse",
         "packageName": "eu.kanade.tachiyomi.extension.fr.raijinscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-raijinscans-v1.4.73.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/raijinscans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.raijinscans-v1.4.73.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-raijinscans-v1.4.73.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/raijinscans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.raijinscans-v1.4.73.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104073",
@@ -537,9 +537,9 @@
         "name": "Rimu Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.rimuscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-rimuscans-v1.4.37.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/rimuscans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.rimuscans-v1.4.37.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-rimuscans-v1.4.37.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/rimuscans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.rimuscans-v1.4.37.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104037",
@@ -558,9 +558,9 @@
         "name": "Scan-Manga",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanmanga",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-scanmanga-v1.4.41.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanmanga-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.scanmanga-v1.4.41.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-scanmanga-v1.4.41.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanmanga-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.scanmanga-v1.4.41.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104041",
@@ -579,9 +579,9 @@
         "name": "Scan Reader",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanreader",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-scanreader-v1.6.4.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanreader-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.scanreader-v1.6.4.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-scanreader-v1.6.4.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanreader-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.scanreader-v1.6.4.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106004",
@@ -600,9 +600,9 @@
         "name": "Scan VF",
         "packageName": "eu.kanade.tachiyomi.extension.fr.scanvf",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-scanvf-v1.4.19.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanvf-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.scanvf-v1.4.19.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-scanvf-v1.4.19.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/scanvf-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.scanvf-v1.4.19.jar"
         },
         "extensionLib": "1.4",
         "versionCode": "104019",
@@ -621,9 +621,9 @@
         "name": "Solaris Scans",
         "packageName": "eu.kanade.tachiyomi.extension.fr.solarisscans",
         "resources": {
-          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-solarisscans-v1.6.5.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/solarisscans-icon.png?v=44974170903",
-          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/ff80e3b/MAKOFF-fr.solarisscans-v1.6.5.jar"
+          "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-solarisscans-v1.6.5.apk",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/solarisscans-icon.png?v=44974631858",
+          "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/33a2df9/MAKOFF-fr.solarisscans-v1.6.5.jar"
         },
         "extensionLib": "1.6",
         "versionCode": "106005",
