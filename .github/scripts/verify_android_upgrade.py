@@ -75,7 +75,7 @@ def compare(old_index: dict, new_index: dict, old_dir: Path, new_dir: Path, repo
         ):
             output = command(apksigner, "verify", "--print-certs", str(apk))
             match = re.search(
-                r"Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", output
+                r"(?:V[1-9] Signer|Signer #\d+): certificate SHA-256 digest:\s*([0-9a-fA-F:]+)", output
             )
             actual = match.group(1).replace(":", "").lower() if match else "MISSING"
             assert actual == expected_cert, (
