@@ -55,7 +55,7 @@
         "packageName": "eu.kanade.tachiyomi.extension.all.mangadex",
         "resources": {
           "apkUrl": "https://github.com/anderson76389/collection-fr/releases/download/3e3d939/MAKOFF-mangadex-v1.6.8.apk",
-          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/assets/source-logos/mangadex-icon.png?v=44971474087",
+          "iconUrl": "https://raw.githubusercontent.com/anderson76389/collection-fr/main/src/all/mangadex/res/mipmap-xxxhdpi/ic_launcher.png?v=39a9729",
           "jarUrl": "https://github.com/anderson76389/collection-fr/releases/download/3e3d939/MAKOFF-all.mangadex-v1.6.8.jar"
         },
         "extensionLib": "1.6",
