@@ -56,6 +56,10 @@ class WebViewTimeoutException internal constructor(
     timeout: Duration,
 ) : Exception("Timed out waiting for WebView after $timeout")
 
+/** Access to the native WebView must be limited to trusted source code. */
+@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+annotation class NativeWebViewApi
+
 /**
  * DSL for configuring and driving a single [runWebView] run.
  *
@@ -227,6 +231,23 @@ class WebViewScope<T> internal constructor(
         }
     }
 
+    /**
+     * Access to the Android WebView on its UI thread for the source-specific
+     * on-screen reader. The existing public bridge API is left intact.
+     */
+    @NativeWebViewApi
+    fun withNativeWebView(block: (WebView) -> Unit) {
+        runOnMain {
+            if (!destroyed) {
+                try {
+                    block(webView)
+                } catch (error: Throwable) {
+                    reject(error)
+                }
+            }
+        }
+    }
+
     fun stopLoading() {
         runOnMain {
             if (!destroyed) {
@@ -393,6 +414,9 @@ suspend fun <T> runWebView(
     } finally {
         scope.destroyed = true
         webView.stopLoading()
+        // A PAM reader can host the WebView inside a virtual display.
+        // Detach it first so the display and image reader are released.
+        runCatching { (webView.parent as? ViewGroup)?.removeView(webView) }
         webView.destroy()
     }
 }
