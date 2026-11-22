@@ -18,7 +18,6 @@ RELEASE_TAG = COMMIT_SHA[:7]
 
 EXPECTED_MODULES = {
     "src/fr/softepsilonscan",
-    "src/fr/epsilonscan",
     "src/fr/banchanscan",
     "src/fr/mangakawaii",
 
@@ -28,7 +27,6 @@ EXPECTED_MODULES = {
     "src/fr/ortegascans",
     "src/fr/lelmanga",
 
-    "src/fr/bananascan",
     "src/all/olympusscanlation",
 
     "src/fr/animesama",
@@ -96,7 +94,6 @@ def main() -> None:
 
             "src/fr/hentaiorigines": "hentai-origines",
             "src/fr/softepsilonscan": "Soft-Epsilon-Scan",
-            "src/fr/epsilonscan": "Epsilon-Scan",
             "src/fr/ortegascans": "ortegascans",
             "src/fr/lelmanga": "lelmanga",
 

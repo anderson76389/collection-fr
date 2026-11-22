@@ -81,7 +81,6 @@ jobs:
         run: |
           modules=(
             :src:fr:softepsilonscan
-            :src:fr:epsilonscan
             :src:fr:banchanscan
             :src:fr:mangakawaii
 
@@ -91,7 +90,6 @@ jobs:
             :src:fr:ortegascans
             :src:fr:lelmanga
 
-            :src:fr:bananascan
             :src:all:olympusscanlation
 
             :src:fr:animesama

@@ -58,18 +58,18 @@ Le fichier est hébergé sur la branche **`repo`** et référence l'index des ex
 
 ## 📖 Les extensions
 
-L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les 33 extensions actuellement publiées. Epsilon Scan et Soft Epsilon Scan sont deux extensions distinctes : `epsilonscan.to` et `epsilonsoft.to`. L'identifiant historique de Soft Epsilon reste conservé. La liste peut évoluer au fil des publications.
+L'[index publié sur la branche `repo`](https://raw.githubusercontent.com/anderson76389/collection-fr/repo/index.json) répertorie les 31 extensions actuellement publiées. Soft Epsilon Scan (`epsilonsoft.to`) reste disponible avec son identifiant historique. La liste peut évoluer au fil des publications.
 
 <details open>
 <summary><strong>🇫🇷 Sources françaises et orientées lecture en français</strong></summary>
 
 **Mangas et scans**
 
-`Epsilon Scan` · `Soft Epsilon Scan` · `AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
+`Soft Epsilon Scan` · `AnimeSama` · `Astral-Manga` · `BDplus` · `Scan-Manga` · `Scan Reader` · `Scan VF` · `Manga-Scantrad` · `Mangas-Origines.fr`
 
 **Manhwas, webtoons et autres catalogues**
 
-`Webtoons.com` · `Solaris Scans` · `Manhuarm` · `Manga Ball` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan` · `Harmony-Scan`
+`Webtoons.com` · `Solaris Scans` · `Manhuarm` · `Manga Ball` · `SayManhwa` · `Blossom Scans` · `Pantheon Scan` · `Poseidon Scans` · `Raijin Scans` · `Rimu Scans` · `Dassou Scan`
 
 </details>
 
