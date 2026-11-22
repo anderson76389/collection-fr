@@ -89,14 +89,7 @@ jobs:
           ram-size: 3072M
           disk-size: 6000M
           disable-animations: true
-          script: |
-            python3 .github/scripts/verify_android_upgrade.py \
-              --old-index upgrade/old-index.json \
-              --new-index upgrade/new-index.json \
-              --old-apks upgrade/old --new-apks upgrade/new \
-              --old-tag "$OLD_TAG" --new-tag "$NEW_TAG" \
-              --repository "$GITHUB_REPOSITORY" --emulator \
-              --report upgrade-test-report.json
+          script: python3 .github/scripts/verify_android_upgrade.py --old-index upgrade/old-index.json --new-index upgrade/new-index.json --old-apks upgrade/old --new-apks upgrade/new --old-tag "$OLD_TAG" --new-tag "$NEW_TAG" --repository "$GITHUB_REPOSITORY" --emulator --report upgrade-test-report.json
       - name: Preserve verification report
         if: always()
         uses: actions/upload-artifact@v4
