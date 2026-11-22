@@ -136,16 +136,16 @@
   },
   {
     "file": "assets/source-logos/mangadex-icon.png",
-    "source": "https://mangadex.dev/content/images/2021/08/icon.png",
+    "source": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/manga-dex.png",
     "original_size": [
-      512,
+      600,
       512
     ],
     "published_size": [
       512,
       512
     ],
-    "note": "Official MangaDex developer site icon; prevents replacing the logo with a CDN anti-bot challenge favicon."
+    "note": "Verified Git blob 6b1daa7d49a48835bedaf45de615076c2ce13893; Homarr Dashboard Icons Apache-2.0"
   },
   {
     "file": "assets/source-logos/asurascans-icon.png",

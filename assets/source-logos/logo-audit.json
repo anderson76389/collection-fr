@@ -62,12 +62,12 @@
       512
     ],
     "original_size": [
-      192,
-      192
+      600,
+      512
     ],
-    "method": "upscaled-legacy",
-    "source": "src/all/mangadex/res/mipmap-xxxhdpi/ic_launcher.png",
-    "note": "Upscaling cannot restore details missing from the original."
+    "method": "high-resolution-replacement",
+    "source": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/main/png/manga-dex.png",
+    "note": "MangaDex cat-and-book mark distributed by Homarr Dashboard Icons (Apache-2.0); brand remains MangaDex"
   },
   {
     "name": "olympusscanlation",
