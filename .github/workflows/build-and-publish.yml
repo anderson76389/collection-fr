@@ -81,6 +81,7 @@ jobs:
         run: |
           modules=(
             :src:fr:softepsilonscan
+            :src:fr:epsilonscan
             :src:fr:banchanscan
             :src:fr:mangakawaii
 

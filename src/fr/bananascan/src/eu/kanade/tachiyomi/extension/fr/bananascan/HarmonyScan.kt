@@ -6,7 +6,7 @@ import okhttp3.OkHttpClient
 
 @Source
 abstract class HarmonyScan : Madara() {
-    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor(OriginalCoverInterceptor())
+    override fun OkHttpClient.Builder.configureClient(): OkHttpClient.Builder = addInterceptor(HarmonyAvailabilityInterceptor()).addInterceptor(OriginalCoverInterceptor())
 
     override fun processThumbnail(url: String?, fromSearch: Boolean): String? = originalCoverUrl(url)
 
