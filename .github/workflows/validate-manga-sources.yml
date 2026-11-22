@@ -1,6 +1,7 @@
 name: Validate selected sources
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
