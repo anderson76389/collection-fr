@@ -87,7 +87,7 @@ L'index peut inclure des sources classées `all` ainsi que d'autres extensions r
 
 ## 🎨 Logos des extensions
 
-Les 30 logos publiés sont stockés localement dans `assets/source-logos/` en PNG 512 × 512, sans dépendance aux sites référencés au moment de l'affichage. Le workflow de publication récupère, quand c'est possible, les versions officielles de meilleure résolution, puis régénère les cinq densités Android. En l'absence d'original net, un agrandissement de qualité est utilisé ; **il ne restitue pas les détails qui n'existent pas dans la source**. Le rapport `assets/source-logos/logo-audit.json` précise le traitement appliqué à chaque icône.
+Les 30 logos publiés sont stockés localement dans `assets/source-logos/` en PNG 512 × 512, sans dépendance aux sites référencés au moment de l'affichage. Les logos sont maintenant figés dans ce dépôt : chaque changement d'image est manuel, auditable et contrôlé par le script `.github/scripts/verify_catalog_integrity.py`. Le workflow de publication ne consulte plus les sites pour remplacer les images. En l'absence d'original net, un agrandissement de qualité est utilisé ; **il ne restitue pas les détails qui n'existent pas dans la source**. Le rapport `assets/source-logos/logo-audit.json` précise le traitement appliqué à chaque icône.
 
 ## 🏗️ Organisation du dépôt
 
@@ -109,6 +109,10 @@ Le code source de Collection FR est issu d'une copie de [Keiyoushi / extensions-
 Les deux versions exactes de l’API de compilation sont [conservées dans ce dépôt](vendor/extensions-lib), avec leurs sources et licences. Gradle les lit exclusivement depuis cette copie locale : la compilation ne dépend plus du téléchargement de `keiyoushi/extensions-lib`. Les autres outils et bibliothèques externes restent nécessaires.
 
 ---
+
+### Bibliothèques conservées et nettoyage
+
+Les modules `lib-multisrc/pam`, `lib/ece` et `lib/secretstream` ont été retirés après vérification des dépendances Gradle des 30 extensions. Les thèmes utilisés (`iken`, `madara`, `mangathemesia`, `mmrcms`, `origines`, `scanreader`) et les bibliothèques nécessaires (`i18n`, `textinterceptor`) restent conservés. Les tests GitHub Actions valident le graph de compilation après ce nettoyage.
 
 ## ⚙️ Compiler et publier
 

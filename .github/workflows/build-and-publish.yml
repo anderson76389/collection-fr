@@ -34,27 +34,9 @@ jobs:
           ref: main
           path: source
 
-      - name: Prepare high-resolution icon tools
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Refresh all published source icons
+      - name: Validate retained modules and pinned logos
         working-directory: source
-        run: |
-          python -m pip install --quiet Pillow requests CairoSVG
-          python .github/scripts/refresh_source_logos.py
-
-      - name: Commit local logo assets for Mihon and Android
-        working-directory: source
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/source-logos src
-          if ! git diff --cached --quiet; then
-            git commit -m "assets(icons): publish improved 512px source logos"
-            git push origin HEAD:main
-          fi
+        run: python3 .github/scripts/verify_catalog_integrity.py
 
       - name: Check signing configuration
         id: gate
